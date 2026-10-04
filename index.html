@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PMMS Loan & Transaction Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans pb-20">
+
+  <!-- Header -->
+  <header class="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
+    <h1 class="text-lg font-bold">Loan Manager (PMMS)</h1>
+    <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">20% / 30 Days</span>
+  </header>
+
+  <!-- Main Container -->
+  <main class="p-4 max-w-lg mx-auto">
+
+    <!-- TAB 1: BATCH POSTING -->
+    <section id="tab-posting" class="tab-content space-y-4">
+      <h2 class="text-lg font-bold border-b pb-2">Repayment & Batch Posting</h2>
+      
+      <!-- Search Client -->
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-slate-600">Search Active Client</label>
+        <input type="text" id="post-search" oninput="searchPostingClients(this.value)" placeholder="Search name, phone, or account..." class="w-full p-2.5 border rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-800">
+        <div id="post-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden"></div>
+      </div>
+
+      <!-- Selected Client Details -->
+      <div id="post-selected-card" class="bg-slate-800 text-white p-3 rounded-lg hidden text-sm space-y-1">
+        <div class="font-bold text-base" id="post-client-name"></div>
+        <div class="text-slate-300 text-xs" id="post-client-acc"></div>
+        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-700 text-center">
+          <div><span class="block text-xs text-slate-400">Arrears</span><span id="post-arrears" class="text-red-400 font-bold"></span></div>
+          <div><span class="block text-xs text-slate-400">Balance</span><span id="post-balance" class="text-blue-400 font-bold"></span></div>
+          <div><span class="block text-xs text-slate-400">Daily Target</span><span id="post-daily" class="text-green-400 font-bold"></span></div>
+        </div>
+      </div>
+
+      <!-- Payment Form -->
+      <div id="post-form" class="space-y-3 hidden">
+        <div class="flex gap-2">
+          <input type="number" id="post-amount" placeholder="Amount Paid (UGX)" class="w-1/2 p-2.5 border rounded-lg bg-white text-sm">
+          <select id="post-channel" class="w-1/2 p-2.5 border rounded-lg bg-white text-sm">
+            <option value="Cash">Cash</option>
+            <option value="MTN MobileMoney">MTN MobileMoney</option>
+            <option value="Airtel Money">Airtel Money</option>
+          </select>
+        </div>
+        <button onclick="addToBatch()" class="w-full bg-teal-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-teal-700">Add to Batch</button>
+      </div>
+
+      <!-- Batch Queue -->
+      <div class="border-t pt-3">
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="font-bold text-sm">Pending Batch (<span id="batch-count">0</span>)</h3>
+          <button onclick="postAllBatch()" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-900">POST ALL & SAVE</button>
+        </div>
+        <div id="batch-list" class="space-y-2"></div>
+      </div>
+    </section>
+
+    <!-- TAB 2: DISBURSEMENT -->
+    <section id="tab-disburse" class="tab-content space-y-4 hidden">
+      <h2 class="text-lg font-bold border-b pb-2">Loan Disbursement</h2>
+      
+      <div class="flex gap-4 mb-2">
+        <label class="flex items-center gap-2 text-sm font-medium">
+          <input type="radio" name="client-type" value="existing" checked onclick="toggleClientMode(false)"> Existing Client
+        </label>
+        <label class="flex items-center gap-2 text-sm font-medium">
+          <input type="radio" name="client-type" value="new" onclick="toggleClientMode(true)"> New Client
+        </label>
+      </div>
+
+      <!-- New Client Inputs -->
+      <div id="new-client-fields" class="space-y-2 hidden">
+        <input type="text" id="new-name" placeholder="Full Client Name" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        <input type="tel" id="new-phone" placeholder="Phone Number" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+      </div>
+
+      <!-- Existing Client Search -->
+      <div id="existing-client-fields">
+        <input type="text" id="disburse-search" oninput="searchDisburseClients(this.value)" placeholder="Search existing client..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        <div id="disburse-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden"></div>
+        <div id="disburse-selected-name" class="text-xs font-bold text-green-700 mt-1"></div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-slate-600">Principal Loan Amount (UGX)</label>
+        <input type="number" id="disburse-principal" placeholder="Enter Amount" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+      </div>
+
+      <button onclick="processDisbursement()" class="w-full bg-slate-800 text-white py-3 rounded-lg font-bold text-sm hover:bg-slate-900">DISBURSE LOAN</button>
+    </section>
+
+    <!-- TAB 3: CALCULATOR -->
+    <section id="tab-calc" class="tab-content space-y-4 hidden">
+      <h2 class="text-lg font-bold border-b pb-2">Loan Calculator</h2>
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-slate-600">Principal Amount (UGX)</label>
+        <input type="number" id="calc-input" oninput="calculateLoan(this.value)" placeholder="Enter principal..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
+      </div>
+
+      <div class="bg-white p-4 border rounded-lg space-y-2 text-sm">
+        <div class="flex justify-between"><span>Principal:</span> <span id="c-principal" class="font-bold">UGX 0</span></div>
+        <hr>
+        <div class="flex justify-between text-amber-700"><span>Interest (20%):</span> <span id="c-interest" class="font-bold">UGX 0</span></div>
+        <hr>
+        <div class="flex justify-between font-bold text-base"><span>Total Payable:</span> <span id="c-total">UGX 0</span></div>
+        <hr>
+        <div class="flex justify-between text-green-700 font-bold"><span>Daily Target (30 Days):</span> <span id="c-daily">UGX 0</span></div>
+      </div>
+    </section>
+
+    <!-- TAB 4: STATEMENTS -->
+    <section id="tab-statement" class="tab-content space-y-4 hidden">
+      <h2 class="text-lg font-bold border-b pb-2">Client Statements</h2>
+      <input type="text" id="statement-search" oninput="searchStatementClients(this.value)" placeholder="Search client for statement..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
+      <div id="statement-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden"></div>
+
+      <div id="statement-view" class="space-y-3 hidden">
+        <div class="bg-white p-3 border rounded-lg text-xs space-y-1">
+          <div class="font-bold text-sm" id="st-name"></div>
+          <div id="st-acc" class="text-slate-500"></div>
+          <div id="st-balance" class="font-bold text-blue-600 pt-1"></div>
+        </div>
+        <h3 class="font-bold text-sm">Transaction History</h3>
+        <div id="statement-list" class="space-y-2"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Bottom Navigation -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-2 text-xs text-slate-600 font-medium">
+    <button onclick="switchTab('posting')" class="flex flex-col items-center py-1 text-slate-800 font-bold" id="nav-posting">
+      <span>Posting</span>
+    </button>
+    <button onclick="switchTab('disburse')" class="flex flex-col items-center py-1" id="nav-disburse">
+      <span>Disburse</span>
+    </button>
+    <button onclick="switchTab('calc')" class="flex flex-col items-center py-1" id="nav-calc">
+      <span>Calculator</span>
+    </button>
+    <button onclick="switchTab('statement')" class="flex flex-col items-center py-1" id="nav-statement">
+      <span>Statements</span>
+    </button>
+  </nav>
+
+  <!-- JavaScript Logic -->
+  <script>
+    // System Data Architecture (LocalStorage)
+    let clients = JSON.parse(localStorage.getItem('pmms_clients')) || [];
+    let loans = JSON.parse(localStorage.getItem('pmms_loans')) || [];
+    let transactions = JSON.parse(localStorage.getItem('pmms_tx')) || [];
+    let batchQueue = [];
+
+    let activePostingClient = null;
+    let activePostingLoan = null;
+    let activeDisburseClient = null;
+
+    function saveAll() {
+      localStorage.setItem('pmms_clients', JSON.stringify(clients));
+      localStorage.setItem('pmms_loans', JSON.stringify(loans));
+      localStorage.setItem('pmms_tx', JSON.stringify(transactions));
+    }
+
+    // UI Tab Navigation
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById('tab-' + tabId).classList.remove('hidden');
+      document.querySelectorAll('nav button').forEach(el => el.classList.remove('text-slate-800', 'font-bold'));
+      document.getElementById('nav-' + tabId).classList.add('text-slate-800', 'font-bold');
+    }
+
+    // Calculator Logic
+    function calculateLoan(val) {
+      let principal = parseFloat(val) || 0;
+      let interest = principal * 0.20;
+      let total = principal + interest;
+      let daily = total / 30;
+
+      document.getElementById('c-principal').innerText = 'UGX ' + principal.toLocaleString();
+      document.getElementById('c-interest').innerText = 'UGX ' + interest.toLocaleString();
+      document.getElementById('c-total').innerText = 'UGX ' + total.toLocaleString();
+      document.getElementById('c-daily').innerText = 'UGX ' + daily.toFixed(0).toLocaleString();
+    }
+
+    // Disbursement Logic
+    function toggleClientMode(isNew) {
+      document.getElementById('new-client-fields').classList.toggle('hidden', !isNew);
+      document.getElementById('existing-client-fields').classList.toggle('hidden', isNew);
+    }
+
+    function searchDisburseClients(query) {
+      let container = document.getElementById('disburse-search-results');
+      if (!query) return container.classList.add('hidden');
+      let matches = clients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()) || c.acc.includes(query));
+      
+      container.innerHTML = matches.map(c => `
+        <div class="p-2 text-xs hover:bg-slate-100 cursor-pointer" onclick="selectDisburseClient(${c.id})">
+          <b>${c.name}</b> (${c.acc})
+        </div>
+      `).join('');
+      container.classList.remove('hidden');
+    }
+
+    function selectDisburseClient(id) {
+      activeDisburseClient = clients.find(c => c.id === id);
+      document.getElementById('disburse-selected-name').innerText = `Selected: ${activeDisburseClient.name} (${activeDisburseClient.acc})`;
+      document.getElementById('disburse-search-results').classList.add('hidden');
+    }
+
+    function processDisbursement() {
+      let isNew = document.querySelector('input[name="client-type"]:checked').value === 'new';
+      let principal = parseFloat(document.getElementById('disburse-principal').value) || 0;
+      if (principal <= 0) return alert('Enter a valid principal amount.');
+
+      let client;
+      if (isNew) {
+        let name = document.getElementById('new-name').value;
+        let phone = document.getElementById('new-phone').value;
+        if (!name || !phone) return alert('Provide both name and phone.');
+        client = { id: Date.now(), name, phone, acc: 'ACC' + Math.floor(1000 + Math.random() * 9000) };
+        clients.push(client);
+      } else {
+        if (!activeDisburseClient) return alert('Select a client.');
+        client = activeDisburseClient;
+      }
+
+      let interest = principal * 0.20;
+      let total = principal + interest;
+      let loan = {
+        id: Date.now(),
+        clientId: client.id,
+        principal,
+        interest,
+        totalPayable: total,
+        dailyTarget: total / 30,
+        balance: total,
+        arrears: 0,
+        status: 'Active',
+        date: new Date().toLocaleDateString()
+      };
+
+      loans.push(loan);
+      saveAll();
+      alert('Loan Disbursed Successfully!');
+      location.reload();
+    }
+
+    // Batch Posting Logic
+    function searchPostingClients(query) {
+      let container = document.getElementById('post-search-results');
+      if (!query) return container.classList.add('hidden');
+      let matches = clients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()) || c.acc.includes(query));
+
+      container.innerHTML = matches.map(c => `
+        <div class="p-2 text-xs hover:bg-slate-100 cursor-pointer" onclick="selectPostingClient(${c.id})">
+          <b>${c.name}</b> (${c.acc})
+        </div>
+      `).join('');
+      container.classList.remove('hidden');
+    }
+
+    function selectPostingClient(id) {
+      activePostingClient = clients.find(c => c.id === id);
+      activePostingLoan = loans.find(l => l.clientId === id && l.status === 'Active');
+
+      if (!activePostingLoan) {
+        alert('This client has no active loan.');
+        return;
+      }
+
+      document.getElementById('post-client-name').innerText = activePostingClient.name;
+      document.getElementById('post-client-acc').innerText = 'Acc: ' + activePostingClient.acc + ' | Phone: ' + activePostingClient.phone;
+      document.getElementById('post-arrears').innerText = 'UGX ' + activePostingLoan.arrears;
+      document.getElementById('post-balance').innerText = 'UGX ' + activePostingLoan.balance.toLocaleString();
+      document.getElementById('post-daily').innerText = 'UGX ' + activePostingLoan.dailyTarget.toFixed(0);
+
+      document.getElementById('post-selected-card').classList.remove('hidden');
+      document.getElementById('post-form').classList.remove('hidden');
+      document.getElementById('post-search-results').classList.add('hidden');
+    }
+
+    function addToBatch() {
+      let amount = parseFloat(document.getElementById('post-amount').value) || 0;
+      let channel = document.getElementById('post-channel').value;
+      if (amount <= 0) return alert('Enter a valid amount.');
+
+      batchQueue.push({
+        client: activePostingClient,
+        loan: activePostingLoan,
+        amount,
+        channel
+      });
+
+      renderBatch();
+      document.getElementById('post-amount').value = '';
+    }
+
+    function renderBatch() {
+      document.getElementById('batch-count').innerText = batchQueue.length;
+      document.getElementById('batch-list').innerHTML = batchQueue.map((item, idx) => `
+        <div class="bg-white p-2 border rounded-lg flex justify-between items-center text-xs">
+          <div>
+            <div class="font-bold">${item.client.name}</div>
+            <div class="text-slate-500">UGX ${item.amount.toLocaleString()} via ${item.channel}</div>
+          </div>
+          <button onclick="batchQueue.splice(${idx}, 1); renderBatch();" class="text-red-500 font-bold px-2">Remove</button>
+        </div>
+      `).join('');
+    }
+
+    function postAllBatch() {
+      if (batchQueue.length === 0) return alert('Batch queue is empty.');
+
+      batchQueue.forEach(item => {
+        let loan = loans.find(l => l.id === item.loan.id);
+        loan.balance -= item.amount;
+        if (loan.balance <= 0) {
+          loan.balance = 0;
+          loan.status = 'Settled';
+        }
+
+        transactions.push({
+          id: Date.now(),
+          loanId: loan.id,
+          clientId: item.client.id,
+          amount: item.amount,
+          channel: item.channel,
+          date: new Date().toLocaleDateString()
+        });
+
+        // Trigger SMS Simulation Alert
+        alert(`AUTOMATED SMS RECEIPT SENT\nTo: ${item.client.phone}\nDear ${item.client.name}, payment of UGX ${item.amount.toLocaleString()} received via ${item.channel}. New Balance: UGX ${loan.balance.toLocaleString()}. Thank you!`);
+      });
+
+      saveAll();
+      batchQueue = [];
+      renderBatch();
+      alert('All transactions saved successfully!');
+      location.reload();
+    }
+
+    // Statement Logic
+    function searchStatementClients(query) {
+      let container = document.getElementById('statement-search-results');
+      if (!query) return container.classList.add('hidden');
+      let matches = clients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()) || c.acc.includes(query));
+
+      container.innerHTML = matches.map(c => `
+        <div class="p-2 text-xs hover:bg-slate-100 cursor-pointer" onclick="viewStatement(${c.id})">
+          <b>${c.name}</b> (${c.acc})
+        </div>
+      `).join('');
+      container.classList.remove('hidden');
+    }
+
+    function viewStatement(clientId) {
+      let client = clients.find(c => c.id === clientId);
+      let loan = loans.find(l => l.clientId === clientId);
+      let txs = transactions.filter(t => t.clientId === clientId);
+
+      document.getElementById('st-name').innerText = client.name;
+      document.getElementById('st-acc').innerText = 'Acc: ' + client.acc + ' | Phone: ' + client.phone;
+      document.getElementById('st-balance').innerText = loan ? 'Outstanding Balance: UGX ' + loan.balance.toLocaleString() : 'No Active Loan';
+
+      document.getElementById('statement-list').innerHTML = txs.map(t => `
+        <div class="bg-white p-2 border rounded-lg text-xs flex justify-between items-center">
+          <div>
+            <div class="font-bold">UGX ${t.amount.toLocaleString()}</div>
+            <div class="text-slate-400">${t.date} via ${t.channel}</div>
+          </div>
+          <span class="text-green-600 font-bold">Posted</span>
+        </div>
+      `).join('');
+
+      document.getElementById('statement-view').classList.remove('hidden');
+      document.getElementById('statement-search-results').classList.add('hidden');
+    }
+  </script>
+</body>
+</html>

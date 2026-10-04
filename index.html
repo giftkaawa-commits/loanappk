@@ -5,33 +5,80 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>PMMS Loan & Transaction Manager</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- PDF Generation Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans pb-20">
+<body class="bg-slate-100 text-slate-800 font-sans pb-24">
+
+  <!-- SECURITY PIN LOGIN OVERLAY -->
+  <div id="login-overlay" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-sm text-center space-y-4 shadow-2xl">
+      <div class="w-16 h-16 bg-slate-100 text-slate-800 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <div>
+        <h2 id="login-title" class="text-xl font-bold text-slate-800">PMMS Secure Login</h2>
+        <p class="text-xs text-slate-500 mt-1">Enter your security PIN code to proceed</p>
+      </div>
+      <div>
+        <input type="password" id="login-pin" maxlength="6" placeholder="Enter PIN" class="w-full text-center text-2xl tracking-widest p-3 border rounded-xl font-bold bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-800">
+      </div>
+      <button onclick="verifyPin()" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold text-sm hover:bg-slate-900 shadow-md">
+        UNLOCK APP
+      </button>
+    </div>
+  </div>
 
   <!-- Header -->
-  <header class="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 flex justify-between items-center">
-    <h1 class="text-lg font-bold">Loan Manager (PMMS)</h1>
-    <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300">20% / 30 Days</span>
+  <header class="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10">
+    <div class="flex justify-between items-center max-w-lg mx-auto">
+      <div>
+        <h1 class="text-lg font-bold flex items-center gap-2">
+          <i class="fa-solid fa-building-columns text-teal-400"></i>
+          <span id="header-company-name">Loan Manager (PMMS)</span>
+        </h1>
+        <p id="header-company-loc" class="text-xs text-slate-400"></p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300 font-semibold" id="header-default-term">20% / 30 Days</span>
+        <button onclick="lockApp()" class="text-slate-400 hover:text-white text-xs p-1" title="Lock App"><i class="fa-solid fa-right-from-bracket"></i></button>
+      </div>
+    </div>
   </header>
 
   <!-- Main Container -->
-  <main class="p-4 max-w-lg mx-auto">
+  <main class="p-4 max-w-lg mx-auto space-y-4">
 
     <!-- TAB 1: BATCH POSTING -->
     <section id="tab-posting" class="tab-content space-y-4">
-      <h2 class="text-lg font-bold border-b pb-2">Repayment & Batch Posting</h2>
+      <h2 class="text-lg font-bold border-b pb-2 flex justify-between items-center">
+        <span>Repayment & Batch Posting</span>
+        <label class="text-xs font-normal flex items-center gap-1 cursor-pointer bg-slate-200 px-2 py-1 rounded">
+          <input type="checkbox" id="toggle-print-receipt" checked class="rounded"> Print/PDF Receipt
+        </label>
+      </h2>
       
       <!-- Search Client -->
       <div>
         <label class="block text-xs font-semibold mb-1 text-slate-600">Search Active Client</label>
         <input type="text" id="post-search" oninput="searchPostingClients(this.value)" placeholder="Search name, phone, or account..." class="w-full p-2.5 border rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-800">
-        <div id="post-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden"></div>
+        <div id="post-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
       </div>
 
       <!-- Selected Client Details -->
       <div id="post-selected-card" class="bg-slate-800 text-white p-3 rounded-lg hidden text-sm space-y-1">
-        <div class="font-bold text-base" id="post-client-name"></div>
-        <div class="text-slate-300 text-xs" id="post-client-acc"></div>
+        <div class="flex justify-between items-start">
+          <div>
+            <div class="font-bold text-base" id="post-client-name"></div>
+            <div class="text-slate-300 text-xs" id="post-client-acc"></div>
+          </div>
+          <a id="post-client-call" href="#" class="bg-green-600 text-white px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+            <i class="fa-solid fa-phone"></i> Call
+          </a>
+        </div>
         <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-700 text-center">
           <div><span class="block text-xs text-slate-400">Arrears</span><span id="post-arrears" class="text-red-400 font-bold"></span></div>
           <div><span class="block text-xs text-slate-400">Balance</span><span id="post-balance" class="text-blue-400 font-bold"></span></div>
@@ -47,6 +94,7 @@
             <option value="Cash">Cash</option>
             <option value="MTN MobileMoney">MTN MobileMoney</option>
             <option value="Airtel Money">Airtel Money</option>
+            <option value="Banking">Bank Transfer</option>
           </select>
         </div>
         <button onclick="addToBatch()" class="w-full bg-teal-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-teal-700">Add to Batch</button>
@@ -62,13 +110,13 @@
       </div>
     </section>
 
-    <!-- TAB 2: DISBURSEMENT -->
+    <!-- TAB 2: DISBURSEMENT & MULTI-LOAN CONSOLIDATION -->
     <section id="tab-disburse" class="tab-content space-y-4 hidden">
-      <h2 class="text-lg font-bold border-b pb-2">Loan Disbursement</h2>
+      <h2 class="text-lg font-bold border-b pb-2">Loan Disbursement & Roll-over</h2>
       
       <div class="flex gap-4 mb-2">
         <label class="flex items-center gap-2 text-sm font-medium">
-          <input type="radio" name="client-type" value="existing" checked onclick="toggleClientMode(false)"> Existing Client
+          <input type="radio" name="client-type" value="existing" checked onclick="toggleClientMode(false)"> Primary Client
         </label>
         <label class="flex items-center gap-2 text-sm font-medium">
           <input type="radio" name="client-type" value="new" onclick="toggleClientMode(true)"> New Client
@@ -83,14 +131,50 @@
 
       <!-- Existing Client Search -->
       <div id="existing-client-fields">
-        <input type="text" id="disburse-search" oninput="searchDisburseClients(this.value)" placeholder="Search existing client..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
-        <div id="disburse-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden"></div>
+        <input type="text" id="disburse-search" oninput="searchDisburseClients(this.value)" placeholder="Search main recipient client..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        <div id="disburse-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
         <div id="disburse-selected-name" class="text-xs font-bold text-green-700 mt-1"></div>
       </div>
 
+      <!-- MULTI-LOAN CONSOLIDATION SECTION -->
+      <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs space-y-2">
+        <div class="flex justify-between items-center">
+          <span class="font-bold text-amber-900"><i class="fa-solid fa-layer-group"></i> Combine Multiple Active Loans</span>
+          <button onclick="toggleConsolidationPanel()" class="bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold">Toggle Selector</button>
+        </div>
+        <p class="text-[11px] text-amber-700">Merge outstanding balances from other clients into this loan.</p>
+        
+        <div id="consolidation-selector-panel" class="hidden space-y-2 pt-2 border-t border-amber-200">
+          <div id="active-loans-checkbox-list" class="max-h-36 overflow-y-auto space-y-1 pr-1"></div>
+        </div>
+      </div>
+
+      <!-- Flexible Terms -->
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-slate-600">Interest Rate (%)</label>
+          <input type="number" id="disburse-rate" value="20" oninput="liveCalculateDisbursement()" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-slate-600">Tenure (Days)</label>
+          <input type="number" id="disburse-days" value="30" oninput="liveCalculateDisbursement()" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        </div>
+      </div>
+
       <div>
-        <label class="block text-xs font-semibold mb-1 text-slate-600">Principal Loan Amount (UGX)</label>
-        <input type="number" id="disburse-principal" placeholder="Enter Amount" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        <label class="block text-xs font-semibold mb-1 text-slate-600">New Cash Disbursement Amount (UGX)</label>
+        <input type="number" id="disburse-principal" oninput="liveCalculateDisbursement()" placeholder="Enter Amount" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+      </div>
+
+      <!-- Auto Calculator Summary Box -->
+      <div class="bg-slate-50 border p-3 rounded-lg text-xs space-y-1.5">
+        <div class="flex justify-between"><span>New Cash Principal:</span> <span id="dis-base" class="font-bold">UGX 0</span></div>
+        <div class="flex justify-between text-amber-700"><span>Merged Outstanding Balances:</span> <span id="dis-combined" class="font-bold">+ UGX 0</span></div>
+        <div class="flex justify-between"><span>Effective Gross Principal:</span> <span id="dis-total-principal" class="font-bold">UGX 0</span></div>
+        <div class="flex justify-between text-teal-700"><span>Calculated Interest:</span> <span id="dis-interest" class="font-bold">UGX 0</span></div>
+        <hr>
+        <div class="flex justify-between font-bold text-sm text-slate-800"><span>Total Payable:</span> <span id="dis-total">UGX 0</span></div>
+        <div class="flex justify-between font-bold text-green-700"><span>Daily Target:</span> <span id="dis-daily">UGX 0</span></div>
       </div>
 
       <button onclick="processDisbursement()" class="w-full bg-slate-800 text-white py-3 rounded-lg font-bold text-sm hover:bg-slate-900">DISBURSE LOAN</button>
@@ -99,107 +183,370 @@
     <!-- TAB 3: CALCULATOR -->
     <section id="tab-calc" class="tab-content space-y-4 hidden">
       <h2 class="text-lg font-bold border-b pb-2">Loan Calculator</h2>
+      
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-slate-600">Interest Rate (%)</label>
+          <input type="number" id="calc-rate" value="20" oninput="calculateLoan()" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-slate-600">Duration (Days)</label>
+          <input type="number" id="calc-days" value="30" oninput="calculateLoan()" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        </div>
+      </div>
+
       <div>
         <label class="block text-xs font-semibold mb-1 text-slate-600">Principal Amount (UGX)</label>
-        <input type="number" id="calc-input" oninput="calculateLoan(this.value)" placeholder="Enter principal..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        <input type="number" id="calc-input" oninput="calculateLoan()" placeholder="Enter principal..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
       </div>
 
       <div class="bg-white p-4 border rounded-lg space-y-2 text-sm">
         <div class="flex justify-between"><span>Principal:</span> <span id="c-principal" class="font-bold">UGX 0</span></div>
         <hr>
-        <div class="flex justify-between text-amber-700"><span>Interest (20%):</span> <span id="c-interest" class="font-bold">UGX 0</span></div>
+        <div class="flex justify-between text-amber-700"><span>Interest:</span> <span id="c-interest" class="font-bold">UGX 0</span></div>
         <hr>
         <div class="flex justify-between font-bold text-base"><span>Total Payable:</span> <span id="c-total">UGX 0</span></div>
         <hr>
-        <div class="flex justify-between text-green-700 font-bold"><span>Daily Target (30 Days):</span> <span id="c-daily">UGX 0</span></div>
+        <div class="flex justify-between text-green-700 font-bold"><span>Daily Target:</span> <span id="c-daily">UGX 0</span></div>
       </div>
     </section>
 
-    <!-- TAB 4: STATEMENTS -->
+    <!-- TAB 4: STATEMENTS & CLIENT EDIT -->
     <section id="tab-statement" class="tab-content space-y-4 hidden">
-      <h2 class="text-lg font-bold border-b pb-2">Client Statements</h2>
+      <h2 class="text-lg font-bold border-b pb-2">Client Statements & Management</h2>
+      
+      <!-- Date Range Filter -->
+      <div class="bg-white p-3 border rounded-lg space-y-2">
+        <div class="text-xs font-bold text-slate-700">Filter Transactions by Date</div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] text-slate-500">From Date</label>
+            <input type="date" id="filter-date-from" onchange="applyDateFilter()" class="w-full p-1.5 border rounded text-xs">
+          </div>
+          <div>
+            <label class="block text-[10px] text-slate-500">To Date</label>
+            <input type="date" id="filter-date-to" onchange="applyDateFilter()" class="w-full p-1.5 border rounded text-xs">
+          </div>
+        </div>
+      </div>
+
       <input type="text" id="statement-search" oninput="searchStatementClients(this.value)" placeholder="Search client for statement..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
-      <div id="statement-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden"></div>
+      <div id="statement-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
 
       <div id="statement-view" class="space-y-3 hidden">
-        <div class="bg-white p-3 border rounded-lg text-xs space-y-1">
-          <div class="font-bold text-sm" id="st-name"></div>
-          <div id="st-acc" class="text-slate-500"></div>
-          <div id="st-balance" class="font-bold text-blue-600 pt-1"></div>
+        <div class="bg-white p-3 border rounded-lg text-xs space-y-2">
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="font-bold text-sm" id="st-name"></div>
+              <div id="st-acc" class="text-slate-500"></div>
+            </div>
+            <div class="flex gap-1">
+              <button onclick="openEditClientModal()" class="bg-slate-200 text-slate-800 px-2 py-1 rounded text-xs font-bold hover:bg-slate-300">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </button>
+              <a id="st-call-btn" href="#" class="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                <i class="fa-solid fa-phone"></i>
+              </a>
+            </div>
+          </div>
+          
+          <div id="st-balance" class="font-bold text-blue-600 pt-1 border-t"></div>
+
+          <!-- Active Loan Management -->
+          <div id="st-loan-controls" class="hidden pt-2 border-t flex justify-between items-center">
+            <span class="text-slate-500 text-[11px]">Loan Actions:</span>
+            <button onclick="reverseActiveLoan()" class="bg-red-600 text-white px-2.5 py-1 rounded text-xs font-bold hover:bg-red-700">
+              <i class="fa-solid fa-trash-can"></i> Reverse Loan
+            </button>
+          </div>
         </div>
-        <h3 class="font-bold text-sm">Transaction History</h3>
+
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-sm">Transaction History</h3>
+          <button onclick="exportPDFStatement()" class="bg-teal-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5">
+            <i class="fa-solid fa-file-pdf"></i> PDF Statement
+          </button>
+        </div>
+
         <div id="statement-list" class="space-y-2"></div>
+      </div>
+    </section>
+
+    <!-- TAB 5: REPORTS & AGING ANALYSIS -->
+    <section id="tab-reports" class="tab-content space-y-4 hidden">
+      <h2 class="text-lg font-bold border-b pb-2">Financial Collections & Aging Analysis</h2>
+
+      <!-- Summary Dashboard -->
+      <div class="bg-slate-800 text-white p-4 rounded-xl space-y-3">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-teal-400">Financial Summary Overview</h3>
+        <div class="grid grid-cols-2 gap-3 text-xs">
+          <div class="bg-slate-700 p-2.5 rounded-lg">
+            <span class="block text-slate-400 text-[10px]">Total Collections</span>
+            <span id="rep-tot-collections" class="text-sm font-bold text-green-400">UGX 0</span>
+          </div>
+          <div class="bg-slate-700 p-2.5 rounded-lg">
+            <span class="block text-slate-400 text-[10px]">Total Disbursements</span>
+            <span id="rep-tot-disbursed" class="text-sm font-bold text-blue-400">UGX 0</span>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-700 pt-2 text-xs space-y-1">
+          <div class="text-[11px] font-bold text-slate-300">Collections Breakdown by Channel</div>
+          <div class="flex justify-between text-slate-300"><span>Cash at Hand:</span> <span id="rep-cash" class="font-bold text-white">UGX 0</span></div>
+          <div class="flex justify-between text-slate-300"><span>MTN MobileMoney:</span> <span id="rep-mtn" class="font-bold text-white">UGX 0</span></div>
+          <div class="flex justify-between text-slate-300"><span>Airtel Money:</span> <span id="rep-airtel" class="font-bold text-white">UGX 0</span></div>
+          <div class="flex justify-between text-slate-300"><span>Bankings / Transfers:</span> <span id="rep-bank" class="font-bold text-white">UGX 0</span></div>
+        </div>
+
+        <div class="border-t border-slate-700 pt-2 text-xs space-y-1">
+          <div class="flex justify-between text-red-300"><span>Total Expenses:</span> <span id="rep-expenses" class="font-bold">UGX 0</span></div>
+        </div>
+      </div>
+
+      <!-- Expense Entry -->
+      <div class="bg-white p-3 border rounded-lg space-y-2">
+        <h4 class="text-xs font-bold text-slate-700">Record Company Expense</h4>
+        <div class="flex gap-2">
+          <input type="text" id="exp-desc" placeholder="Expense description..." class="w-1/2 p-2 border rounded text-xs">
+          <input type="number" id="exp-amount" placeholder="Amount (UGX)" class="w-1/2 p-2 border rounded text-xs">
+        </div>
+        <button onclick="addExpense()" class="w-full bg-slate-700 text-white py-1.5 rounded text-xs font-bold">Add Expense</button>
+      </div>
+
+      <!-- Aging Analysis Table -->
+      <div class="flex justify-between items-center border-t pt-2">
+        <h3 class="font-bold text-sm">Aging Analysis Report</h3>
+        <button onclick="exportPDFAging()" class="bg-slate-800 text-white px-2.5 py-1 rounded text-xs font-bold">
+          <i class="fa-solid fa-download"></i> PDF
+        </button>
+      </div>
+
+      <div class="bg-white border rounded-lg overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-slate-800 text-white text-[11px]">
+              <th class="p-2">Client</th>
+              <th class="p-2">Phone</th>
+              <th class="p-2 text-right">Balance</th>
+              <th class="p-2 text-right">Arrears</th>
+            </tr>
+          </thead>
+          <tbody id="aging-table-body" class="divide-y text-slate-700"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 6: DEMAND LIST -->
+    <section id="tab-demand" class="tab-content space-y-4 hidden">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h2 class="text-lg font-bold">Demand & Defaulters List</h2>
+        <button onclick="exportPDFDemand()" class="bg-red-600 text-white px-2.5 py-1 rounded text-xs font-bold flex items-center gap-1">
+          <i class="fa-solid fa-file-pdf"></i> PDF List
+        </button>
+      </div>
+
+      <div id="demand-list-container" class="space-y-2"></div>
+    </section>
+
+    <!-- TAB 7: COMPANY SETTINGS & SECURITY PIN -->
+    <section id="tab-settings" class="tab-content space-y-4 hidden">
+      <h2 class="text-lg font-bold border-b pb-2">Company Setup & Security</h2>
+
+      <div class="bg-white p-4 border rounded-lg space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold mb-1 text-slate-600">Company Name Heading</label>
+          <input type="text" id="cfg-name" placeholder="e.g. PMMS Microfinance Ltd" class="w-full p-2.5 border rounded-lg text-sm">
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-slate-600">Company Address / Location</label>
+          <input type="text" id="cfg-loc" placeholder="e.g. Kampala, Uganda" class="w-full p-2.5 border rounded-lg text-sm">
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-slate-600">App Security PIN</label>
+          <input type="password" id="cfg-pin" maxlength="6" placeholder="Default 1234" class="w-full p-2.5 border rounded-lg text-sm font-bold">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold mb-1 text-slate-600">Default Rate (%)</label>
+            <input type="number" id="cfg-rate" placeholder="20" class="w-full p-2.5 border rounded-lg text-sm">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-slate-600">Default Tenure (Days)</label>
+            <input type="number" id="cfg-days" placeholder="30" class="w-full p-2.5 border rounded-lg text-sm">
+          </div>
+        </div>
+        <button onclick="saveCompanySettings()" class="w-full bg-slate-800 text-white py-2.5 rounded-lg text-sm font-bold hover:bg-slate-900">
+          Save Settings
+        </button>
       </div>
     </section>
 
   </main>
 
+  <!-- Edit Client Modal -->
+  <div id="edit-client-modal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl p-4 w-full max-w-sm space-y-3">
+      <h3 class="font-bold text-sm border-b pb-2">Edit Client Details</h3>
+      <input type="hidden" id="edit-client-id">
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-slate-600">Full Name</label>
+        <input type="text" id="edit-client-name" class="w-full p-2 border rounded-lg text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-slate-600">Phone Number</label>
+        <input type="tel" id="edit-client-phone" class="w-full p-2 border rounded-lg text-sm">
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeEditClientModal()" class="w-1/2 border py-2 rounded-lg text-xs font-bold">Cancel</button>
+        <button onclick="saveEditedClient()" class="w-1/2 bg-slate-800 text-white py-2 rounded-lg text-xs font-bold">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Bottom Navigation -->
-  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-2 text-xs text-slate-600 font-medium">
-    <button onclick="switchTab('posting')" class="flex flex-col items-center py-1 text-slate-800 font-bold" id="nav-posting">
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-2 text-[10px] text-slate-600 font-medium z-40 overflow-x-auto">
+    <button onclick="switchTab('posting')" class="flex flex-col items-center py-1 min-w-[50px] text-slate-800 font-bold" id="nav-posting">
+      <i class="fa-solid fa-receipt text-sm mb-0.5"></i>
       <span>Posting</span>
     </button>
-    <button onclick="switchTab('disburse')" class="flex flex-col items-center py-1" id="nav-disburse">
+    <button onclick="switchTab('disburse')" class="flex flex-col items-center py-1 min-w-[50px]" id="nav-disburse">
+      <i class="fa-solid fa-hand-holding-dollar text-sm mb-0.5"></i>
       <span>Disburse</span>
     </button>
-    <button onclick="switchTab('calc')" class="flex flex-col items-center py-1" id="nav-calc">
-      <span>Calculator</span>
+    <button onclick="switchTab('calc')" class="flex flex-col items-center py-1 min-w-[50px]" id="nav-calc">
+      <i class="fa-solid fa-calculator text-sm mb-0.5"></i>
+      <span>Calc</span>
     </button>
-    <button onclick="switchTab('statement')" class="flex flex-col items-center py-1" id="nav-statement">
+    <button onclick="switchTab('statement')" class="flex flex-col items-center py-1 min-w-[50px]" id="nav-statement">
+      <i class="fa-solid fa-file-invoice text-sm mb-0.5"></i>
       <span>Statements</span>
+    </button>
+    <button onclick="switchTab('reports')" class="flex flex-col items-center py-1 min-w-[50px]" id="nav-reports">
+      <i class="fa-solid fa-chart-pie text-sm mb-0.5"></i>
+      <span>Reports</span>
+    </button>
+    <button onclick="switchTab('demand')" class="flex flex-col items-center py-1 min-w-[50px]" id="nav-demand">
+      <i class="fa-solid fa-triangle-exclamation text-sm mb-0.5"></i>
+      <span>Demand</span>
+    </button>
+    <button onclick="switchTab('settings')" class="flex flex-col items-center py-1 min-w-[50px]" id="nav-settings">
+      <i class="fa-solid fa-gear text-sm mb-0.5"></i>
+      <span>Setup</span>
     </button>
   </nav>
 
-  <!-- JavaScript Logic -->
+  <!-- JavaScript Application Engine -->
   <script>
-    // System Data Architecture (LocalStorage)
+    // LocalStorage Data Architecture
     let clients = JSON.parse(localStorage.getItem('pmms_clients')) || [];
     let loans = JSON.parse(localStorage.getItem('pmms_loans')) || [];
     let transactions = JSON.parse(localStorage.getItem('pmms_tx')) || [];
-    let batchQueue = [];
+    let expenses = JSON.parse(localStorage.getItem('pmms_expenses')) || [];
+    let config = JSON.parse(localStorage.getItem('pmms_config')) || { name: 'PMMS MICROFINANCE LTD', location: 'Kampala, Uganda', defaultRate: 20, defaultDays: 30, pin: '1234' };
 
+    let batchQueue = [];
     let activePostingClient = null;
     let activePostingLoan = null;
     let activeDisburseClient = null;
+    let activeStatementClientId = null;
+
+    // Initialization & Security PIN
+    window.addEventListener('DOMContentLoaded', () => {
+      applyCompanyConfig();
+      populateConsolidationList();
+      liveCalculateDisbursement();
+      calculateLoan();
+    });
+
+    function verifyPin() {
+      let inputPin = document.getElementById('login-pin').value;
+      let storedPin = config.pin || '1234';
+
+      if (inputPin === storedPin) {
+        document.getElementById('login-overlay').classList.add('hidden');
+        document.getElementById('login-pin').value = '';
+      } else {
+        alert('Incorrect PIN code. Try again!');
+        document.getElementById('login-pin').value = '';
+      }
+    }
+
+    function lockApp() {
+      document.getElementById('login-overlay').classList.remove('hidden');
+    }
 
     function saveAll() {
       localStorage.setItem('pmms_clients', JSON.stringify(clients));
       localStorage.setItem('pmms_loans', JSON.stringify(loans));
       localStorage.setItem('pmms_tx', JSON.stringify(transactions));
+      localStorage.setItem('pmms_expenses', JSON.stringify(expenses));
+      localStorage.setItem('pmms_config', JSON.stringify(config));
     }
 
-    // UI Tab Navigation
+    function applyCompanyConfig() {
+      document.getElementById('header-company-name').innerText = config.name || 'PMMS MICROFINANCE LTD';
+      document.getElementById('header-company-loc').innerText = config.location || '';
+      document.getElementById('header-default-term').innerText = `${config.defaultRate || 20}% / ${config.defaultDays || 30} Days`;
+      
+      document.getElementById('cfg-name').value = config.name || '';
+      document.getElementById('cfg-loc').value = config.location || '';
+      document.getElementById('cfg-pin').value = config.pin || '1234';
+      document.getElementById('cfg-rate').value = config.defaultRate || 20;
+      document.getElementById('cfg-days').value = config.defaultDays || 30;
+    }
+
+    function saveCompanySettings() {
+      config.name = document.getElementById('cfg-name').value || 'PMMS MICROFINANCE LTD';
+      config.location = document.getElementById('cfg-loc').value || '';
+      config.pin = document.getElementById('cfg-pin').value || '1234';
+      config.defaultRate = parseFloat(document.getElementById('cfg-rate').value) || 20;
+      config.defaultDays = parseFloat(document.getElementById('cfg-days').value) || 30;
+      saveAll();
+      applyCompanyConfig();
+      alert('Company settings & Security PIN saved!');
+    }
+
+    // Tab Switcher
     function switchTab(tabId) {
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       document.getElementById('tab-' + tabId).classList.remove('hidden');
       document.querySelectorAll('nav button').forEach(el => el.classList.remove('text-slate-800', 'font-bold'));
       document.getElementById('nav-' + tabId).classList.add('text-slate-800', 'font-bold');
+
+      if (tabId === 'disburse') populateConsolidationList();
+      if (tabId === 'reports') renderReports();
+      if (tabId === 'demand') renderDemandList();
     }
 
-    // Calculator Logic
-    function calculateLoan(val) {
-      let principal = parseFloat(val) || 0;
-      let interest = principal * 0.20;
+    // Standalone Calculator Logic
+    function calculateLoan() {
+      let principal = parseFloat(document.getElementById('calc-input').value) || 0;
+      let rate = parseFloat(document.getElementById('calc-rate').value) || config.defaultRate || 20;
+      let days = parseFloat(document.getElementById('calc-days').value) || config.defaultDays || 30;
+
+      let interest = principal * (rate / 100);
       let total = principal + interest;
-      let daily = total / 30;
+      let daily = days > 0 ? total / days : 0;
 
       document.getElementById('c-principal').innerText = 'UGX ' + principal.toLocaleString();
       document.getElementById('c-interest').innerText = 'UGX ' + interest.toLocaleString();
       document.getElementById('c-total').innerText = 'UGX ' + total.toLocaleString();
-      document.getElementById('c-daily').innerText = 'UGX ' + daily.toFixed(0).toLocaleString();
+      document.getElementById('c-daily').innerText = 'UGX ' + Math.round(daily).toLocaleString();
     }
 
-    // Disbursement Logic
+    // Multi-Loan Consolidation & Disbursement
     function toggleClientMode(isNew) {
       document.getElementById('new-client-fields').classList.toggle('hidden', !isNew);
       document.getElementById('existing-client-fields').classList.toggle('hidden', isNew);
+      activeDisburseClient = null;
+      liveCalculateDisbursement();
     }
 
     function searchDisburseClients(query) {
       let container = document.getElementById('disburse-search-results');
       if (!query) return container.classList.add('hidden');
       let matches = clients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()) || c.acc.includes(query));
-      
+
       container.innerHTML = matches.map(c => `
         <div class="p-2 text-xs hover:bg-slate-100 cursor-pointer" onclick="selectDisburseClient(${c.id})">
           <b>${c.name}</b> (${c.acc})
@@ -210,14 +557,75 @@
 
     function selectDisburseClient(id) {
       activeDisburseClient = clients.find(c => c.id === id);
-      document.getElementById('disburse-selected-name').innerText = `Selected: ${activeDisburseClient.name} (${activeDisburseClient.acc})`;
+      document.getElementById('disburse-selected-name').innerText = `Primary Client: ${activeDisburseClient.name} (${activeDisburseClient.acc})`;
       document.getElementById('disburse-search-results').classList.add('hidden');
+      populateConsolidationList();
+      liveCalculateDisbursement();
+    }
+
+    function toggleConsolidationPanel() {
+      document.getElementById('consolidation-selector-panel').classList.toggle('hidden');
+    }
+
+    function populateConsolidationList() {
+      let activeLoans = loans.filter(l => l.status === 'Active' && l.balance > 0);
+      let container = document.getElementById('active-loans-checkbox-list');
+
+      if (activeLoans.length === 0) {
+        container.innerHTML = `<div class="text-slate-500 italic">No active loans available to merge.</div>`;
+        return;
+      }
+
+      container.innerHTML = activeLoans.map(loan => {
+        let client = clients.find(c => c.id === loan.clientId);
+        let isCurrentClient = activeDisburseClient && activeDisburseClient.id === client.id;
+        return `
+          <label class="flex items-center justify-between p-1.5 border rounded bg-white text-xs cursor-pointer">
+            <span class="flex items-center gap-2">
+              <input type="checkbox" value="${loan.id}" class="combine-loan-checkbox" onchange="liveCalculateDisbursement()">
+              <b>${client ? client.name : 'Unknown'}</b> ${isCurrentClient ? '<span class="text-blue-600 font-bold">(Self)</span>' : ''}
+            </span>
+            <span class="font-bold text-amber-700">UGX ${loan.balance.toLocaleString()}</span>
+          </label>
+        `;
+      }).join('');
+    }
+
+    function getMergedSelectedLoansBalance() {
+      let selectedCheckboxes = document.querySelectorAll('.combine-loan-checkbox:checked');
+      let totalMerged = 0;
+      selectedCheckboxes.forEach(cb => {
+        let loanId = parseInt(cb.value);
+        let loan = loans.find(l => l.id === loanId);
+        if (loan) totalMerged += loan.balance;
+      });
+      return totalMerged;
+    }
+
+    function liveCalculateDisbursement() {
+      let principalInput = parseFloat(document.getElementById('disburse-principal').value) || 0;
+      let rate = parseFloat(document.getElementById('disburse-rate').value) || config.defaultRate || 20;
+      let days = parseFloat(document.getElementById('disburse-days').value) || config.defaultDays || 30;
+
+      let mergedBalance = getMergedSelectedLoansBalance();
+      let totalEffectivePrincipal = principalInput + mergedBalance;
+      let interest = totalEffectivePrincipal * (rate / 100);
+      let totalPayable = totalEffectivePrincipal + interest;
+      let dailyTarget = days > 0 ? totalPayable / days : 0;
+
+      document.getElementById('dis-base').innerText = 'UGX ' + principalInput.toLocaleString();
+      document.getElementById('dis-combined').innerText = '+ UGX ' + mergedBalance.toLocaleString();
+      document.getElementById('dis-total-principal').innerText = 'UGX ' + totalEffectivePrincipal.toLocaleString();
+      document.getElementById('dis-interest').innerText = 'UGX ' + interest.toLocaleString();
+      document.getElementById('dis-total').innerText = 'UGX ' + totalPayable.toLocaleString();
+      document.getElementById('dis-daily').innerText = 'UGX ' + Math.round(dailyTarget).toLocaleString();
     }
 
     function processDisbursement() {
       let isNew = document.querySelector('input[name="client-type"]:checked').value === 'new';
-      let principal = parseFloat(document.getElementById('disburse-principal').value) || 0;
-      if (principal <= 0) return alert('Enter a valid principal amount.');
+      let principalInput = parseFloat(document.getElementById('disburse-principal').value) || 0;
+      let rate = parseFloat(document.getElementById('disburse-rate').value) || config.defaultRate || 20;
+      let days = parseFloat(document.getElementById('disburse-days').value) || config.defaultDays || 30;
 
       let client;
       if (isNew) {
@@ -227,32 +635,52 @@
         client = { id: Date.now(), name, phone, acc: 'ACC' + Math.floor(1000 + Math.random() * 9000) };
         clients.push(client);
       } else {
-        if (!activeDisburseClient) return alert('Select a client.');
+        if (!activeDisburseClient) return alert('Select a primary client.');
         client = activeDisburseClient;
       }
 
-      let interest = principal * 0.20;
-      let total = principal + interest;
+      let selectedCheckboxes = document.querySelectorAll('.combine-loan-checkbox:checked');
+      let mergedBalance = 0;
+
+      // Close merged loans
+      selectedCheckboxes.forEach(cb => {
+        let loanId = parseInt(cb.value);
+        let loan = loans.find(l => l.id === loanId);
+        if (loan) {
+          mergedBalance += loan.balance;
+          loan.status = 'Consolidated & Merged into Loan #' + client.acc;
+          loan.balance = 0;
+        }
+      });
+
+      let totalPrincipal = principalInput + mergedBalance;
+      if (totalPrincipal <= 0) return alert('Loan principal amount must be greater than UGX 0.');
+
+      let interest = totalPrincipal * (rate / 100);
+      let totalPayable = totalPrincipal + interest;
+
       let loan = {
         id: Date.now(),
         clientId: client.id,
-        principal,
+        principal: totalPrincipal,
+        rate,
+        days,
         interest,
-        totalPayable: total,
-        dailyTarget: total / 30,
-        balance: total,
+        totalPayable,
+        dailyTarget: totalPayable / days,
+        balance: totalPayable,
         arrears: 0,
         status: 'Active',
-        date: new Date().toLocaleDateString()
+        date: new Date().toISOString().split('T')[0]
       };
 
       loans.push(loan);
       saveAll();
-      alert('Loan Disbursed Successfully!');
+      alert('Loan Disbursed Successfully! ' + (selectedCheckboxes.length > 0 ? selectedCheckboxes.length + ' active loans merged.' : ''));
       location.reload();
     }
 
-    // Batch Posting Logic
+    // Batch Posting Logic with Automated Dynamic SMS Alert
     function searchPostingClients(query) {
       let container = document.getElementById('post-search-results');
       if (!query) return container.classList.add('hidden');
@@ -277,9 +705,10 @@
 
       document.getElementById('post-client-name').innerText = activePostingClient.name;
       document.getElementById('post-client-acc').innerText = 'Acc: ' + activePostingClient.acc + ' | Phone: ' + activePostingClient.phone;
-      document.getElementById('post-arrears').innerText = 'UGX ' + activePostingLoan.arrears;
+      document.getElementById('post-client-call').href = 'tel:' + activePostingClient.phone;
+      document.getElementById('post-arrears').innerText = 'UGX ' + activePostingLoan.arrears.toLocaleString();
       document.getElementById('post-balance').innerText = 'UGX ' + activePostingLoan.balance.toLocaleString();
-      document.getElementById('post-daily').innerText = 'UGX ' + activePostingLoan.dailyTarget.toFixed(0);
+      document.getElementById('post-daily').innerText = 'UGX ' + Math.round(activePostingLoan.dailyTarget).toLocaleString();
 
       document.getElementById('post-selected-card').classList.remove('hidden');
       document.getElementById('post-form').classList.remove('hidden');
@@ -295,7 +724,8 @@
         client: activePostingClient,
         loan: activePostingLoan,
         amount,
-        channel
+        channel,
+        date: new Date().toISOString().split('T')[0]
       });
 
       renderBatch();
@@ -318,6 +748,9 @@
     function postAllBatch() {
       if (batchQueue.length === 0) return alert('Batch queue is empty.');
 
+      let allowPrint = document.getElementById('toggle-print-receipt').checked;
+      let companyHeading = config.name || 'PMMS MICROFINANCE LTD';
+
       batchQueue.forEach(item => {
         let loan = loans.find(l => l.id === item.loan.id);
         loan.balance -= item.amount;
@@ -326,27 +759,66 @@
           loan.status = 'Settled';
         }
 
-        transactions.push({
-          id: Date.now(),
+        let tx = {
+          id: Date.now() + Math.floor(Math.random() * 100),
           loanId: loan.id,
           clientId: item.client.id,
           amount: item.amount,
           channel: item.channel,
-          date: new Date().toLocaleDateString()
-        });
+          date: new Date().toISOString().split('T')[0]
+        };
+        transactions.push(tx);
 
-        // Trigger SMS Simulation Alert
-        alert(`AUTOMATED SMS RECEIPT SENT\nTo: ${item.client.phone}\nDear ${item.client.name}, payment of UGX ${item.amount.toLocaleString()} received via ${item.channel}. New Balance: UGX ${loan.balance.toLocaleString()}. Thank you!`);
+        if (allowPrint) {
+          generateReceiptPDF(item.client, tx, loan.balance);
+        }
+
+        // SMS Notification Alert
+        alert(`AUTOMATED SMS RECEIPT SENT\nSender: ${companyHeading}\nTo: ${item.client.phone}\nDear ${item.client.name}, payment of UGX ${item.amount.toLocaleString()} received via ${item.channel}. New Balance: UGX ${loan.balance.toLocaleString()}. Thank you!`);
       });
 
       saveAll();
       batchQueue = [];
       renderBatch();
-      alert('All transactions saved successfully!');
+      alert('All transactions posted successfully!');
       location.reload();
     }
 
-    // Statement Logic
+    function generateReceiptPDF(client, tx, newBalance) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ format: [80, 120], unit: 'mm' });
+
+      let companyHeading = config.name || "PMMS MICROFINANCE LTD";
+
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.text(companyHeading, 40, 10, { align: "center" });
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      if(config.location) doc.text(config.location, 40, 14, { align: "center" });
+      
+      doc.text("--------------------------------------------------", 40, 18, { align: "center" });
+      doc.text(`Receipt No: TXN-${tx.id}`, 5, 23);
+      doc.text(`Date: ${tx.date}`, 5, 28);
+      doc.text(`Client: ${client.name}`, 5, 33);
+      doc.text(`Account: ${client.acc}`, 5, 38);
+      doc.text("--------------------------------------------------", 40, 43, { align: "center" });
+
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Amount Paid: UGX ${tx.amount.toLocaleString()}`, 5, 50);
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Channel: ${tx.channel}`, 5, 55);
+      doc.text(`Remaining Balance: UGX ${newBalance.toLocaleString()}`, 5, 60);
+
+      doc.text("--------------------------------------------------", 40, 67, { align: "center" });
+      doc.text("Thank you for choosing " + companyHeading, 40, 73, { align: "center" });
+
+      doc.save(`Receipt_${client.name}_${tx.id}.pdf`);
+    }
+
+    // Statements & Management
     function searchStatementClients(query) {
       let container = document.getElementById('statement-search-results');
       if (!query) return container.classList.add('hidden');
@@ -361,13 +833,33 @@
     }
 
     function viewStatement(clientId) {
+      activeStatementClientId = clientId;
       let client = clients.find(c => c.id === clientId);
-      let loan = loans.find(l => l.clientId === clientId);
-      let txs = transactions.filter(t => t.clientId === clientId);
+      let loan = loans.find(l => l.clientId === clientId && l.status === 'Active');
 
       document.getElementById('st-name').innerText = client.name;
       document.getElementById('st-acc').innerText = 'Acc: ' + client.acc + ' | Phone: ' + client.phone;
+      document.getElementById('st-call-btn').href = 'tel:' + client.phone;
       document.getElementById('st-balance').innerText = loan ? 'Outstanding Balance: UGX ' + loan.balance.toLocaleString() : 'No Active Loan';
+
+      let loanControls = document.getElementById('st-loan-controls');
+      if (loan) loanControls.classList.remove('hidden');
+      else loanControls.classList.add('hidden');
+
+      applyDateFilter();
+      document.getElementById('statement-view').classList.remove('hidden');
+      document.getElementById('statement-search-results').classList.add('hidden');
+    }
+
+    function applyDateFilter() {
+      if (!activeStatementClientId) return;
+      let fromDate = document.getElementById('filter-date-from').value;
+      let toDate = document.getElementById('filter-date-to').value;
+
+      let txs = transactions.filter(t => t.clientId === activeStatementClientId);
+
+      if (fromDate) txs = txs.filter(t => t.date >= fromDate);
+      if (toDate) txs = txs.filter(t => t.date <= toDate);
 
       document.getElementById('statement-list').innerHTML = txs.map(t => `
         <div class="bg-white p-2 border rounded-lg text-xs flex justify-between items-center">
@@ -378,9 +870,186 @@
           <span class="text-green-600 font-bold">Posted</span>
         </div>
       `).join('');
+    }
 
-      document.getElementById('statement-view').classList.remove('hidden');
-      document.getElementById('statement-search-results').classList.add('hidden');
+    function reverseActiveLoan() {
+      if (!activeStatementClientId) return;
+      let loan = loans.find(l => l.clientId === activeStatementClientId && l.status === 'Active');
+      if (!loan) return alert('No active loan found to reverse.');
+
+      if (confirm('Are you sure you want to reverse/delete this active loan?')) {
+        loans = loans.filter(l => l.id !== loan.id);
+        transactions = transactions.filter(t => t.loanId !== loan.id);
+        saveAll();
+        alert('Loan reversed and removed successfully.');
+        location.reload();
+      }
+    }
+
+    function openEditClientModal() {
+      if (!activeStatementClientId) return;
+      let client = clients.find(c => c.id === activeStatementClientId);
+      document.getElementById('edit-client-id').value = client.id;
+      document.getElementById('edit-client-name').value = client.name;
+      document.getElementById('edit-client-phone').value = client.phone;
+      document.getElementById('edit-client-modal').classList.remove('hidden');
+    }
+
+    function closeEditClientModal() {
+      document.getElementById('edit-client-modal').classList.add('hidden');
+    }
+
+    function saveEditedClient() {
+      let id = parseInt(document.getElementById('edit-client-id').value);
+      let client = clients.find(c => c.id === id);
+      client.name = document.getElementById('edit-client-name').value;
+      client.phone = document.getElementById('edit-client-phone').value;
+      saveAll();
+      closeEditClientModal();
+      viewStatement(id);
+      alert('Client details updated.');
+    }
+
+    function exportPDFStatement() {
+      if (!activeStatementClientId) return;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      let client = clients.find(c => c.id === activeStatementClientId);
+      let txs = transactions.filter(t => t.clientId === activeStatementClientId);
+
+      doc.setFontSize(16);
+      doc.text(config.name || "PMMS MICROFINANCE LTD", 14, 15);
+      doc.setFontSize(10);
+      doc.text(config.location || "", 14, 21);
+      doc.text(`Statement of Account: ${client.name} (${client.acc})`, 14, 28);
+      doc.text(`Phone: ${client.phone}`, 14, 33);
+
+      let tableData = txs.map(t => [t.date, `UGX ${t.amount.toLocaleString()}`, t.channel]);
+      doc.autoTable({
+        startY: 38,
+        head: [['Date', 'Amount Paid', 'Channel']],
+        body: tableData
+      });
+
+      doc.save(`Statement_${client.name}.pdf`);
+    }
+
+    // Reports, Expenses & Aging Analysis
+    function addExpense() {
+      let desc = document.getElementById('exp-desc').value;
+      let amount = parseFloat(document.getElementById('exp-amount').value) || 0;
+      if (!desc || amount <= 0) return alert('Enter valid expense details.');
+
+      expenses.push({ id: Date.now(), desc, amount, date: new Date().toISOString().split('T')[0] });
+      saveAll();
+      document.getElementById('exp-desc').value = '';
+      document.getElementById('exp-amount').value = '';
+      renderReports();
+    }
+
+    function renderReports() {
+      let cash = transactions.filter(t => t.channel === 'Cash').reduce((s, t) => s + t.amount, 0);
+      let mtn = transactions.filter(t => t.channel === 'MTN MobileMoney').reduce((s, t) => s + t.amount, 0);
+      let airtel = transactions.filter(t => t.channel === 'Airtel Money').reduce((s, t) => s + t.amount, 0);
+      let bank = transactions.filter(t => t.channel === 'Banking').reduce((s, t) => s + t.amount, 0);
+
+      let totalCol = cash + mtn + airtel + bank;
+      let totalDisb = loans.reduce((s, l) => s + l.principal, 0);
+      let totalExp = expenses.reduce((s, e) => s + e.amount, 0);
+
+      document.getElementById('rep-tot-collections').innerText = 'UGX ' + totalCol.toLocaleString();
+      document.getElementById('rep-tot-disbursed').innerText = 'UGX ' + totalDisb.toLocaleString();
+      document.getElementById('rep-cash').innerText = 'UGX ' + cash.toLocaleString();
+      document.getElementById('rep-mtn').innerText = 'UGX ' + mtn.toLocaleString();
+      document.getElementById('rep-airtel').innerText = 'UGX ' + airtel.toLocaleString();
+      document.getElementById('rep-bank').innerText = 'UGX ' + bank.toLocaleString();
+      document.getElementById('rep-expenses').innerText = 'UGX ' + totalExp.toLocaleString();
+
+      let body = document.getElementById('aging-table-body');
+      body.innerHTML = clients.map(c => {
+        let loan = loans.find(l => l.clientId === c.id && l.status === 'Active');
+        return `
+          <tr class="border-b">
+            <td class="p-2 font-bold">${c.name}</td>
+            <td class="p-2"><a href="tel:${c.phone}" class="text-blue-600">${c.phone}</a></td>
+            <td class="p-2 text-right font-bold text-blue-600">UGX ${loan ? loan.balance.toLocaleString() : '0'}</td>
+            <td class="p-2 text-right font-bold text-red-600">UGX ${loan ? loan.arrears.toLocaleString() : '0'}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function exportPDFAging() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(14);
+      doc.text(`${config.name || "PMMS"} - Aging Analysis Report`, 14, 15);
+
+      let rows = clients.map(c => {
+        let loan = loans.find(l => l.clientId === c.id && l.status === 'Active');
+        return [c.name, c.phone, loan ? `UGX ${loan.balance.toLocaleString()}` : 'UGX 0', loan ? `UGX ${loan.arrears.toLocaleString()}` : 'UGX 0'];
+      });
+
+      doc.autoTable({
+        startY: 22,
+        head: [['Client Name', 'Phone', 'Loan Balance', 'Arrears']],
+        body: rows
+      });
+
+      doc.save(`Aging_Analysis_${new Date().toISOString().split('T')[0]}.pdf`);
+    }
+
+    // Demand List
+    function renderDemandList() {
+      let activeLoans = loans.filter(l => l.status === 'Active');
+      let container = document.getElementById('demand-list-container');
+
+      if (activeLoans.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-500 text-center py-4">No active loans or demand records found.</div>`;
+        return;
+      }
+
+      container.innerHTML = activeLoans.map(loan => {
+        let client = clients.find(c => c.id === loan.clientId);
+        return `
+          <div class="bg-white p-3 border rounded-lg text-xs space-y-1">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-sm text-slate-800">${client.name}</span>
+              <a href="tel:${client.phone}" class="bg-green-600 text-white px-2 py-0.5 rounded text-[11px] font-bold">
+                <i class="fa-solid fa-phone"></i> Call
+              </a>
+            </div>
+            <div class="text-slate-500">Account: ${client.acc} | Phone: ${client.phone}</div>
+            <div class="flex justify-between pt-1 font-bold border-t">
+              <span class="text-slate-600">Daily Target: UGX ${Math.round(loan.dailyTarget).toLocaleString()}</span>
+              <span class="text-red-600">Total Due: UGX ${loan.balance.toLocaleString()}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function exportPDFDemand() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(14);
+      doc.text(`${config.name || "PMMS"} - Client Demand List`, 14, 15);
+
+      let activeLoans = loans.filter(l => l.status === 'Active');
+      let rows = activeLoans.map(loan => {
+        let client = clients.find(c => c.id === loan.clientId);
+        return [client.name, client.phone, `UGX ${Math.round(loan.dailyTarget).toLocaleString()}`, `UGX ${loan.balance.toLocaleString()}`];
+      });
+
+      doc.autoTable({
+        startY: 22,
+        head: [['Client Name', 'Phone Number', 'Daily Target', 'Outstanding Balance']],
+        body: rows
+      });
+
+      doc.save(`Demand_List_${new Date().toISOString().split('T')[0]}.pdf`);
     }
   </script>
 </body>

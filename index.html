@@ -1,6 +1,2090 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PMMS Enterprise Microfinance & Branch Network Manager</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- PDF Generation Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans pb-28">
+
+  <!-- SECURITY PIN LOGIN OVERLAY -->
+  <div id="login-overlay" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-sm text-center space-y-4 shadow-2xl">
+      <div class="w-16 h-16 bg-slate-100 text-slate-800 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+        <i class="fa-solid fa-shield-halved"></i>
+      </div>
+      <div>
+        <h2 id="login-title" class="text-xl font-bold text-slate-800">PMMS Secure Access</h2>
+        <p class="text-xs text-slate-500 mt-1">10-Hour Session expired or security lock. Enter PIN.</p>
+      </div>
+      <div>
+        <input type="password" id="login-pin" maxlength="6" placeholder="Enter PIN" class="w-full text-center text-2xl tracking-widest p-3 border rounded-xl font-bold bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-800">
+      </div>
+      <button onclick="verifyPin()" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold text-sm hover:bg-slate-900 shadow-md">
+        UNLOCK APP
+      </button>
+    </div>
+  </div>
+
+  <!-- BRANCH APPROVAL LOCK OVERLAY FOR UNAUTHORIZED / SWITCHED OFF BRANCHES -->
+  <div id="branch-lock-overlay" class="fixed inset-0 bg-slate-950/95 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md text-center space-y-4 shadow-2xl border-t-4 border-red-600">
+      <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+        <i class="fa-solid fa-ban"></i>
+      </div>
+      <div>
+        <h2 id="branch-lock-title" class="text-xl font-bold text-slate-900">Branch Access Restricted</h2>
+        <p id="branch-lock-msg" class="text-xs text-slate-600 mt-2 leading-relaxed">
+          This branch system has not been approved by Mother System Admin, or access has been switched off remotely.
+        </p>
+      </div>
+      <button onclick="checkBranchAuthorizationState()" class="w-full bg-slate-800 text-white py-2.5 rounded-xl font-bold text-xs hover:bg-slate-900">
+        <i class="fa-solid fa-rotate-right"></i> Check Authorization Status
+      </button>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <header class="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10">
+    <div class="flex justify-between items-center max-w-xl mx-auto">
+      <div>
+        <h1 class="text-lg font-bold flex items-center gap-2">
+          <i class="fa-solid fa-building-columns text-teal-400"></i>
+          <span id="header-company-name">Loan Manager (PMMS)</span>
+        </h1>
+        <p id="header-company-loc" class="text-xs text-slate-400"></p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300 font-semibold" id="header-branch-tag">Mother Branch</span>
+        <button onclick="lockApp()" class="text-slate-400 hover:text-white text-xs p-1" title="Lock App"><i class="fa-solid fa-right-from-bracket"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="p-4 max-w-xl mx-auto space-y-4">
+
+    <!-- PENDING CONSOLIDATION APPROVALS ALERT FOR MOTHER SYSTEM -->
+    <div id="mother-consolidation-alerts" class="hidden space-y-2"></div>
+
+    <!-- TAB 1: BATCH POSTING -->
+    <section id="tab-posting" class="tab-content space-y-4">
+      <h2 class="text-lg font-bold border-b pb-2 flex justify-between items-center">
+        <span>Repayment & Batch Posting</span>
+        <label class="text-xs font-normal flex items-center gap-1 cursor-pointer bg-slate-200 px-2 py-1 rounded">
+          <input type="checkbox" id="toggle-print-receipt" checked class="rounded"> Print/PDF Receipt
+        </label>
+      </h2>
+      
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-slate-600">Search Active Client</label>
+        <input type="text" id="post-search" oninput="searchPostingClients(this.value)" placeholder="Search name, phone, plate, or account..." class="w-full p-2.5 border rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-800">
+        <div id="post-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
+      </div>
+
+      <div id="post-selected-card" class="bg-slate-800 text-white p-3 rounded-lg hidden text-sm space-y-1">
+        <div class="flex justify-between items-start">
+          <div>
+            <div class="font-bold text-base" id="post-client-name"></div>
+            <div class="text-slate-300 text-xs" id="post-client-acc"></div>
+            <div class="text-teal-300 text-xs font-semibold" id="post-client-type-info"></div>
+          </div>
+          <a id="post-client-call" href="#" class="bg-green-600 text-white px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1">
+            <i class="fa-solid fa-phone"></i> Call
+          </a>
+        </div>
+        <div class="grid grid-cols-4 gap-1 pt-2 border-t border-slate-700 text-center">
+          <div><span class="block text-[10px] text-slate-400">Arrears</span><span id="post-arrears" class="text-red-400 font-bold text-xs"></span></div>
+          <div><span class="block text-[10px] text-slate-400">Advance</span><span id="post-advance" class="text-emerald-400 font-bold text-xs"></span></div>
+          <div><span class="block text-[10px] text-slate-400">Balance</span><span id="post-balance" class="text-blue-400 font-bold text-xs"></span></div>
+          <div><span class="block text-[10px] text-slate-400">Daily Target</span><span id="post-daily" class="text-green-400 font-bold text-xs"></span></div>
+        </div>
+      </div>
+
+      <div id="post-form" class="space-y-3 hidden">
+        <div class="flex gap-2">
+          <input type="number" id="post-amount" placeholder="Amount Paid (UGX)" class="w-1/2 p-2.5 border rounded-lg bg-white text-sm">
+          <select id="post-channel" class="w-1/2 p-2.5 border rounded-lg bg-white text-sm">
+            <option value="Cash">Cash</option>
+            <option value="MTN Mobile Money">MTN Mobile Money</option>
+            <option value="Airtel Mobile Money">Airtel Mobile Money</option>
+            <option value="Banking">Bank Transfer</option>
+          </select>
+        </div>
+        <button onclick="addToBatch()" class="w-full bg-teal-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-teal-700">Add to Batch</button>
+      </div>
+
+      <div class="border-t pt-3">
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="font-bold text-sm">Pending Batch (<span id="batch-count">0</span>)</h3>
+          <button onclick="postAllBatch()" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-900">POST ALL & SAVE</button>
+        </div>
+        <div id="batch-list" class="space-y-2"></div>
+      </div>
+    </section>
+
+    <!-- TAB 2: DISBURSEMENT & MULTI-SEARCH LOAN CONSOLIDATION -->
+    <section id="tab-disburse" class="tab-content space-y-4 hidden">
+      <h2 class="text-lg font-bold border-b pb-2">Loan Disbursement & Roll-over</h2>
+      
+      <div class="flex gap-4 mb-2">
+        <label class="flex items-center gap-2 text-sm font-medium">
+          <input type="radio" name="client-type" value="existing" checked onclick="toggleClientMode(false)"> Primary Client
+        </label>
+        <label class="flex items-center gap-2 text-sm font-medium">
+          <input type="radio" name="client-type" value="new" onclick="toggleClientMode(true)"> New Client
+        </label>
+      </div>
+
+      <!-- New Client Inputs -->
+      <div id="new-client-fields" class="space-y-2 hidden border p-3 rounded-lg bg-white">
+        <div class="font-bold text-xs text-slate-700">New Client Details</div>
+        <input type="text" id="new-name" placeholder="Full Client Name" class="w-full p-2 border rounded text-xs">
+        <input type="tel" id="new-phone" placeholder="UG Phone (e.g., 0771234567 or +256701234567)" class="w-full p-2 border rounded text-xs">
+        
+        <!-- Category & Boda Boda Number Plate System -->
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] text-slate-600 font-semibold mb-1">Client Category</label>
+            <select id="new-client-category" onchange="toggleBodaPlateInput('new')" class="w-full p-2 border rounded text-xs bg-white">
+              <option value="OTHERS">OTHERS</option>
+              <option value="BODABODA">BODABODA</option>
+            </select>
+          </div>
+          <div id="new-plate-container" class="hidden">
+            <label class="block text-[10px] text-slate-600 font-semibold mb-1">Motorcycle Number Plate</label>
+            <input type="text" id="new-number-plate" placeholder="e.g. UER 123X" class="w-full p-2 border rounded text-xs uppercase bg-white">
+          </div>
+        </div>
+
+        <p class="text-[11px] text-teal-700 italic">* Automatic Ledger Fee of UGX 10,000 applies to new clients.</p>
+      </div>
+
+      <!-- Existing Client Search -->
+      <div id="existing-client-fields">
+        <input type="text" id="disburse-search" oninput="searchDisburseClients(this.value)" placeholder="Search primary client by name, phone, or plate..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        <div id="disburse-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
+        <div id="disburse-selected-name" class="text-xs font-bold text-green-700 mt-1"></div>
+      </div>
+
+      <!-- GUARANTOR DETAILS SECTION -->
+      <div class="bg-slate-50 border p-3 rounded-lg space-y-2">
+        <div class="text-xs font-bold text-slate-700"><i class="fa-solid fa-user-shield"></i> Guarantor Information (Max 10 Active Client Cap)</div>
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" id="guarantor-name" placeholder="Guarantor Name" class="p-2 border rounded text-xs bg-white">
+          <input type="tel" id="guarantor-phone" placeholder="UG Guarantor Phone (07...)" class="p-2 border rounded text-xs bg-white">
+        </div>
+        <input type="text" id="guarantor-info" placeholder="Guarantor National ID / Address" class="w-full p-2 border rounded text-xs bg-white">
+      </div>
+
+      <!-- MULTI-SEARCH CONSOLIDATION SELECTOR -->
+      <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs space-y-2">
+        <div class="font-bold text-amber-900"><i class="fa-solid fa-layer-group"></i> Combine Outstanding Loans From Search</div>
+        <p class="text-[11px] text-amber-800">Search and pick active loans across clients to merge. Require Mother System Approval before clearing balances.</p>
+        
+        <input type="text" id="merge-search-input" oninput="searchLoansToCombine(this.value)" placeholder="Type client name/phone/plate to merge loan..." class="w-full p-2 border rounded text-xs bg-white">
+        <div id="merge-search-results" class="bg-white border rounded divide-y max-h-32 overflow-y-auto hidden"></div>
+
+        <!-- Selected Merged List -->
+        <div id="selected-merged-loans-container" class="space-y-1 pt-1">
+          <div class="text-[10px] text-slate-500 font-bold uppercase">Loans Marked for Consolidation:</div>
+          <div id="selected-merged-loans-list" class="space-y-1"></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-slate-600">Interest Rate (%)</label>
+          <input type="number" id="disburse-rate" value="20" oninput="liveCalculateDisbursement()" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-slate-600">Tenure (Days)</label>
+          <input type="number" id="disburse-days" value="30" oninput="liveCalculateDisbursement()" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-slate-600">New Cash Disbursement Amount (UGX)</label>
+        <input type="number" id="disburse-principal" oninput="liveCalculateDisbursement()" placeholder="Enter Amount" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+      </div>
+
+      <!-- Auto Calculator Summary Box -->
+      <div class="bg-white border p-3 rounded-lg text-xs space-y-1.5 shadow-sm">
+        <div class="flex justify-between"><span>New Cash Principal:</span> <span id="dis-base" class="font-bold">UGX 0</span></div>
+        <div class="flex justify-between text-amber-700"><span>Merged Outstanding Balances:</span> <span id="dis-combined" class="font-bold">+ UGX 0</span></div>
+        <div class="flex justify-between font-bold"><span>Effective Gross Principal:</span> <span id="dis-total-principal" class="text-slate-800">UGX 0</span></div>
+        <div class="flex justify-between text-teal-700"><span>Calculated Interest:</span> <span id="dis-interest" class="font-bold">UGX 0</span></div>
+        <div class="flex justify-between text-slate-600"><span>Processing Fee (Mandatory):</span> <span class="font-bold text-blue-600">UGX 10,000</span></div>
+        <div id="row-ledger-fee" class="flex justify-between text-slate-600 hidden"><span>Ledger Fee (New Client):</span> <span class="font-bold text-purple-600">UGX 10,000</span></div>
+        <hr>
+        <div class="flex justify-between font-bold text-sm text-slate-800"><span>Total Loan Payable:</span> <span id="dis-total">UGX 0</span></div>
+        <div class="flex justify-between font-bold text-green-700"><span>Daily Target:</span> <span id="dis-daily">UGX 0</span></div>
+      </div>
+
+      <button onclick="processDisbursement()" class="w-full bg-slate-800 text-white py-3 rounded-lg font-bold text-sm hover:bg-slate-900 shadow">DISBURSE LOAN</button>
+    </section>
+
+    <!-- TAB 3: CALCULATOR -->
+    <section id="tab-calc" class="tab-content space-y-4 hidden">
+      <h2 class="text-lg font-bold border-b pb-2">Loan Calculator</h2>
+      
+      <div class="grid grid-cols-2 gap-2">
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-slate-600">Interest Rate (%)</label>
+          <input type="number" id="calc-rate" value="20" oninput="calculateLoan()" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-slate-600">Duration (Days)</label>
+          <input type="number" id="calc-days" value="30" oninput="calculateLoan()" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-slate-600">Principal Amount (UGX)</label>
+        <input type="number" id="calc-input" oninput="calculateLoan()" placeholder="Enter principal..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
+      </div>
+
+      <div class="bg-white p-4 border rounded-lg space-y-2 text-sm">
+        <div class="flex justify-between"><span>Principal:</span> <span id="c-principal" class="font-bold">UGX 0</span></div>
+        <hr>
+        <div class="flex justify-between text-amber-700"><span>Interest:</span> <span id="c-interest" class="font-bold">UGX 0</span></div>
+        <hr>
+        <div class="flex justify-between font-bold text-base"><span>Total Payable:</span> <span id="c-total">UGX 0</span></div>
+        <hr>
+        <div class="flex justify-between text-green-700 font-bold"><span>Daily Target:</span> <span id="c-daily">UGX 0</span></div>
+      </div>
+    </section>
+
+    <!-- TAB 4: STATEMENTS & CLIENT EDIT / SOFT DELETE -->
+    <section id="tab-statement" class="tab-content space-y-4 hidden">
+      <h2 class="text-lg font-bold border-b pb-2">Client Statements & Management</h2>
+      
+      <div class="bg-white p-3 border rounded-lg space-y-2">
+        <div class="text-xs font-bold text-slate-700">Filter Transactions by Date</div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] text-slate-500">From Date</label>
+            <input type="date" id="filter-date-from" onchange="applyDateFilter()" class="w-full p-1.5 border rounded text-xs">
+          </div>
+          <div>
+            <label class="block text-[10px] text-slate-500">To Date</label>
+            <input type="date" id="filter-date-to" onchange="applyDateFilter()" class="w-full p-1.5 border rounded text-xs">
+          </div>
+        </div>
+      </div>
+
+      <input type="text" id="statement-search" oninput="searchStatementClients(this.value)" placeholder="Search client for statement..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
+      <div id="statement-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
+
+      <div id="statement-view" class="space-y-3 hidden">
+        <div class="bg-white p-3 border rounded-lg text-xs space-y-2">
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="font-bold text-sm" id="st-name"></div>
+              <div id="st-acc" class="text-slate-500"></div>
+              <div id="st-type-plate" class="text-teal-700 font-bold mt-0.5"></div>
+              <div id="st-guarantor" class="text-amber-800 font-semibold mt-0.5"></div>
+            </div>
+            <div class="flex gap-1">
+              <button onclick="openEditClientModal()" class="bg-slate-200 text-slate-800 px-2 py-1 rounded text-xs font-bold hover:bg-slate-300">
+                <i class="fa-solid fa-pen-to-square"></i> Edit
+              </button>
+              <button id="btn-delete-cleared-client" onclick="deleteClearedClient()" class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold hover:bg-red-200 hidden">
+                <i class="fa-solid fa-user-xmark"></i> Soft Delete
+              </button>
+              <a id="st-call-btn" href="#" class="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
+                <i class="fa-solid fa-phone"></i>
+              </a>
+            </div>
+          </div>
+          
+          <div id="st-balance" class="font-bold text-blue-600 pt-1 border-t"></div>
+
+          <div id="st-loan-controls" class="hidden pt-2 border-t flex justify-between items-center">
+            <span class="text-slate-500 text-[11px]">Loan Actions:</span>
+            <button onclick="reverseActiveLoan()" class="bg-red-600 text-white px-2.5 py-1 rounded text-xs font-bold hover:bg-red-700">
+              <i class="fa-solid fa-trash-can"></i> Soft Delete Loan
+            </button>
+          </div>
+        </div>
+
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-sm">Transaction History</h3>
+          <button onclick="exportPDFStatement()" class="bg-teal-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5">
+            <i class="fa-solid fa-file-pdf"></i> PDF Statement
+          </button>
+        </div>
+
+        <div id="statement-list" class="space-y-2"></div>
+      </div>
+    </section>
+
+    <!-- TAB 5: FINANCIAL DASHBOARD -->
+    <section id="tab-reports" class="tab-content space-y-4 hidden">
+      <h2 class="text-lg font-bold border-b pb-2">Financial Summary Overview</h2>
+
+      <div class="bg-slate-800 text-white p-4 rounded-xl space-y-3 shadow-lg">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-teal-400 border-b border-slate-700 pb-2">Portfolio Executive Dashboard</h3>
+        
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-slate-700/60 p-2 rounded">
+            <span class="text-slate-400 block text-[10px]">Total Clients</span>
+            <span id="rep-total-clients" class="text-sm font-bold text-white">0</span>
+          </div>
+          <div class="bg-slate-700/60 p-2 rounded">
+            <span class="text-slate-400 block text-[10px]">Active Clients (Paid)</span>
+            <span id="rep-active-clients" class="text-sm font-bold text-emerald-400">0 (0 Paid)</span>
+          </div>
+          <div class="bg-slate-700/60 p-2 rounded">
+            <span class="text-slate-400 block text-[10px]">New Clients</span>
+            <span id="rep-new-clients" class="text-sm font-bold text-blue-300">0</span>
+          </div>
+          <div class="bg-slate-700/60 p-2 rounded">
+            <span class="text-slate-400 block text-[10px]">Collection Rate</span>
+            <span id="rep-collection-rate" class="text-sm font-bold text-teal-300">0%</span>
+          </div>
+        </div>
+
+        <div class="border-t border-slate-700 pt-2 text-xs space-y-1">
+          <div class="text-[11px] font-bold text-slate-300">Liquidity & Collections Breakdown</div>
+          <div class="flex justify-between text-slate-300"><span>Opening Cash:</span> <span id="rep-opening-cash" class="font-bold text-white">UGX 0</span></div>
+          <div class="flex justify-between text-slate-300"><span>Capitalization Top-up:</span> <span id="rep-capitalization" class="font-bold text-emerald-300">UGX 0</span></div>
+          <div class="flex justify-between text-slate-300"><span>Cash Collected:</span> <span id="rep-cash-collected" class="font-bold text-white">UGX 0</span></div>
+          <div class="flex justify-between text-slate-300"><span>MTN Mobile Money:</span> <span id="rep-mtn" class="font-bold text-yellow-300">UGX 0</span></div>
+          <div class="flex justify-between text-slate-300"><span>Airtel Mobile Money:</span> <span id="rep-airtel" class="font-bold text-red-300">UGX 0</span></div>
+          <div class="flex justify-between font-semibold text-teal-200"><span>Total Mobile Money:</span> <span id="rep-total-mm">UGX 0</span></div>
+          <div class="flex justify-between text-slate-300"><span>Bank Transfers:</span> <span id="rep-bank" class="font-bold text-white">UGX 0</span></div>
+          <div class="flex justify-between font-bold text-emerald-400 border-t border-slate-700 pt-1"><span>Total Collections:</span> <span id="rep-total-collections">UGX 0</span></div>
+        </div>
+
+        <div class="border-t border-slate-700 pt-2 text-xs space-y-1">
+          <div class="text-[11px] font-bold text-slate-300">Loans & Revenue Streams</div>
+          <div class="flex justify-between text-slate-300"><span>Loans Disbursed (Count):</span> <span id="rep-disbursed-count" class="font-bold text-white">0</span></div>
+          <div class="flex justify-between text-slate-300"><span>Total Amount Disbursed:</span> <span id="rep-disbursed-amount" class="font-bold text-blue-400">UGX 0</span></div>
+          <div class="flex justify-between text-slate-300"><span>Outstanding Principal Balance:</span> <span id="rep-principal-balance" class="font-bold text-amber-300">UGX 0</span></div>
+          <div class="flex justify-between text-slate-300"><span>Outstanding Interest Balance:</span> <span id="rep-interest-balance" class="font-bold text-amber-400">UGX 0</span></div>
+          <div class="flex justify-between text-slate-300"><span>Processing Fees Total (UGX 10k):</span> <span id="rep-processing-fees" class="font-bold text-blue-300">UGX 0</span></div>
+          <div class="flex justify-between text-slate-300"><span>Ledger Fees Total (UGX 10k):</span> <span id="rep-ledger-fees" class="font-bold text-purple-300">UGX 0</span></div>
+          <div class="flex justify-between text-red-300"><span>Total Expenses:</span> <span id="rep-expenses" class="font-bold">UGX 0</span></div>
+        </div>
+
+        <div class="border-t border-slate-600 pt-2 text-xs">
+          <div class="flex justify-between font-bold text-sm text-teal-300">
+            <span>Closing Balance (Cash + MM):</span>
+            <span id="rep-closing-balance">UGX 0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Record Expense Section -->
+      <div class="bg-white p-3 border rounded-lg space-y-2">
+        <h4 class="text-xs font-bold text-slate-700">Record Company Expense</h4>
+        <div class="grid grid-cols-2 gap-2">
+          <input type="text" id="exp-category" placeholder="Expense Category" class="p-2 border rounded text-xs bg-white">
+          <input type="number" id="exp-amount" placeholder="Amount (UGX)" class="p-2 border rounded text-xs bg-white">
+        </div>
+        <input type="text" id="exp-narration" placeholder="Expense Narration / Details..." class="w-full p-2 border rounded text-xs bg-white">
+        <button onclick="addExpense()" class="w-full bg-slate-700 text-white py-1.5 rounded text-xs font-bold hover:bg-slate-800">Add Expense</button>
+      </div>
+    </section>
+
+    <!-- TAB 6: AGING ANALYSIS & GUARANTORS (WITH ADVANCE DAYS & NUMBER PLATES) -->
+    <section id="tab-aging" class="tab-content space-y-4 hidden">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h2 class="text-lg font-bold">Aging Analysis & Guarantors</h2>
+        <button onclick="exportPDFAging()" class="bg-slate-800 text-white px-2.5 py-1 rounded text-xs font-bold">
+          <i class="fa-solid fa-download"></i> PDF Report
+        </button>
+      </div>
+
+      <div class="bg-white border rounded-lg overflow-x-auto">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-slate-800 text-white text-[11px]">
+              <th class="p-2">Client & Plate</th>
+              <th class="p-2">Guarantor</th>
+              <th class="p-2 text-right">Balance</th>
+              <th class="p-2 text-right">Arrears</th>
+              <th class="p-2 text-right">Advance Days</th>
+            </tr>
+          </thead>
+          <tbody id="aging-table-body" class="divide-y text-slate-700"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 7: EXTENDED RECORDS HUB -->
+    <section id="tab-records" class="tab-content space-y-4 hidden">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h2 class="text-lg font-bold">Financial Records Hub</h2>
+        <select id="record-period-type" onchange="renderRecordsHub()" class="p-1 border rounded text-xs font-bold">
+          <option value="daily">Daily View</option>
+          <option value="weekly">Weekly View</option>
+          <option value="monthly">Monthly Overview</option>
+          <option value="yearly">Yearly / Annual Overview</option>
+        </select>
+      </div>
+
+      <div class="bg-white p-3 border rounded-lg space-y-3">
+        <div class="flex justify-between items-center">
+          <span class="text-xs font-bold text-slate-700" id="records-period-heading">Daily Record Log</span>
+          <button onclick="exportRecordsPDF()" class="bg-teal-700 text-white px-2.5 py-1 rounded text-xs font-bold">
+            <i class="fa-solid fa-file-pdf"></i> Download PDF
+          </button>
+        </div>
+        <div id="records-list-container" class="space-y-2 max-h-96 overflow-y-auto"></div>
+      </div>
+    </section>
+
+    <!-- TAB 8: DEFAULTERS LIST (STRICT 30 DAYS WITHOUT PAYMENT) -->
+    <section id="tab-demand" class="tab-content space-y-4 hidden">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h2 class="text-lg font-bold text-red-700">Defaulters List (30+ Days Unpaid)</h2>
+        <button onclick="exportPDFDemand()" class="bg-red-600 text-white px-2.5 py-1 rounded text-xs font-bold flex items-center gap-1">
+          <i class="fa-solid fa-file-pdf"></i> Defaulters PDF
+        </button>
+      </div>
+
+      <p class="text-xs text-slate-500 italic">* Strict Requirement: Displays active clients who have gone 30 consecutive days or more without making any payment.</p>
+      <div id="demand-list-container" class="space-y-2"></div>
+    </section>
+
+    <!-- TAB 9: SETUP, CAPITAL & BRANCH MANAGEMENT (WITH REMOTE APPROVAL & KILL SWITCH) -->
+    <section id="tab-settings" class="tab-content space-y-4 hidden">
+      <h2 class="text-lg font-bold border-b pb-2">Setup, Capital & Branch System</h2>
+
+      <!-- Mother Admin Notice -->
+      <div id="branch-access-warning" class="hidden bg-amber-100 text-amber-900 p-2 rounded text-xs font-bold">
+        ⚠️ Branch Mode: Settings can only be modified by Mother System Admin.
+      </div>
+
+      <div class="bg-white p-4 border rounded-lg space-y-3 text-xs">
+        <div>
+          <label class="block font-semibold mb-1 text-slate-600">Company Name Heading</label>
+          <input type="text" id="cfg-name" placeholder="e.g. PMMS Microfinance Ltd" class="w-full p-2.5 border rounded-lg text-sm">
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-slate-600">Company Address / Location</label>
+          <input type="text" id="cfg-loc" placeholder="e.g. Kampala, Uganda" class="w-full p-2.5 border rounded-lg text-sm">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold mb-1 text-slate-600">Opening Cash (UGX)</label>
+            <input type="number" id="cfg-opening-cash" placeholder="0" class="w-full p-2.5 border rounded-lg text-sm">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-slate-600">Added Capitalization (UGX)</label>
+            <input type="number" id="cfg-capital" placeholder="0" class="w-full p-2.5 border rounded-lg text-sm">
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold mb-1 text-slate-600">App Security PIN</label>
+          <input type="password" id="cfg-pin" maxlength="6" placeholder="Default 1234" class="w-full p-2.5 border rounded-lg text-sm font-bold">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold mb-1 text-slate-600">Default Rate (%)</label>
+            <input type="number" id="cfg-rate" placeholder="20" class="w-full p-2.5 border rounded-lg text-sm">
+          </div>
+          <div>
+            <label class="block font-semibold mb-1 text-slate-600">Default Tenure (Days)</label>
+            <input type="number" id="cfg-days" placeholder="30" class="w-full p-2.5 border rounded-lg text-sm">
+          </div>
+        </div>
+        <button id="btn-save-settings" onclick="saveCompanySettings()" class="w-full bg-slate-800 text-white py-2.5 rounded-lg text-sm font-bold hover:bg-slate-900">
+          Save Settings
+        </button>
+      </div>
+
+      <!-- BRANCH NETWORK CONTROL HUB (MOTHER SYSTEM ONLY) -->
+      <div id="branch-management-box" class="bg-slate-800 text-white p-4 rounded-lg space-y-3 text-xs">
+        <h3 class="font-bold text-teal-400 border-b border-slate-700 pb-1">Deploy & Control Branch Network (100+ Branches)</h3>
+        <p class="text-slate-300">Generated branch links require explicit approval from Mother System before access is granted. Mother System can switch off access at any time.</p>
+        
+        <div class="flex gap-2">
+          <input type="text" id="new-branch-name" placeholder="Branch Name (e.g. Jinja Branch)" class="p-2 rounded text-slate-800 bg-white w-2/3">
+          <button onclick="createNewBranch()" class="bg-teal-600 text-white font-bold p-2 rounded w-1/3 hover:bg-teal-700">Generate Branch</button>
+        </div>
+
+        <div id="branch-links-list" class="space-y-2 pt-2 border-t border-slate-700 max-h-60 overflow-y-auto"></div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Edit Client Details & Number Plate Modal -->
+  <div id="edit-client-modal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-xl p-4 w-full max-w-sm space-y-3">
+      <h3 class="font-bold text-sm border-b pb-2">Edit Client & Plate Details</h3>
+      <input type="hidden" id="edit-client-id">
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-slate-600">Full Name</label>
+        <input type="text" id="edit-client-name" class="w-full p-2 border rounded-lg text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-slate-600">Phone Number (Unique UG Format)</label>
+        <input type="tel" id="edit-client-phone" class="w-full p-2 border rounded-lg text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-slate-600">Client Category</label>
+        <select id="edit-client-type" onchange="toggleBodaPlateInput('edit')" class="w-full p-2 border rounded-lg text-sm bg-white">
+          <option value="OTHERS">OTHERS</option>
+          <option value="BODABODA">BODABODA</option>
+        </select>
+      </div>
+      <div id="edit-plate-container" class="hidden">
+        <label class="block text-xs font-semibold mb-1 text-slate-600">Motorcycle Number Plate (Unique)</label>
+        <input type="text" id="edit-number-plate" class="w-full p-2 border rounded-lg text-sm uppercase bg-white">
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="closeEditClientModal()" class="w-1/2 border py-2 rounded-lg text-xs font-bold">Cancel</button>
+        <button onclick="saveEditedClient()" class="w-1/2 bg-slate-800 text-white py-2 rounded-lg text-xs font-bold">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom Navigation -->
+  <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-2 text-[10px] text-slate-600 font-medium z-40 overflow-x-auto">
+    <button onclick="switchTab('posting')" class="flex flex-col items-center py-1 min-w-[44px] text-slate-800 font-bold" id="nav-posting">
+      <i class="fa-solid fa-receipt text-sm mb-0.5"></i>
+      <span>Posting</span>
+    </button>
+    <button onclick="switchTab('disburse')" class="flex flex-col items-center py-1 min-w-[44px]" id="nav-disburse">
+      <i class="fa-solid fa-hand-holding-dollar text-sm mb-0.5"></i>
+      <span>Disburse</span>
+    </button>
+    <button onclick="switchTab('calc')" class="flex flex-col items-center py-1 min-w-[44px]" id="nav-calc">
+      <i class="fa-solid fa-calculator text-sm mb-0.5"></i>
+      <span>Calc</span>
+    </button>
+    <button onclick="switchTab('statement')" class="flex flex-col items-center py-1 min-w-[44px]" id="nav-statement">
+      <i class="fa-solid fa-file-invoice text-sm mb-0.5"></i>
+      <span>Statements</span>
+    </button>
+    <button onclick="switchTab('reports')" class="flex flex-col items-center py-1 min-w-[44px]" id="nav-reports">
+      <i class="fa-solid fa-chart-pie text-sm mb-0.5"></i>
+      <span>Reports</span>
+    </button>
+    <button onclick="switchTab('aging')" class="flex flex-col items-center py-1 min-w-[44px]" id="nav-aging">
+      <i class="fa-solid fa-clock-rotate-left text-sm mb-0.5"></i>
+      <span>Aging</span>
+    </button>
+    <button onclick="switchTab('records')" class="flex flex-col items-center py-1 min-w-[44px]" id="nav-records">
+      <i class="fa-solid fa-folder-closed text-sm mb-0.5"></i>
+      <span>Records</span>
+    </button>
+    <button onclick="switchTab('demand')" class="flex flex-col items-center py-1 min-w-[44px]" id="nav-demand">
+      <i class="fa-solid fa-triangle-exclamation text-sm mb-0.5 text-red-600"></i>
+      <span class="text-red-600">Defaulters</span>
+    </button>
+    <button onclick="switchTab('settings')" class="flex flex-col items-center py-1 min-w-[44px]" id="nav-settings">
+      <i class="fa-solid fa-gear text-sm mb-0.5"></i>
+      <span>Setup</span>
+    </button>
+  </nav>
+
+  <!-- JavaScript Application Engine -->
+  <script>
+    // Branch URL & Local Storage Prefix Management
+    const urlParams = new URLSearchParams(window.location.search);
+    const branchCode = urlParams.get('branch') || 'mother';
+    const isMotherSystem = (branchCode === 'mother');
+
+    const STORAGE_PREFIX = `pmms_${branchCode}_`;
+
+    // Permanent Data Store (With Soft Deletes)
+    let clients = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'clients')) || [];
+    let loans = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'loans')) || [];
+    let transactions = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'tx')) || [];
+    let expenses = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'expenses')) || [];
+    let branches = JSON.parse(localStorage.getItem('pmms_branches_master')) || [];
+    let consolidationRequests = JSON.parse(localStorage.getItem('pmms_consolidation_requests')) || [];
+
+    let config = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'config')) || { 
+      name: isMotherSystem ? 'PMMS MICROFINANCE LTD (MOTHER)' : `PMMS BRANCH (${branchCode.toUpperCase()})`, 
+      location: 'Kampala, Uganda', 
+      defaultRate: 20, 
+      defaultDays: 30, 
+      pin: '1234',
+      openingCash: 0,
+      capitalization: 0
+    };
+
+    let batchQueue = [];
+    let activePostingClient = null;
+    let activePostingLoan = null;
+    let activeDisburseClient = null;
+    let activeStatementClientId = null;
+    let selectedLoansToCombine = [];
+
+    const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      checkBranchAuthorizationState();
+      checkSessionTimeout();
+      applyCompanyConfig();
+      renderBranchList();
+      renderMotherConsolidationAlerts();
+      liveCalculateDisbursement();
+      calculateLoan();
+    });
+
+    // 1 & 6. BRANCH SECURITY, APPROVAL & REMOTE SWITCH-OFF ENGINE
+    function checkBranchAuthorizationState() {
+      if (isMotherSystem) return; // Mother system is always authorized
+
+      branches = JSON.parse(localStorage.getItem('pmms_branches_master')) || [];
+      let currentBranch = branches.find(b => b.code === branchCode);
+
+      let overlay = document.getElementById('branch-lock-overlay');
+      let title = document.getElementById('branch-lock-title');
+      let msg = document.getElementById('branch-lock-msg');
+
+      if (!currentBranch) {
+        title.innerText = "Unregistered Branch Link";
+        msg.innerText = "This branch code does not exist on Mother System. Access denied.";
+        overlay.classList.remove('hidden');
+        return;
+      }
+
+      if (currentBranch.approval_status === 'PENDING_APPROVAL') {
+        title.innerText = "Approval Required From Mother System";
+        msg.innerText = `Branch "${currentBranch.name}" has requested access. The link cannot be used until authorized by Mother System Admin.`;
+        overlay.classList.remove('hidden');
+        return;
+      }
+
+      if (currentBranch.approval_status === 'REJECTED' || !currentBranch.is_active) {
+        title.innerText = "Branch Switched Off / Access Denied";
+        msg.innerText = `Access to branch "${currentBranch.name}" has been disabled or rejected by Mother System Admin.`;
+        overlay.classList.remove('hidden');
+        return;
+      }
+
+      // Branch is approved and active
+      overlay.classList.add('hidden');
+    }
+
+    function checkSessionTimeout() {
+      let lastLoginTime = localStorage.getItem(STORAGE_PREFIX + 'last_login');
+      let now = Date.now();
+      if (!lastLoginTime || (now - parseInt(lastLoginTime)) > TEN_HOURS_MS) {
+        lockApp();
+      }
+    }
+
+    function verifyPin() {
+      let inputPin = document.getElementById('login-pin').value;
+      let storedPin = config.pin || '1234';
+
+      if (inputPin === storedPin) {
+        localStorage.setItem(STORAGE_PREFIX + 'last_login', Date.now().toString());
+        document.getElementById('login-overlay').classList.add('hidden');
+        document.getElementById('login-pin').value = '';
+      } else {
+        alert('Incorrect Security PIN!');
+        document.getElementById('login-pin').value = '';
+      }
+    }
+
+    function lockApp() {
+      document.getElementById('login-overlay').classList.remove('hidden');
+    }
+
+    // 5. PERMANENT DATA RETENTION (SOFT DELETE ENGINE)
+    function saveAll() {
+      localStorage.setItem(STORAGE_PREFIX + 'clients', JSON.stringify(clients));
+      localStorage.setItem(STORAGE_PREFIX + 'loans', JSON.stringify(loans));
+      localStorage.setItem(STORAGE_PREFIX + 'tx', JSON.stringify(transactions));
+      localStorage.setItem(STORAGE_PREFIX + 'expenses', JSON.stringify(expenses));
+      localStorage.setItem(STORAGE_PREFIX + 'config', JSON.stringify(config));
+      localStorage.setItem('pmms_branches_master', JSON.stringify(branches));
+      localStorage.setItem('pmms_consolidation_requests', JSON.stringify(consolidationRequests));
+    }
+
+    function applyCompanyConfig() {
+      document.getElementById('header-company-name').innerText = config.name || 'PMMS MICROFINANCE';
+      document.getElementById('header-company-loc').innerText = config.location || '';
+      document.getElementById('header-branch-tag').innerText = branchCode.toUpperCase();
+      
+      document.getElementById('cfg-name').value = config.name || '';
+      document.getElementById('cfg-loc').value = config.location || '';
+      document.getElementById('cfg-pin').value = config.pin || '1234';
+      document.getElementById('cfg-rate').value = config.defaultRate || 20;
+      document.getElementById('cfg-days').value = config.defaultDays || 30;
+      document.getElementById('cfg-opening-cash').value = config.openingCash || 0;
+      document.getElementById('cfg-capital').value = config.capitalization || 0;
+
+      // Restrict Branch Admin Access
+      if (!isMotherSystem) {
+        document.getElementById('branch-access-warning').classList.remove('hidden');
+        document.getElementById('cfg-pin').disabled = true;
+        document.getElementById('cfg-opening-cash').disabled = true;
+        document.getElementById('cfg-capital').disabled = true;
+        document.getElementById('btn-save-settings').classList.add('hidden');
+        document.getElementById('branch-management-box').classList.add('hidden');
+      }
+    }
+
+    function saveCompanySettings() {
+      if (!isMotherSystem) return alert('Only Mother System Admin can modify system settings.');
+      config.name = document.getElementById('cfg-name').value || 'PMMS MICROFINANCE';
+      config.location = document.getElementById('cfg-loc').value || '';
+      config.pin = document.getElementById('cfg-pin').value || '1234';
+      config.defaultRate = parseFloat(document.getElementById('cfg-rate').value) || 20;
+      config.defaultDays = parseFloat(document.getElementById('cfg-days').value) || 30;
+      config.openingCash = parseFloat(document.getElementById('cfg-opening-cash').value) || 0;
+      config.capitalization = parseFloat(document.getElementById('cfg-capital').value) || 0;
+
+      saveAll();
+      applyCompanyConfig();
+      alert('Settings saved successfully!');
+    }
+
+    // Branch Generator & Remote Control Hub
+    function createNewBranch() {
+      if (!isMotherSystem) return alert('Only Mother System can create new branches.');
+      let bName = document.getElementById('new-branch-name').value.trim();
+      if (!bName) return alert('Enter branch name.');
+
+      let bCode = 'br_' + Math.floor(1000 + Math.random() * 9000);
+      let baseUrl = window.location.origin + window.location.pathname;
+      let branchLink = `${baseUrl}?branch=${bCode}`;
+
+      branches.push({ 
+        code: bCode, 
+        name: bName, 
+        link: branchLink, 
+        is_active: false, // Inactive until approved
+        approval_status: 'PENDING_APPROVAL', // Requires approval
+        created: new Date().toISOString().split('T')[0] 
+      });
+
+      saveAll();
+      renderBranchList();
+      document.getElementById('new-branch-name').value = '';
+      alert(`New Branch Link Generated!\nLink: ${branchLink}\n\n* Note: Branch is set to PENDING_APPROVAL. Approve it in the Hub below when shared.`);
+    }
+
+    function toggleBranchApproval(code, status) {
+      if (!isMotherSystem) return;
+      let branch = branches.find(b => b.code === code);
+      if (branch) {
+        branch.approval_status = status;
+        branch.is_active = (status === 'APPROVED');
+        saveAll();
+        renderBranchList();
+        alert(`Branch ${branch.name} status updated to: ${status}`);
+      }
+    }
+
+    function toggleBranchActive(code, isActive) {
+      if (!isMotherSystem) return;
+      let branch = branches.find(b => b.code === code);
+      if (branch) {
+        branch.is_active = isActive;
+        if (!isActive) branch.approval_status = 'REJECTED';
+        saveAll();
+        renderBranchList();
+        alert(`Branch ${branch.name} access ${isActive ? 'ACTIVATED' : 'SWITCHED OFF'}.`);
+      }
+    }
+
+    function renderBranchList() {
+      let container = document.getElementById('branch-links-list');
+      if (!container) return;
+
+      if (branches.length === 0) {
+        container.innerHTML = `<div class="text-slate-400 italic">No active branches created yet.</div>`;
+        return;
+      }
+
+      container.innerHTML = branches.map(b => `
+        <div class="p-2.5 bg-slate-700 rounded space-y-2 text-xs">
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="font-bold text-teal-300">${b.name} (${b.code})</div>
+              <div class="text-[10px] text-slate-300 break-all">${b.link}</div>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
+              b.approval_status === 'APPROVED' ? 'bg-emerald-600 text-white' : 
+              b.approval_status === 'PENDING_APPROVAL' ? 'bg-amber-500 text-slate-900' : 'bg-red-600 text-white'
+            }">${b.approval_status}</span>
+          </div>
+
+          <div class="flex flex-wrap gap-1.5 pt-1 border-t border-slate-600 justify-between items-center">
+            <button onclick="navigator.clipboard.writeText('${b.link}'); alert('Branch Link Copied!');" class="bg-slate-600 px-2 py-1 rounded text-white font-bold text-[10px]">
+              <i class="fa-solid fa-copy"></i> Copy Link
+            </button>
+            <div class="flex gap-1">
+              ${b.approval_status !== 'APPROVED' ? `
+                <button onclick="toggleBranchApproval('${b.code}', 'APPROVED')" class="bg-emerald-600 px-2 py-1 rounded text-white font-bold text-[10px]">
+                  Allow / Approve
+                </button>
+              ` : `
+                <button onclick="toggleBranchActive('${b.code}', false)" class="bg-red-600 px-2 py-1 rounded text-white font-bold text-[10px]">
+                  Switch Off
+                </button>
+              `}
+              ${b.approval_status === 'PENDING_APPROVAL' ? `
+                <button onclick="toggleBranchApproval('${b.code}', 'REJECTED')" class="bg-slate-800 px-2 py-1 rounded text-white font-bold text-[10px]">
+                  Reject
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // 2. CLIENT CATEGORIZATION & UNIQUE BODA BODA PLATE ENGINE
+    function toggleBodaPlateInput(mode) {
+      if (mode === 'new') {
+        let cat = document.getElementById('new-client-category').value;
+        document.getElementById('new-plate-container').classList.toggle('hidden', cat !== 'BODABODA');
+      } else if (mode === 'edit') {
+        let cat = document.getElementById('edit-client-type').value;
+        document.getElementById('edit-plate-container').classList.toggle('hidden', cat !== 'BODABODA');
+      }
+    }
+
+    function isNumberPlateUnique(plate, excludeClientId = null) {
+      if (!plate) return true;
+      let cleanPlate = plate.trim().toUpperCase().replaceAll(' ', '');
+      return !clients.some(c => c.deleted_at === null && c.number_plate && c.number_plate.trim().toUpperCase().replaceAll(' ', '') === cleanPlate && c.id !== excludeClientId);
+    }
+
+    function switchTab(tabId) {
+      checkBranchAuthorizationState();
+      checkSessionTimeout();
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.getElementById('tab-' + tabId).classList.remove('hidden');
+      document.querySelectorAll('nav button').forEach(el => el.classList.remove('text-slate-800', 'font-bold'));
+      document.getElementById('nav-' + tabId).classList.add('text-slate-800', 'font-bold');
+
+      if (tabId === 'reports') renderReports();
+      if (tabId === 'aging') renderAgingAnalysis();
+      if (tabId === 'records') renderRecordsHub();
+      if (tabId === 'demand') renderDemandList();
+    }
+
+    // Ugandan Phone Number Validation
+    function validateUgandanPhone(phone) {
+      let clean = phone.trim().replaceAll(' ', '').replaceAll('-', '');
+      let ugRegex = /^(\+?256|0)[37]\d{8}$/;
+      return ugRegex.test(clean);
+    }
+
+    function isPhoneNumberUnique(phone, excludeClientId = null) {
+      let cleanPhone = phone.trim().replaceAll(' ', '');
+      return !clients.some(c => c.deleted_at === null && c.phone.trim().replaceAll(' ', '') === cleanPhone && c.id !== excludeClientId);
+    }
+
+    // 4. ACCURATE ARREARS & ADVANCE DAYS CALCULATOR
+    function calculateAccurateArrearsAndAdvance(loan) {
+      if (!loan || loan.status !== 'Active') return { arrears: 0, advanceDays: 0 };
+      
+      let start = new Date(loan.date);
+      let today = new Date();
+
+      start.setHours(0,0,0,0);
+      today.setHours(0,0,0,0);
+
+      let diffTime = today - start;
+      let daysElapsed = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      if (daysElapsed < 1) daysElapsed = 1;
+
+      let expectedPaidToDate = loan.dailyTarget * daysElapsed;
+      let actualTotalPaid = loan.totalPayable - loan.balance;
+      
+      let difference = actualTotalPaid - expectedPaidToDate;
+
+      if (difference < 0) {
+        return { arrears: Math.round(Math.abs(difference)), advanceDays: 0 };
+      } else {
+        let advanceDays = loan.dailyTarget > 0 ? Math.floor(difference / loan.dailyTarget) : 0;
+        return { arrears: 0, advanceDays };
+      }
+    }
+
+    // Guarantor Cap Check (Max 10 Active Clients per Guarantor)
+    function checkGuarantorCap(gPhone) {
+      if (!gPhone) return true;
+      let cleanGPhone = gPhone.trim().replaceAll(' ', '');
+      let activeGuaranteedCount = loans.filter(l => l.deleted_at === null && l.status === 'Active' && l.guarantor && l.guarantor.phone.trim().replaceAll(' ', '') === cleanGPhone).length;
+      return activeGuaranteedCount < 10;
+    }
+
+    // Calculator Logic
+    function calculateLoan() {
+      let principal = parseFloat(document.getElementById('calc-input').value) || 0;
+      let rate = parseFloat(document.getElementById('calc-rate').value) || config.defaultRate || 20;
+      let days = parseFloat(document.getElementById('calc-days').value) || config.defaultDays || 30;
+
+      let interest = principal * (rate / 100);
+      let total = principal + interest;
+      let daily = days > 0 ? total / days : 0;
+
+      document.getElementById('c-principal').innerText = 'UGX ' + principal.toLocaleString();
+      document.getElementById('c-interest').innerText = 'UGX ' + interest.toLocaleString();
+      document.getElementById('c-total').innerText = 'UGX ' + total.toLocaleString();
+      document.getElementById('c-daily').innerText = 'UGX ' + Math.round(daily).toLocaleString();
+    }
+
+    // Disburse & Multi-Search Combining
+    function toggleClientMode(isNew) {
+      document.getElementById('new-client-fields').classList.toggle('hidden', !isNew);
+      document.getElementById('existing-client-fields').classList.toggle('hidden', isNew);
+      document.getElementById('row-ledger-fee').classList.toggle('hidden', !isNew);
+      activeDisburseClient = null;
+      liveCalculateDisbursement();
+    }
+
+    function searchDisburseClients(query) {
+      let container = document.getElementById('disburse-search-results');
+      if (!query) return container.classList.add('hidden');
+      
+      let matches = clients.filter(c => c.deleted_at === null && (
+        c.name.toLowerCase().includes(query.toLowerCase()) || 
+        c.acc.includes(query) || 
+        c.phone.includes(query) || 
+        (c.number_plate && c.number_plate.toLowerCase().includes(query.toLowerCase()))
+      ));
+
+      container.innerHTML = matches.map(c => `
+        <div class="p-2 text-xs hover:bg-slate-100 cursor-pointer flex justify-between" onclick="selectDisburseClient(${c.id})">
+          <span><b>${c.name}</b> (${c.acc}) - ${c.phone}</span>
+          ${c.client_type === 'BODABODA' ? `<span class="bg-teal-100 text-teal-800 px-1.5 py-0.5 rounded font-bold">${c.number_plate || 'PLATE MISSING'}</span>` : ''}
+        </div>
+      `).join('');
+      container.classList.remove('hidden');
+    }
+
+    function selectDisburseClient(id) {
+      activeDisburseClient = clients.find(c => c.id === id && c.deleted_at === null);
+      let plateInfo = activeDisburseClient.client_type === 'BODABODA' ? ` | Plate: ${activeDisburseClient.number_plate}` : '';
+      document.getElementById('disburse-selected-name').innerText = `Primary Client: ${activeDisburseClient.name} (${activeDisburseClient.acc}${plateInfo})`;
+      document.getElementById('disburse-search-results').classList.add('hidden');
+      liveCalculateDisbursement();
+    }
+
+    function searchLoansToCombine(query) {
+      let container = document.getElementById('merge-search-results');
+      if (!query) return container.classList.add('hidden');
+
+      let matches = loans.filter(l => l.deleted_at === null && l.status === 'Active' && l.balance > 0).filter(l => {
+        let client = clients.find(c => c.id === l.clientId && c.deleted_at === null);
+        return client && (
+          client.name.toLowerCase().includes(query.toLowerCase()) || 
+          client.phone.includes(query) || 
+          client.acc.includes(query) ||
+          (client.number_plate && client.number_plate.toLowerCase().includes(query.toLowerCase()))
+        );
+      });
+
+      container.innerHTML = matches.map(l => {
+        let client = clients.find(c => c.id === l.clientId);
+        return `
+          <div class="p-2 text-xs hover:bg-slate-100 cursor-pointer flex justify-between" onclick="addLoanToCombineList(${l.id})">
+            <span><b>${client.name}</b> (${client.acc}) ${client.number_plate ? '['+client.number_plate+']' : ''}</span>
+            <span class="font-bold text-amber-700">UGX ${l.balance.toLocaleString()}</span>
+          </div>
+        `;
+      }).join('');
+      container.classList.remove('hidden');
+    }
+
+    function addLoanToCombineList(loanId) {
+      if (!selectedLoansToCombine.includes(loanId)) {
+        selectedLoansToCombine.push(loanId);
+      }
+      document.getElementById('merge-search-results').classList.add('hidden');
+      document.getElementById('merge-search-input').value = '';
+      renderSelectedLoansToCombine();
+      liveCalculateDisbursement();
+    }
+
+    function renderSelectedLoansToCombine() {
+      let container = document.getElementById('selected-merged-loans-list');
+      if (selectedLoansToCombine.length === 0) {
+        container.innerHTML = `<div class="text-slate-400 italic">No loans selected for consolidation.</div>`;
+        return;
+      }
+
+      container.innerHTML = selectedLoansToCombine.map((lId, idx) => {
+        let loan = loans.find(l => l.id === lId);
+        let client = clients.find(c => c.id === loan.clientId);
+        return `
+          <div class="p-1.5 border rounded bg-white flex justify-between items-center text-xs">
+            <div><b>${client.name}</b>: UGX ${loan.balance.toLocaleString()}</div>
+            <button onclick="selectedLoansToCombine.splice(${idx}, 1); renderSelectedLoansToCombine(); liveCalculateDisbursement();" class="text-red-600 font-bold px-1">Remove</button>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function liveCalculateDisbursement() {
+      let principalInput = parseFloat(document.getElementById('disburse-principal').value) || 0;
+      let rate = parseFloat(document.getElementById('disburse-rate').value) || config.defaultRate || 20;
+      let days = parseFloat(document.getElementById('disburse-days').value) || config.defaultDays || 30;
+
+      let mergedBalance = selectedLoansToCombine.reduce((s, id) => {
+        let l = loans.find(x => x.id === id);
+        return s + (l ? l.balance : 0);
+      }, 0);
+
+      let totalEffectivePrincipal = principalInput + mergedBalance;
+      let interest = totalEffectivePrincipal * (rate / 100);
+      let totalPayable = totalEffectivePrincipal + interest;
+      let dailyTarget = days > 0 ? totalPayable / days : 0;
+
+      document.getElementById('dis-base').innerText = 'UGX ' + principalInput.toLocaleString();
+      document.getElementById('dis-combined').innerText = '+ UGX ' + mergedBalance.toLocaleString();
+      document.getElementById('dis-total-principal').innerText = 'UGX ' + totalEffectivePrincipal.toLocaleString();
+      document.getElementById('dis-interest').innerText = 'UGX ' + interest.toLocaleString();
+      document.getElementById('dis-total').innerText = 'UGX ' + totalPayable.toLocaleString();
+      document.getElementById('dis-daily').innerText = 'UGX ' + Math.round(dailyTarget).toLocaleString();
+    }
+
+    // 7. LOAN DISBURSEMENT & MOTHER APPROVAL CONSOLIDATION ENGINE
+    function processDisbursement() {
+      let isNew = document.querySelector('input[name="client-type"]:checked').value === 'new';
+      let principalInput = parseFloat(document.getElementById('disburse-principal').value) || 0;
+      let rate = parseFloat(document.getElementById('disburse-rate').value) || config.defaultRate || 20;
+      let days = parseFloat(document.getElementById('disburse-days').value) || config.defaultDays || 30;
+
+      let gName = document.getElementById('guarantor-name').value;
+      let gPhone = document.getElementById('guarantor-phone').value;
+      let gInfo = document.getElementById('guarantor-info').value;
+
+      if (gPhone && !checkGuarantorCap(gPhone)) {
+        return alert('ERROR: This guarantor has reached the maximum cap of 10 active guaranteed loans!');
+      }
+
+      let client;
+      if (isNew) {
+        let name = document.getElementById('new-name').value;
+        let phone = document.getElementById('new-phone').value;
+        let category = document.getElementById('new-client-category').value;
+        let plate = document.getElementById('new-number-plate').value.trim().toUpperCase();
+
+        if (!name || !phone) return alert('Provide client name and phone number.');
+        
+        if (!validateUgandanPhone(phone)) {
+          return alert('INVALID PHONE: Provide a valid Ugandan phone number.');
+        }
+
+        if (!isPhoneNumberUnique(phone)) {
+          return alert('ERROR: Phone number already exists for another client!');
+        }
+
+        if (category === 'BODABODA') {
+          if (!plate) return alert('Motorcycle Number Plate is mandatory for Boda Boda clients!');
+          if (!isNumberPlateUnique(plate)) {
+            return alert(`DUPLICATE NUMBER PLATE ERROR: Plate '${plate}' is already assigned to another client!`);
+          }
+        }
+
+        client = { 
+          id: Date.now(), 
+          name, 
+          phone, 
+          client_type: category,
+          number_plate: category === 'BODABODA' ? plate : null,
+          acc: 'ACC' + Math.floor(1000 + Math.random() * 9000),
+          isNewClient: true,
+          deleted_at: null
+        };
+        clients.push(client);
+
+        transactions.push({
+          id: Date.now() + 1,
+          clientId: client.id,
+          amount: 10000,
+          channel: 'Cash Fee',
+          type: 'Ledger Fee',
+          date: new Date().toISOString().split('T')[0],
+          deleted_at: null
+        });
+
+      } else {
+        if (!activeDisburseClient) return alert('Select a primary client.');
+        client = activeDisburseClient;
+
+        let existingActive = loans.find(l => l.deleted_at === null && l.clientId === client.id && l.status === 'Active');
+        if (existingActive) {
+          return alert(`CANNOT DISBURSE: Client ${client.name} currently has an active running loan balance of UGX ${existingActive.balance.toLocaleString()}.`);
+        }
+      }
+
+      // If consolidation requested, check Mother System Approval Rule (#7)
+      let mergedBalance = 0;
+      if (selectedLoansToCombine.length > 0) {
+        if (!isMotherSystem) {
+          // Send Consolidation Request to Mother System
+          let reqId = Date.now();
+          consolidationRequests.push({
+            id: reqId,
+            mother_system_approved: null, // Pending
+            target_client_id: client.id,
+            target_client_name: client.name,
+            original_loan_ids: [...selectedLoansToCombine],
+            requested_by_branch_id: branchCode,
+            cash_principal: principalInput,
+            rate,
+            days,
+            guarantor: { name: gName, phone: gPhone, info: gInfo },
+            created_at: new Date().toISOString()
+          });
+          saveAll();
+          alert("LOAN CONSOLIDATION REQUEST SUBMITTED!\n\nCombining loans requires explicit approval from Mother System Admin. Access Mother System to approve this consolidation request.");
+          location.reload();
+          return;
+        } else {
+          // Executing on Mother System Directly
+          selectedLoansToCombine.forEach(lId => {
+            let loan = loans.find(l => l.id === lId);
+            if (loan) {
+              mergedBalance += loan.balance;
+              loan.status = 'Cleared & Merged into #' + client.acc;
+              loan.balance = 0;
+            }
+          });
+        }
+      }
+
+      let totalPrincipal = principalInput + mergedBalance;
+      if (totalPrincipal <= 0) return alert('Principal amount must be greater than UGX 0.');
+
+      let interest = totalPrincipal * (rate / 100);
+      let totalPayable = totalPrincipal + interest;
+
+      let newLoan = {
+        id: Date.now(),
+        clientId: client.id,
+        principal: totalPrincipal,
+        cashPrincipal: principalInput,
+        mergedPrincipal: mergedBalance,
+        rate,
+        days,
+        interest,
+        totalPayable,
+        dailyTarget: totalPayable / days,
+        balance: totalPayable,
+        status: 'Active',
+        date: new Date().toISOString().split('T')[0],
+        guarantor: { name: gName, phone: gPhone, info: gInfo },
+        deleted_at: null
+      };
+
+      loans.push(newLoan);
+
+      transactions.push({
+        id: Date.now() + 2,
+        loanId: newLoan.id,
+        clientId: client.id,
+        amount: 10000,
+        channel: 'Cash Fee',
+        type: 'Processing Fee',
+        date: new Date().toISOString().split('T')[0],
+        deleted_at: null
+      });
+
+      saveAll();
+      alert('Loan Disbursed Successfully!');
+      location.reload();
+    }
+
+    // Mother System Consolidation Request Approval
+    function renderMotherConsolidationAlerts() {
+      let container = document.getElementById('mother-consolidation-alerts');
+      if (!container) return;
+
+      if (!isMotherSystem) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      let pending = consolidationRequests.filter(r => r.mother_system_approved === null);
+      if (pending.length === 0) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      container.classList.remove('hidden');
+      container.innerHTML = pending.map(req => `
+        <div class="bg-amber-50 border border-amber-300 p-3 rounded-lg text-xs space-y-2">
+          <div class="flex justify-between font-bold text-amber-900">
+            <span><i class="fa-solid fa-code-pull-request"></i> Loan Consolidation Request (${req.requested_by_branch_id.toUpperCase()})</span>
+            <span class="text-[10px] text-amber-700">${new Date(req.created_at).toLocaleTimeString()}</span>
+          </div>
+          <div>Primary Client: <b>${req.target_client_name}</b> | Requested Loans to Merge: <b>${req.original_loan_ids.length} Loans</b></div>
+          <div class="flex gap-2 pt-1">
+            <button onclick="respondConsolidationRequest(${req.id}, true)" class="bg-emerald-600 text-white px-3 py-1 rounded font-bold hover:bg-emerald-700">Approve Consolidation</button>
+            <button onclick="respondConsolidationRequest(${req.id}, false)" class="bg-red-600 text-white px-3 py-1 rounded font-bold hover:bg-red-700">Reject Request</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function respondConsolidationRequest(reqId, isApproved) {
+      let req = consolidationRequests.find(r => r.id === reqId);
+      if (!req) return;
+
+      req.mother_system_approved = isApproved;
+
+      if (isApproved) {
+        let mergedBalance = 0;
+        req.original_loan_ids.forEach(lId => {
+          let loan = loans.find(l => l.id === lId);
+          if (loan) {
+            mergedBalance += loan.balance;
+            loan.status = 'Cleared & Merged';
+            loan.balance = 0;
+          }
+        });
+
+        let totalPrincipal = req.cash_principal + mergedBalance;
+        let interest = totalPrincipal * (req.rate / 100);
+        let totalPayable = totalPrincipal + interest;
+
+        let newLoan = {
+          id: Date.now(),
+          clientId: req.target_client_id,
+          principal: totalPrincipal,
+          cashPrincipal: req.cash_principal,
+          mergedPrincipal: mergedBalance,
+          rate: req.rate,
+          days: req.days,
+          interest,
+          totalPayable,
+          dailyTarget: totalPayable / req.days,
+          balance: totalPayable,
+          status: 'Active',
+          date: new Date().toISOString().split('T')[0],
+          guarantor: req.guarantor,
+          deleted_at: null
+        };
+
+        loans.push(newLoan);
+        alert('Consolidation APPROVED and new consolidated loan disbursed successfully!');
+      } else {
+        alert('Consolidation Request REJECTED.');
+      }
+
+      saveAll();
+      renderMotherConsolidationAlerts();
+    }
+
+    // Batch Posting & Receipts with Advance Days & Arrears
+    function searchPostingClients(query) {
+      let container = document.getElementById('post-search-results');
+      if (!query) return container.classList.add('hidden');
+      
+      let matches = clients.filter(c => c.deleted_at === null && (
+        c.name.toLowerCase().includes(query.toLowerCase()) || 
+        c.acc.includes(query) || 
+        c.phone.includes(query) ||
+        (c.number_plate && c.number_plate.toLowerCase().includes(query.toLowerCase()))
+      ));
+
+      container.innerHTML = matches.map(c => `
+        <div class="p-2 text-xs hover:bg-slate-100 cursor-pointer flex justify-between" onclick="selectPostingClient(${c.id})">
+          <span><b>${c.name}</b> (${c.acc}) - ${c.phone}</span>
+          ${c.client_type === 'BODABODA' ? `<span class="bg-teal-100 text-teal-800 px-1.5 py-0.5 rounded font-bold">${c.number_plate || 'PLATE MISSING'}</span>` : ''}
+        </div>
+      `).join('');
+      container.classList.remove('hidden');
+    }
+
+    function selectPostingClient(id) {
+      activePostingClient = clients.find(c => c.id === id && c.deleted_at === null);
+      activePostingLoan = loans.find(l => l.clientId === id && l.status === 'Active' && l.deleted_at === null);
+
+      if (!activePostingLoan) {
+        alert('This client has no active running loan.');
+        return;
+      }
+
+      let metrics = calculateAccurateArrearsAndAdvance(activePostingLoan);
+
+      document.getElementById('post-client-name').innerText = activePostingClient.name;
+      document.getElementById('post-client-acc').innerText = 'Acc: ' + activePostingClient.acc + ' | Phone: ' + activePostingClient.phone;
+      document.getElementById('post-client-type-info').innerText = activePostingClient.client_type === 'BODABODA' 
+        ? `Category: BODABODA | Motorcycle Plate: ${activePostingClient.number_plate}` 
+        : `Category: OTHERS`;
+
+      document.getElementById('post-client-call').href = 'tel:' + activePostingClient.phone;
+      document.getElementById('post-arrears').innerText = 'UGX ' + metrics.arrears.toLocaleString();
+      document.getElementById('post-advance').innerText = metrics.advanceDays + ' Days';
+      document.getElementById('post-balance').innerText = 'UGX ' + activePostingLoan.balance.toLocaleString();
+      document.getElementById('post-daily').innerText = 'UGX ' + Math.round(activePostingLoan.dailyTarget).toLocaleString();
+
+      document.getElementById('post-selected-card').classList.remove('hidden');
+      document.getElementById('post-form').classList.remove('hidden');
+      document.getElementById('post-search-results').classList.add('hidden');
+    }
+
+    function addToBatch() {
+      let amount = parseFloat(document.getElementById('post-amount').value) || 0;
+      let channel = document.getElementById('post-channel').value;
+      if (amount <= 0) return alert('Enter a valid repayment amount.');
+
+      batchQueue.push({
+        client: activePostingClient,
+        loan: activePostingLoan,
+        amount,
+        channel,
+        date: new Date().toISOString().split('T')[0]
+      });
+
+      renderBatch();
+      document.getElementById('post-amount').value = '';
+    }
+
+    function renderBatch() {
+      document.getElementById('batch-count').innerText = batchQueue.length;
+      document.getElementById('batch-list').innerHTML = batchQueue.map((item, idx) => `
+        <div class="bg-white p-2 border rounded-lg flex justify-between items-center text-xs">
+          <div>
+            <div class="font-bold">${item.client.name}</div>
+            <div class="text-slate-500">UGX ${item.amount.toLocaleString()} via ${item.channel}</div>
+          </div>
+          <button onclick="batchQueue.splice(${idx}, 1); renderBatch();" class="text-red-500 font-bold px-2">Remove</button>
+        </div>
+      `).join('');
+    }
+
+    function postAllBatch() {
+      if (batchQueue.length === 0) return alert('Batch queue is empty.');
+
+      let allowPrint = document.getElementById('toggle-print-receipt').checked;
+      let companyHeading = config.name || 'PMMS MICROFINANCE';
+
+      batchQueue.forEach(item => {
+        let loan = loans.find(l => l.id === item.loan.id);
+        loan.balance -= item.amount;
+        if (loan.balance <= 0) {
+          loan.balance = 0;
+          loan.status = 'Settled';
+        }
+
+        let metrics = calculateAccurateArrearsAndAdvance(loan);
+
+        let tx = {
+          id: Date.now() + Math.floor(Math.random() * 100),
+          loanId: loan.id,
+          clientId: item.client.id,
+          amount: item.amount,
+          channel: item.channel,
+          type: 'Repayment',
+          date: new Date().toISOString().split('T')[0],
+          deleted_at: null
+        };
+        transactions.push(tx);
+
+        if (allowPrint) {
+          generateReceiptPDF(item.client, tx, loan.balance, metrics.arrears, metrics.advanceDays);
+        }
+
+        alert(`AUTOMATED RECEIPT\nSender: ${companyHeading}\nTo: ${item.client.phone}\nDear ${item.client.name}, payment of UGX ${item.amount.toLocaleString()} received via ${item.channel}.\nAdvance Paid: ${metrics.advanceDays} Days\nArrears Balance: UGX ${metrics.arrears.toLocaleString()}\nNew Loan Balance: UGX ${loan.balance.toLocaleString()}. Thank you!`);
+      });
+
+      saveAll();
+      batchQueue = [];
+      renderBatch();
+      alert('All batch payments posted successfully!');
+      location.reload();
+    }
+
+    // PDF Receipt Generator with Advance Days
+    function generateReceiptPDF(client, tx, newBalance, arrears, advanceDays) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ format: [80, 130], unit: 'mm' });
+
+      let companyHeading = config.name || "PMMS MICROFINANCE";
+
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "bold");
+      doc.text(companyHeading, 40, 10, { align: "center" });
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      if(config.location) doc.text(config.location, 40, 14, { align: "center" });
+      
+      doc.text("--------------------------------------------------", 40, 18, { align: "center" });
+      doc.text(`Receipt No: TXN-${tx.id}`, 5, 23);
+      doc.text(`Date: ${tx.date}`, 5, 28);
+      doc.text(`Client: ${client.name}`, 5, 33);
+      doc.text(`Account: ${client.acc}`, 5, 38);
+      if(client.client_type === 'BODABODA') {
+        doc.text(`Boda Plate: ${client.number_plate || 'N/A'}`, 5, 43);
+      }
+      doc.text("--------------------------------------------------", 40, 48, { align: "center" });
+
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Amount Paid: UGX ${tx.amount.toLocaleString()}`, 5, 55);
+      doc.setFontSize(7);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Channel: ${tx.channel}`, 5, 60);
+      doc.text(`Advance Paid Days: ${advanceDays} Days`, 5, 65);
+      doc.text(`Arrears Balance: UGX ${arrears.toLocaleString()}`, 5, 70);
+      doc.text(`Remaining Loan Balance: UGX ${newBalance.toLocaleString()}`, 5, 75);
+
+      doc.text("--------------------------------------------------", 40, 82, { align: "center" });
+      doc.text("Thank you for choosing " + companyHeading, 40, 88, { align: "center" });
+
+      doc.save(`Receipt_${client.name}_${tx.id}.pdf`);
+    }
+
+    // Statements & Client Editing / Soft Deleting
+    function searchStatementClients(query) {
+      let container = document.getElementById('statement-search-results');
+      if (!query) return container.classList.add('hidden');
+      
+      let matches = clients.filter(c => c.deleted_at === null && (
+        c.name.toLowerCase().includes(query.toLowerCase()) || 
+        c.acc.includes(query) || 
+        c.phone.includes(query) ||
+        (c.number_plate && c.number_plate.toLowerCase().includes(query.toLowerCase()))
+      ));
+
+      container.innerHTML = matches.map(c => `
+        <div class="p-2 text-xs hover:bg-slate-100 cursor-pointer flex justify-between" onclick="viewStatement(${c.id})">
+          <span><b>${c.name}</b> (${c.acc}) - ${c.phone}</span>
+          ${c.client_type === 'BODABODA' ? `<span class="bg-teal-100 text-teal-800 px-1.5 py-0.5 rounded font-bold">${c.number_plate || 'PLATE MISSING'}</span>` : ''}
+        </div>
+      `).join('');
+      container.classList.remove('hidden');
+    }
+
+    function viewStatement(clientId) {
+      activeStatementClientId = clientId;
+      let client = clients.find(c => c.id === clientId);
+      let loan = loans.find(l => l.clientId === clientId && l.status === 'Active' && l.deleted_at === null);
+      let clientActiveLoans = loans.filter(l => l.clientId === clientId && l.status === 'Active' && l.balance > 0 && l.deleted_at === null);
+
+      document.getElementById('st-name').innerText = client.name;
+      document.getElementById('st-acc').innerText = 'Acc: ' + client.acc + ' | Phone: ' + client.phone;
+      document.getElementById('st-type-plate').innerText = client.client_type === 'BODABODA' 
+        ? `Category: BODABODA | Plate: ${client.number_plate}` 
+        : `Category: OTHERS`;
+
+      document.getElementById('st-call-btn').href = 'tel:' + client.phone;
+      document.getElementById('st-balance').innerText = loan ? 'Outstanding Balance: UGX ' + loan.balance.toLocaleString() : 'No Active Loan (Cleared)';
+
+      let btnDeleteCleared = document.getElementById('btn-delete-cleared-client');
+      if (clientActiveLoans.length === 0) {
+        btnDeleteCleared.classList.remove('hidden');
+      } else {
+        btnDeleteCleared.classList.add('hidden');
+      }
+
+      applyDateFilter();
+      document.getElementById('statement-view').classList.remove('hidden');
+      document.getElementById('statement-search-results').classList.add('hidden');
+    }
+
+    function openEditClientModal() {
+      if (!activeStatementClientId) return;
+      let client = clients.find(c => c.id === activeStatementClientId);
+      document.getElementById('edit-client-id').value = client.id;
+      document.getElementById('edit-client-name').value = client.name;
+      document.getElementById('edit-client-phone').value = client.phone;
+      document.getElementById('edit-client-type').value = client.client_type || 'OTHERS';
+      document.getElementById('edit-number-plate').value = client.number_plate || '';
+
+      toggleBodaPlateInput('edit');
+      document.getElementById('edit-client-modal').classList.remove('hidden');
+    }
+
+    function closeEditClientModal() {
+      document.getElementById('edit-client-modal').classList.add('hidden');
+    }
+
+    function saveEditedClient() {
+      let id = parseInt(document.getElementById('edit-client-id').value);
+      let client = clients.find(c => c.id === id);
+      let name = document.getElementById('edit-client-name').value;
+      let phone = document.getElementById('edit-client-phone').value;
+      let category = document.getElementById('edit-client-type').value;
+      let plate = document.getElementById('edit-number-plate').value.trim().toUpperCase();
+
+      if (!name || !phone) return alert('Name and phone number are required.');
+
+      if (!validateUgandanPhone(phone)) {
+        return alert('INVALID PHONE: Enter a valid Ugandan phone number.');
+      }
+
+      if (!isPhoneNumberUnique(phone, id)) {
+        return alert('ERROR: Phone number belongs to another client.');
+      }
+
+      if (category === 'BODABODA') {
+        if (!plate) return alert('Motorcycle number plate is required for Boda Boda clients!');
+        if (!isNumberPlateUnique(plate, id)) {
+          return alert(`DUPLICATE PLATE ERROR: Number plate '${plate}' is assigned to another client!`);
+        }
+      }
+
+      client.name = name;
+      client.phone = phone;
+      client.client_type = category;
+      client.number_plate = category === 'BODABODA' ? plate : null;
+
+      saveAll();
+      closeEditClientModal();
+      viewStatement(id);
+      alert('Client details updated successfully!');
+    }
+
+    // 5. SOFT DELETE CLIENT ENGINE
+    function deleteClearedClient() {
+      if (!activeStatementClientId) return;
+      let client = clients.find(c => c.id === activeStatementClientId);
+      let hasActiveLoan = loans.some(l => l.clientId === activeStatementClientId && l.status === 'Active' && l.balance > 0 && l.deleted_at === null);
+
+      if (hasActiveLoan) return alert('Cannot delete client with active running loans.');
+
+      if (confirm(`Soft Delete client record: ${client.name}? Data will be retained in database permanently.`)) {
+        client.deleted_at = new Date().toISOString();
+        saveAll();
+        alert('Client record soft deleted successfully.');
+        location.reload();
+      }
+    }
+
+    function applyDateFilter() {
+      if (!activeStatementClientId) return;
+      let fromDate = document.getElementById('filter-date-from').value;
+      let toDate = document.getElementById('filter-date-to').value;
+
+      let txs = transactions.filter(t => t.clientId === activeStatementClientId && t.deleted_at === null);
+
+      if (fromDate) txs = txs.filter(t => t.date >= fromDate);
+      if (toDate) txs = txs.filter(t => t.date <= toDate);
+
+      document.getElementById('statement-list').innerHTML = txs.map(t => `
+        <div class="bg-white p-2 border rounded-lg text-xs flex justify-between items-center">
+          <div>
+            <div class="font-bold">UGX ${t.amount.toLocaleString()} <span class="text-[10px] text-slate-500">(${t.type || 'Repayment'})</span></div>
+            <div class="text-slate-400">${t.date} via ${t.channel}</div>
+          </div>
+          <span class="text-green-600 font-bold">Recorded</span>
+        </div>
+      `).join('');
+    }
+
+    function exportPDFStatement() {
+      if (!activeStatementClientId) return;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      let client = clients.find(c => c.id === activeStatementClientId);
+      let txs = transactions.filter(t => t.clientId === activeStatementClientId && t.deleted_at === null);
+
+      doc.setFontSize(16);
+      doc.text(config.name || "PMMS MICROFINANCE", 14, 15);
+      doc.setFontSize(10);
+      doc.text(config.location || "", 14, 21);
+      doc.text(`Statement of Account: ${client.name} (${client.acc})`, 14, 28);
+      if(client.client_type === 'BODABODA') doc.text(`Boda Boda Plate: ${client.number_plate || 'N/A'}`, 14, 34);
+
+      let tableData = txs.map(t => [t.date, t.type || 'Repayment', `UGX ${t.amount.toLocaleString()}`, t.channel]);
+      doc.autoTable({ startY: client.client_type === 'BODABODA' ? 40 : 34, head: [['Date', 'Type', 'Amount', 'Channel']], body: tableData });
+      doc.save(`Statement_${client.name}.pdf`);
+    }
+
+    // Reports & Aging Analysis with Advance Days & Plates
+    function addExpense() {
+      let category = document.getElementById('exp-category').value;
+      let amount = parseFloat(document.getElementById('exp-amount').value) || 0;
+      let narration = document.getElementById('exp-narration').value;
+
+      if (!category || amount <= 0 || !narration) return alert('Enter category, amount, and narration.');
+
+      expenses.push({ id: Date.now(), category, amount, narration, date: new Date().toISOString().split('T')[0] });
+      saveAll();
+      document.getElementById('exp-category').value = '';
+      document.getElementById('exp-amount').value = '';
+      document.getElementById('exp-narration').value = '';
+      renderReports();
+      alert('Expense recorded.');
+    }
+
+    function renderReports() {
+      let activeClientsList = clients.filter(c => c.deleted_at === null);
+      let activeLoansList = loans.filter(l => l.deleted_at === null && l.status === 'Active');
+
+      let totalClientsCount = activeClientsList.length;
+      let newClientsCount = activeClientsList.filter(c => c.isNewClient).length;
+      let activeClientsCount = new Set(activeLoansList.map(l => l.clientId)).size;
+
+      let activeTx = transactions.filter(t => t.deleted_at === null);
+      let paidActiveClientsCount = new Set(
+        activeTx.filter(t => t.type === 'Repayment' && activeLoansList.some(l => l.id === t.loanId)).map(t => t.clientId)
+      ).size;
+
+      let collectionRate = activeClientsCount > 0 ? ((paidActiveClientsCount / activeClientsCount) * 100).toFixed(1) : '0.0';
+
+      let repayments = activeTx.filter(t => t.type === 'Repayment');
+      let mtnTotal = repayments.filter(t => t.channel === 'MTN Mobile Money').reduce((s, t) => s + t.amount, 0);
+      let airtelTotal = repayments.filter(t => t.channel === 'Airtel Mobile Money').reduce((s, t) => s + t.amount, 0);
+      let allMobileMoney = mtnTotal + airtelTotal;
+      let cashCollected = repayments.filter(t => t.channel === 'Cash').reduce((s, t) => s + t.amount, 0);
+      let bankTransfers = repayments.filter(t => t.channel === 'Banking').reduce((s, t) => s + t.amount, 0);
+      let totalCollections = cashCollected + allMobileMoney + bankTransfers;
+
+      let allLoans = loans.filter(l => l.deleted_at === null);
+      let totalLoansDisbursedCount = allLoans.length;
+      let totalAmountDisbursed = allLoans.reduce((s, l) => s + (l.cashPrincipal || l.principal), 0);
+      let totalPrincipalBalance = activeLoansList.reduce((s, l) => s + l.principal, 0);
+      let totalInterestBalance = activeLoansList.reduce((s, l) => s + l.interest, 0);
+
+      let processingFeesTotal = activeTx.filter(t => t.type === 'Processing Fee').reduce((s, t) => s + t.amount, 0);
+      let ledgerFeesTotal = activeTx.filter(t => t.type === 'Ledger Fee').reduce((s, t) => s + t.amount, 0);
+      let totalExpensesAmount = expenses.reduce((s, e) => s + e.amount, 0);
+
+      let openingCash = config.openingCash || 0;
+      let capitalization = config.capitalization || 0;
+
+      let closingCashAtHand = (openingCash + capitalization + cashCollected + processingFeesTotal + ledgerFeesTotal) - totalAmountDisbursed - totalExpensesAmount;
+      let overallClosingBalance = closingCashAtHand + allMobileMoney + bankTransfers;
+
+      document.getElementById('rep-total-clients').innerText = totalClientsCount;
+      document.getElementById('rep-active-clients').innerText = `${activeClientsCount} (${paidActiveClientsCount} Paid)`;
+      document.getElementById('rep-new-clients').innerText = newClientsCount;
+      document.getElementById('rep-collection-rate').innerText = `${collectionRate}%`;
+
+      document.getElementById('rep-opening-cash').innerText = 'UGX ' + openingCash.toLocaleString();
+      document.getElementById('rep-capitalization').innerText = 'UGX ' + capitalization.toLocaleString();
+      document.getElementById('rep-cash-collected').innerText = 'UGX ' + cashCollected.toLocaleString();
+      document.getElementById('rep-mtn').innerText = 'UGX ' + mtnTotal.toLocaleString();
+      document.getElementById('rep-airtel').innerText = 'UGX ' + airtelTotal.toLocaleString();
+      document.getElementById('rep-total-mm').innerText = 'UGX ' + allMobileMoney.toLocaleString();
+      document.getElementById('rep-bank').innerText = 'UGX ' + bankTransfers.toLocaleString();
+      document.getElementById('rep-total-collections').innerText = 'UGX ' + totalCollections.toLocaleString();
+
+      document.getElementById('rep-disbursed-count').innerText = totalLoansDisbursedCount;
+      document.getElementById('rep-disbursed-amount').innerText = 'UGX ' + totalAmountDisbursed.toLocaleString();
+      document.getElementById('rep-principal-balance').innerText = 'UGX ' + totalPrincipalBalance.toLocaleString();
+      document.getElementById('rep-interest-balance').innerText = 'UGX ' + totalInterestBalance.toLocaleString();
+      document.getElementById('rep-processing-fees').innerText = 'UGX ' + processingFeesTotal.toLocaleString();
+      document.getElementById('rep-ledger-fees').innerText = 'UGX ' + ledgerFeesTotal.toLocaleString();
+      document.getElementById('rep-expenses').innerText = 'UGX ' + totalExpensesAmount.toLocaleString();
+      document.getElementById('rep-closing-balance').innerText = 'UGX ' + overallClosingBalance.toLocaleString();
+    }
+
+    // 2 & 4. AGING ANALYSIS TABLE WITH ADVANCE DAYS & BODA PLATES
+    function renderAgingAnalysis() {
+      let body = document.getElementById('aging-table-body');
+      let activeClients = clients.filter(c => c.deleted_at === null);
+
+      body.innerHTML = activeClients.map(c => {
+        let loan = loans.find(l => l.clientId === c.id && l.status === 'Active' && l.deleted_at === null);
+        let metrics = loan ? calculateAccurateArrearsAndAdvance(loan) : { arrears: 0, advanceDays: 0 };
+        
+        let gDetails = (loan && loan.guarantor && loan.guarantor.name) 
+          ? `<b>${loan.guarantor.name}</b><br><span class="text-slate-400 text-[10px]">${loan.guarantor.phone || 'N/A'}</span>` 
+          : '<span class="text-slate-400">None</span>';
+
+        let plateBadge = (c.client_type === 'BODABODA' && c.number_plate) 
+          ? `<br><span class="inline-block bg-teal-100 text-teal-800 text-[10px] px-1 rounded font-bold">${c.number_plate}</span>` 
+          : '';
+
+        return `
+          <tr class="border-b">
+            <td class="p-2 font-bold">${c.name} ${plateBadge}<br><span class="font-normal text-slate-500 text-[10px]">${c.phone}</span></td>
+            <td class="p-2">${gDetails}</td>
+            <td class="p-2 text-right font-bold text-blue-600">UGX ${loan ? loan.balance.toLocaleString() : '0'}</td>
+            <td class="p-2 text-right font-bold text-red-600">UGX ${metrics.arrears.toLocaleString()}</td>
+            <td class="p-2 text-right font-bold text-emerald-600">${metrics.advanceDays} Days</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function exportPDFAging() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.setFontSize(14);
+      doc.text(`${config.name || "PMMS"} - Aging Analysis & Guarantor Report`, 14, 15);
+
+      let activeClients = clients.filter(c => c.deleted_at === null);
+      let rows = activeClients.map(c => {
+        let loan = loans.find(l => l.clientId === c.id && l.status === 'Active' && l.deleted_at === null);
+        let metrics = loan ? calculateAccurateArrearsAndAdvance(loan) : { arrears: 0, advanceDays: 0 };
+        let gInfo = (loan && loan.guarantor && loan.guarantor.name) ? `${loan.guarantor.name} (${loan.guarantor.phone || ''})` : 'N/A';
+        let plate = (c.client_type === 'BODABODA') ? c.number_plate || 'N/A' : 'N/A';
+
+        return [c.name, plate, c.phone, gInfo, loan ? `UGX ${loan.balance.toLocaleString()}` : 'UGX 0', `UGX ${metrics.arrears.toLocaleString()}`, `${metrics.advanceDays} Days`];
+      });
+
+      doc.autoTable({ startY: 22, head: [['Client Name', 'Boda Plate', 'Phone', 'Guarantor', 'Balance', 'Arrears', 'Advance']], body: rows });
+      doc.save(`Aging_Analysis_${new Date().toISOString().split('T')[0]}.pdf`);
+    }
+
+    // Financial Records Hub
+    function renderRecordsHub() {
+      let pType = document.getElementById('record-period-type').value;
+      let container = document.getElementById('records-list-container');
+      document.getElementById('records-period-heading').innerText = `${pType.toUpperCase()} Financial Records`;
+
+      let groups = {};
+      let activeTx = transactions.filter(t => t.deleted_at === null);
+
+      activeTx.forEach(t => {
+        let key = t.date;
+        if (pType === 'monthly') key = t.date.substring(0, 7);
+        if (pType === 'yearly') key = t.date.substring(0, 4);
+        if (pType === 'weekly') {
+          let d = new Date(t.date);
+          key = `${t.date.substring(0, 7)}-W${Math.ceil(d.getDate() / 7)}`;
+        }
+
+        if (!groups[key]) groups[key] = { collections: 0, count: 0 };
+        groups[key].collections += t.amount;
+        groups[key].count += 1;
+      });
+
+      let keys = Object.keys(groups).sort().reverse();
+
+      if (keys.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-400 italic text-center py-4">No historical records available.</div>`;
+        return;
+      }
+
+      container.innerHTML = keys.map(k => `
+        <div class="bg-slate-50 p-2.5 border rounded-lg text-xs flex justify-between items-center">
+          <div>
+            <div class="font-bold text-slate-800">${pType.toUpperCase()} Period: ${k}</div>
+            <div class="text-slate-400 text-[10px]">${groups[k].count} Recorded Payment Transactions</div>
+          </div>
+          <div class="text-right font-bold text-emerald-600">
+            UGX ${groups[k].collections.toLocaleString()}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function exportRecordsPDF() {
+      let pType = document.getElementById('record-period-type').value;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(14);
+      doc.text(`${config.name || "PMMS"} - ${pType.toUpperCase()} Financial Overview Report`, 14, 15);
+
+      let groups = {};
+      transactions.filter(t => t.deleted_at === null).forEach(t => {
+        let key = t.date;
+        if (pType === 'monthly') key = t.date.substring(0, 7);
+        if (pType === 'yearly') key = t.date.substring(0, 4);
+        if (pType === 'weekly') {
+          let d = new Date(t.date);
+          key = `${t.date.substring(0, 7)}-W${Math.ceil(d.getDate() / 7)}`;
+        }
+        if (!groups[key]) groups[key] = 0;
+        groups[key] += t.amount;
+      });
+
+      let rows = Object.keys(groups).sort().reverse().map(k => [k, `UGX ${groups[k].toLocaleString()}`]);
+
+      doc.autoTable({ startY: 22, head: [[`${pType.toUpperCase()} Period`, 'Total Collections']], body: rows });
+      doc.save(`Financial_Records_${pType}_${new Date().toISOString().split('T')[0]}.pdf`);
+    }
+
+    // 3. DEFAULTERS LIST (STRICT REQUIREMENT: 30 CONSECUTIVE DAYS UNPAID)
+    function renderDemandList() {
+      let container = document.getElementById('demand-list-container');
+      let activeLoansList = loans.filter(l => l.deleted_at === null && l.status === 'Active' && l.balance > 0);
+      let today = new Date();
+      today.setHours(0,0,0,0);
+
+      let defaulters = [];
+
+      activeLoansList.forEach(loan => {
+        let client = clients.find(c => c.id === loan.clientId && c.deleted_at === null);
+        if (!client) return;
+
+        // Find client's latest payment transaction date
+        let clientTx = transactions.filter(t => t.deleted_at === null && t.clientId === client.id && t.type === 'Repayment').sort((a,b) => new Date(b.date) - new Date(a.date));
+        
+        let lastPaymentDate = clientTx.length > 0 ? new Date(clientTx[0].date) : new Date(loan.date);
+        lastPaymentDate.setHours(0,0,0,0);
+
+        let diffDays = Math.floor((today - lastPaymentDate) / (1000 * 60 * 60 * 24));
+
+        if (diffDays >= 30) {
+          let metrics = calculateAccurateArrearsAndAdvance(loan);
+          defaulters.push({ loan, client, daysUnpaid: diffDays, arrears: metrics.arrears });
+        }
+      });
+
+      if (defaulters.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-500 text-center py-4">No defaulters found! No client has gone 30+ days without paying.</div>`;
+        return;
+      }
+
+      container.innerHTML = defaulters.map(item => `
+        <div class="bg-white p-3 border rounded-lg text-xs space-y-1 border-l-4 border-l-red-600">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-sm text-slate-800">${item.client.name}</span>
+            <a href="tel:${item.client.phone}" class="bg-green-600 text-white px-2 py-0.5 rounded text-[11px] font-bold">
+              <i class="fa-solid fa-phone"></i> Call
+            </a>
+          </div>
+          <div class="text-slate-500">Account: ${item.client.acc} | Phone: ${item.client.phone} ${item.client.number_plate ? '| Plate: '+item.client.number_plate : ''}</div>
+          <div class="text-red-700 font-bold bg-red-50 p-1.5 rounded mt-1 flex justify-between">
+            <span>Consecutive Days Unpaid: ${item.daysUnpaid} Days</span>
+            <span>Arrears: UGX ${item.arrears.toLocaleString()}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function exportPDFDemand() {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      doc.setFontSize(14);
+      doc.text(`${config.name || "PMMS"} - Defaulters Report (30+ Days Unpaid)`, 14, 15);
+
+      let activeLoansList = loans.filter(l => l.deleted_at === null && l.status === 'Active' && l.balance > 0);
+      let today = new Date();
+      today.setHours(0,0,0,0);
+
+      let rows = [];
+
+      activeLoansList.forEach(loan => {
+        let client = clients.find(c => c.id === loan.clientId && c.deleted_at === null);
+        if (!client) return;
+
+        let clientTx = transactions.filter(t => t.deleted_at === null && t.clientId === client.id && t.type === 'Repayment').sort((a,b) => new Date(b.date) - new Date(a.date));
+        let lastPaymentDate = clientTx.length > 0 ? new Date(clientTx[0].date) : new Date(loan.date);
+        lastPaymentDate.setHours(0,0,0,0);
+
+        let diffDays = Math.floor((today - lastPaymentDate) / (1000 * 60 * 60 * 24));
+
+        if (diffDays >= 30) {
+          let metrics = calculateAccurateArrearsAndAdvance(loan);
+          rows.push([
+            client.name,
+            client.phone,
+            client.number_plate || 'N/A',
+            `${diffDays} Days`,
+            `UGX ${metrics.arrears.toLocaleString()}`,
+            `UGX ${loan.balance.toLocaleString()}`
+          ]);
+        }
+      });
+
+      doc.autoTable({ startY: 22, head: [['Client Name', 'Phone', 'Boda Plate', 'Unpaid Duration', 'Arrears', 'Balance']], body: rows });
+      doc.save(`Defaulters_30Days_${new Date().toISOString().split('T')[0]}.pdf`);
+ALTER TABLE clients 
+ADD COLUMN is_boda_boda BOOLEAN DEFAULT FALSE,
+ADD COLUMN motorcycle_plate VARCHAR(20) UNIQUE DEFAULT NULL;
+app.post('/api/clients/disburse', async (req, res) => {
+  const { client_name, is_boda_boda, motorcycle_plate, loan_amount } = req.body;
+
+  if (is_boda_boda) {
+    if (!motorcycle_plate || motorcycle_plate.trim() === '') {
+      return res.status(400).json({ error: 'Motorcycle number plate is required for Boda Boda riders.' });
+    }
+
+    // Check if number plate already exists in system
+    const existingPlate = await db.query(
+      'SELECT id FROM clients WHERE UPPER(motorcycle_plate) = UPPER($1)',
+      [motorcycle_plate.trim()]
+    );
+
+    if (existingPlate.rows.length > 0) {
+      return res.status(409).json({ 
+        error: 'This motorcycle number plate is already registered in the system.' 
+      });
+    }
+  }
+
+  // Insert new client disbursement
+  const cleanPlate = is_boda_boda ? motorcycle_plate.trim().toUpperCase() : null;
+  const result = await db.query(
+    'INSERT INTO clients (name, is_boda_boda, motorcycle_plate, loan_amount) VALUES ($1, $2, $3, $4) RETURNING *',
+    [client_name, is_boda_boda, cleanPlate, loan_amount]
+  );
+
+  res.status(201).json(result.rows[0]);
+});
+<label>
+  <input type="checkbox" id="isBodaBoda" onchange="togglePlateField(this.checked)" />
+  Is Boda Boda Rider?
+</label>
+
+<div id="plateContainer" style="display: none; margin-top: 10px;">
+  <label for="motorcyclePlate">Motorcycle Number Plate:</label>
+  <input type="text" id="motorcyclePlate" placeholder="e.g. UER 123X" style="text-transform: uppercase;" />
+</div>
+
+<script>
+function togglePlateField(isChecked) {
+  const container = document.getElementById('plateContainer');
+  const input = document.getElementById('motorcyclePlate');
+  container.style.display = isChecked ? 'block' : 'none';
+  input.required = isChecked;
+  if (!isChecked) input.value = '';
+}
+</script>
+  
+  COALESCE((SELECT SUM(amount) FROM repayments), 0) AS total_collection,
+  COALESCE((SELECT SUM(loan_amount) FROM loans WHERE status = 'DISBURSED'), 0) AS total_disbursement,
+  COALESCE((SELECT COUNT(id) FROM clients), 0) AS total_new_clients,
+  COALESCE((SELECT SUM(principal_amount) FROM loans), 0) AS total_principal,
+  COALESCE((SELECT SUM(interest_amount) FROM loans), 0) AS total_interest,
+  COALESCE((SELECT SUM(amount) FROM expenses), 0) AS total_expenses;
+app.post('/api/transactions/repay', async (req, res) => {
+  const { loan_id, amount, payment_method } = req.body;
+  const receipt_number = 'REC-' + Date.now();
+
+  const transaction = await db.query(
+    `INSERT INTO repayments (loan_id, amount, receipt_number, payment_method, created_at) 
+     VALUES ($1, $2, $3, $4, NOW()) RETURNING *`,
+    [loan_id, amount, receipt_number, payment_method]
+  );
+
+  res.status(201).json({
+    message: 'Payment recorded successfully',
+    receipt: {
+      receipt_number: transaction.rows[0].receipt_number,
+      loan_id,
+      amount,
+      date: transaction.rows[0].created_at,
+      payment_method
+    }
+  });
+});
+<!-- Aging Analysis Table Row Example -->
+<tr>
+  <td>John Doe (Client)</td>
+  <td>UGX 450,000</td>
+  <td>30 Days Overdue</td>
+  <td>
+    <a href="tel:+256700000000" class="btn-call">📞 Call Client (+256 700 000 000)</a>
+  </td>
+  <td>
+    <a href="tel:+256750000000" class="btn-call">📞 Call Guarantor (+256 750 000 000)</a>
+  </td>
+</tr>
+SELECT 
+ < l.id AS loan_id,
+  l.disbursed_at AS transaction_date,
+  'LOAN DISBURSEMENT' AS description,
+  l.total_loan_amount AS debit,
+  0 AS credit,
+  l.total_loan_amount AS balance
+FROM loans l
+WHERE l.client_id = $1
+
+UNION ALL
+
+SELECT 
+  <r.loan_id,
+  r.created_at AS transaction_date,
+  'REPAYMENT (' || r.receipt_number || ')' AS description,
+  0 AS debit,
+  r.amount AS credit,
+  0 AS balance
+FROM repayments r
+JOIN loans l ON r.loan_id = l.id
+WHERE l.client_id = $1
+ORDER BY transaction_date ASC;
+CREATE TABLE branch_devices (
+  id SERIAL PRIMARY KEY,
+  branch_id INT NOT NULL,
+  device_id VARCHAR(255) NOT NULL,
+  last_active TIMESTAMP DEFAULT NOW(),
+  UNIQUE(branch_id, device_id)
+);
+<app.use('/branch/:branchId', async (req, res, next) => {
+  const { branchId } = req.params;
+  // Get device ID from custom header or generate cookie-based ID
+  const deviceId = req.headers['x-device-id'] || req.cookies['device_id'];
+
+  if (!deviceId) {
+    return res.status(400).json({ error: 'Device identification header missing.' });
+  }
+
+  // Check existing active devices for this branch
+  const activeDevices = await db.query(
+    'SELECT device_id FROM branch_devices WHERE branch_id = $1',
+    [branchId]
+  );
+
+  const existingDeviceIds = activeDevices.rows.map(r => r.device_id);
+
+  if (!existingDeviceIds.includes(deviceId)) {
+    if (existingDeviceIds.length >= 2) {
+      return res.status(403).json({ 
+        error: 'Access denied: This branch link is already active on the maximum allowed 2 devices.' 
+      });
+    }
+
+    // Register 2nd device
+    await db.query(
+      'INSERT INTO branch_devices (branch_id, device_id) VALUES ($1, $2)',
+      [branchId, deviceId]
+    );
+  } else {
+    // Update active timestamp
+    await db.query(
+      'UPDATE branch_devices SET last_active = NOW() WHERE branch_id = $1 AND device_id = $2',
+      [branchId, deviceId]
+    );
+  }
+
+  next();
+});
+<div id="financialSummary" class="printable-area">
+  <h2>Financial Summary Overview</h2>
+  <p>Generated on: <span id="currentDate"></span></p>
+  
+  <table border="1" style="width: 100%; border-collapse: collapse;">
+    <tr><th>Metric</th><th>Amount</th></tr>
+    <tr><td>Total Collection</td><td>UGX 12,500,000</td></tr>
+    <tr><td>Total Disbursement</td><td>UGX 10,000,000</td></tr>
+    <tr><td>Total Interest</td><td>UGX 2,000,000</td></tr>
+    <tr><td>Total Expenses</td><td>UGX 800,000</td></tr>
+  </table>
+</div>
+
+<button onclick="window.print()">🖨️ Print / Save as PDF</button>
+
+<style>
+@media print {
+  /* Hide navigation, buttons, and sidebars during printing */
+  body * {
+    visibility: hidden;
+  }
+  .printable-area, .printable-area * {
+    visibility: visible;
+  }
+  .printable-area {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+}
+  
+  </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>PMMS Microfinance Enterprise System</title>

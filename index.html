@@ -32,6 +32,24 @@
     </div>
   </div>
 
+  <!-- BRANCH APPROVAL LOCK OVERLAY FOR UNAUTHORIZED / SWITCHED OFF BRANCHES -->
+  <div id="branch-lock-overlay" class="fixed inset-0 bg-slate-950/95 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-md text-center space-y-4 shadow-2xl border-t-4 border-red-600">
+      <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+        <i class="fa-solid fa-ban"></i>
+      </div>
+      <div>
+        <h2 id="branch-lock-title" class="text-xl font-bold text-slate-900">Branch Access Restricted</h2>
+        <p id="branch-lock-msg" class="text-xs text-slate-600 mt-2 leading-relaxed">
+          This branch system has not been approved by Mother System Admin, or access has been switched off remotely.
+        </p>
+      </div>
+      <button onclick="checkBranchAuthorizationState()" class="w-full bg-slate-800 text-white py-2.5 rounded-xl font-bold text-xs hover:bg-slate-900">
+        <i class="fa-solid fa-rotate-right"></i> Check Authorization Status
+      </button>
+    </div>
+  </div>
+
   <!-- Header -->
   <header class="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10">
     <div class="flex justify-between items-center max-w-xl mx-auto">
@@ -52,6 +70,9 @@
   <!-- Main Container -->
   <main class="p-4 max-w-xl mx-auto space-y-4">
 
+    <!-- PENDING CONSOLIDATION APPROVALS ALERT FOR MOTHER SYSTEM -->
+    <div id="mother-consolidation-alerts" class="hidden space-y-2"></div>
+
     <!-- TAB 1: BATCH POSTING -->
     <section id="tab-posting" class="tab-content space-y-4">
       <h2 class="text-lg font-bold border-b pb-2 flex justify-between items-center">
@@ -63,7 +84,7 @@
       
       <div>
         <label class="block text-xs font-semibold mb-1 text-slate-600">Search Active Client</label>
-        <input type="text" id="post-search" oninput="searchPostingClients(this.value)" placeholder="Search name, UG phone (e.g. 077...), or account..." class="w-full p-2.5 border rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-800">
+        <input type="text" id="post-search" oninput="searchPostingClients(this.value)" placeholder="Search name, phone, plate, or account..." class="w-full p-2.5 border rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-800">
         <div id="post-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
       </div>
 
@@ -72,15 +93,17 @@
           <div>
             <div class="font-bold text-base" id="post-client-name"></div>
             <div class="text-slate-300 text-xs" id="post-client-acc"></div>
+            <div class="text-teal-300 text-xs font-semibold" id="post-client-type-info"></div>
           </div>
           <a id="post-client-call" href="#" class="bg-green-600 text-white px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1">
             <i class="fa-solid fa-phone"></i> Call
           </a>
         </div>
-        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-slate-700 text-center">
-          <div><span class="block text-xs text-slate-400">Arrears</span><span id="post-arrears" class="text-red-400 font-bold"></span></div>
-          <div><span class="block text-xs text-slate-400">Balance</span><span id="post-balance" class="text-blue-400 font-bold"></span></div>
-          <div><span class="block text-xs text-slate-400">Daily Target</span><span id="post-daily" class="text-green-400 font-bold"></span></div>
+        <div class="grid grid-cols-4 gap-1 pt-2 border-t border-slate-700 text-center">
+          <div><span class="block text-[10px] text-slate-400">Arrears</span><span id="post-arrears" class="text-red-400 font-bold text-xs"></span></div>
+          <div><span class="block text-[10px] text-slate-400">Advance</span><span id="post-advance" class="text-emerald-400 font-bold text-xs"></span></div>
+          <div><span class="block text-[10px] text-slate-400">Balance</span><span id="post-balance" class="text-blue-400 font-bold text-xs"></span></div>
+          <div><span class="block text-[10px] text-slate-400">Daily Target</span><span id="post-daily" class="text-green-400 font-bold text-xs"></span></div>
         </div>
       </div>
 
@@ -124,12 +147,28 @@
         <div class="font-bold text-xs text-slate-700">New Client Details</div>
         <input type="text" id="new-name" placeholder="Full Client Name" class="w-full p-2 border rounded text-xs">
         <input type="tel" id="new-phone" placeholder="UG Phone (e.g., 0771234567 or +256701234567)" class="w-full p-2 border rounded text-xs">
+        
+        <!-- Category & Boda Boda Number Plate System -->
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block text-[10px] text-slate-600 font-semibold mb-1">Client Category</label>
+            <select id="new-client-category" onchange="toggleBodaPlateInput('new')" class="w-full p-2 border rounded text-xs bg-white">
+              <option value="OTHERS">OTHERS</option>
+              <option value="BODABODA">BODABODA</option>
+            </select>
+          </div>
+          <div id="new-plate-container" class="hidden">
+            <label class="block text-[10px] text-slate-600 font-semibold mb-1">Motorcycle Number Plate</label>
+            <input type="text" id="new-number-plate" placeholder="e.g. UER 123X" class="w-full p-2 border rounded text-xs uppercase bg-white">
+          </div>
+        </div>
+
         <p class="text-[11px] text-teal-700 italic">* Automatic Ledger Fee of UGX 10,000 applies to new clients.</p>
       </div>
 
       <!-- Existing Client Search -->
       <div id="existing-client-fields">
-        <input type="text" id="disburse-search" oninput="searchDisburseClients(this.value)" placeholder="Search primary client for new loan..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        <input type="text" id="disburse-search" oninput="searchDisburseClients(this.value)" placeholder="Search primary client by name, phone, or plate..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
         <div id="disburse-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
         <div id="disburse-selected-name" class="text-xs font-bold text-green-700 mt-1"></div>
       </div>
@@ -147,9 +186,9 @@
       <!-- MULTI-SEARCH CONSOLIDATION SELECTOR -->
       <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs space-y-2">
         <div class="font-bold text-amber-900"><i class="fa-solid fa-layer-group"></i> Combine Outstanding Loans From Search</div>
-        <p class="text-[11px] text-amber-800">Search and pick active loans across clients to merge into this loan. Selected balances will be set to UGX 0.</p>
+        <p class="text-[11px] text-amber-800">Search and pick active loans across clients to merge. Require Mother System Approval before clearing balances.</p>
         
-        <input type="text" id="merge-search-input" oninput="searchLoansToCombine(this.value)" placeholder="Type client name/phone to merge loan..." class="w-full p-2 border rounded text-xs bg-white">
+        <input type="text" id="merge-search-input" oninput="searchLoansToCombine(this.value)" placeholder="Type client name/phone/plate to merge loan..." class="w-full p-2 border rounded text-xs bg-white">
         <div id="merge-search-results" class="bg-white border rounded divide-y max-h-32 overflow-y-auto hidden"></div>
 
         <!-- Selected Merged List -->
@@ -222,7 +261,7 @@
       </div>
     </section>
 
-    <!-- TAB 4: STATEMENTS & CLIENT EDIT / DELETE -->
+    <!-- TAB 4: STATEMENTS & CLIENT EDIT / SOFT DELETE -->
     <section id="tab-statement" class="tab-content space-y-4 hidden">
       <h2 class="text-lg font-bold border-b pb-2">Client Statements & Management</h2>
       
@@ -249,6 +288,7 @@
             <div>
               <div class="font-bold text-sm" id="st-name"></div>
               <div id="st-acc" class="text-slate-500"></div>
+              <div id="st-type-plate" class="text-teal-700 font-bold mt-0.5"></div>
               <div id="st-guarantor" class="text-amber-800 font-semibold mt-0.5"></div>
             </div>
             <div class="flex gap-1">
@@ -256,7 +296,7 @@
                 <i class="fa-solid fa-pen-to-square"></i> Edit
               </button>
               <button id="btn-delete-cleared-client" onclick="deleteClearedClient()" class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold hover:bg-red-200 hidden">
-                <i class="fa-solid fa-user-xmark"></i> Delete Cleared
+                <i class="fa-solid fa-user-xmark"></i> Soft Delete
               </button>
               <a id="st-call-btn" href="#" class="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
                 <i class="fa-solid fa-phone"></i>
@@ -269,7 +309,7 @@
           <div id="st-loan-controls" class="hidden pt-2 border-t flex justify-between items-center">
             <span class="text-slate-500 text-[11px]">Loan Actions:</span>
             <button onclick="reverseActiveLoan()" class="bg-red-600 text-white px-2.5 py-1 rounded text-xs font-bold hover:bg-red-700">
-              <i class="fa-solid fa-trash-can"></i> Reverse Loan
+              <i class="fa-solid fa-trash-can"></i> Soft Delete Loan
             </button>
           </div>
         </div>
@@ -354,7 +394,7 @@
       </div>
     </section>
 
-    <!-- TAB 6: AGING ANALYSIS & GUARANTORS -->
+    <!-- TAB 6: AGING ANALYSIS & GUARANTORS (WITH ADVANCE DAYS & NUMBER PLATES) -->
     <section id="tab-aging" class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
         <h2 class="text-lg font-bold">Aging Analysis & Guarantors</h2>
@@ -367,10 +407,11 @@
         <table class="w-full text-left border-collapse text-xs">
           <thead>
             <tr class="bg-slate-800 text-white text-[11px]">
-              <th class="p-2">Client Name</th>
-              <th class="p-2">Guarantor & Phone</th>
+              <th class="p-2">Client & Plate</th>
+              <th class="p-2">Guarantor</th>
               <th class="p-2 text-right">Balance</th>
               <th class="p-2 text-right">Arrears</th>
+              <th class="p-2 text-right">Advance Days</th>
             </tr>
           </thead>
           <tbody id="aging-table-body" class="divide-y text-slate-700"></tbody>
@@ -378,7 +419,7 @@
       </div>
     </section>
 
-    <!-- TAB 7: EXTENDED RECORDS HUB (DAILY, WEEKLY, MONTHLY, YEARLY) -->
+    <!-- TAB 7: EXTENDED RECORDS HUB -->
     <section id="tab-records" class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
         <h2 class="text-lg font-bold">Financial Records Hub</h2>
@@ -401,20 +442,20 @@
       </div>
     </section>
 
-    <!-- TAB 8: DEFAULTERS LIST (ACTIVE CLIENTS WITH ZERO ARREARS EXCLUDED) -->
+    <!-- TAB 8: DEFAULTERS LIST (STRICT 30 DAYS WITHOUT PAYMENT) -->
     <section id="tab-demand" class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
-        <h2 class="text-lg font-bold text-red-700">Defaulters List</h2>
+        <h2 class="text-lg font-bold text-red-700">Defaulters List (30+ Days Unpaid)</h2>
         <button onclick="exportPDFDemand()" class="bg-red-600 text-white px-2.5 py-1 rounded text-xs font-bold flex items-center gap-1">
           <i class="fa-solid fa-file-pdf"></i> Defaulters PDF
         </button>
       </div>
 
-      <p class="text-xs text-slate-500 italic">* Active clients with zero arrears are excluded from this list.</p>
+      <p class="text-xs text-slate-500 italic">* Strict Requirement: Displays active clients who have gone 30 consecutive days or more without making any payment.</p>
       <div id="demand-list-container" class="space-y-2"></div>
     </section>
 
-    <!-- TAB 9: SETUP, CAPITAL & BRANCH MANAGEMENT -->
+    <!-- TAB 9: SETUP, CAPITAL & BRANCH MANAGEMENT (WITH REMOTE APPROVAL & KILL SWITCH) -->
     <section id="tab-settings" class="tab-content space-y-4 hidden">
       <h2 class="text-lg font-bold border-b pb-2">Setup, Capital & Branch System</h2>
 
@@ -461,26 +502,26 @@
         </button>
       </div>
 
-      <!-- BRANCH MANAGEMENT SECTION (100+ BRANCHES) -->
+      <!-- BRANCH NETWORK CONTROL HUB (MOTHER SYSTEM ONLY) -->
       <div id="branch-management-box" class="bg-slate-800 text-white p-4 rounded-lg space-y-3 text-xs">
-        <h3 class="font-bold text-teal-400 border-b border-slate-700 pb-1">Open & Deploy New Branch (100+ Branches Allowed)</h3>
-        <p class="text-slate-300">Create isolated branches with separate databases that link to this identical system on other devices.</p>
+        <h3 class="font-bold text-teal-400 border-b border-slate-700 pb-1">Deploy & Control Branch Network (100+ Branches)</h3>
+        <p class="text-slate-300">Generated branch links require explicit approval from Mother System before access is granted. Mother System can switch off access at any time.</p>
         
         <div class="flex gap-2">
           <input type="text" id="new-branch-name" placeholder="Branch Name (e.g. Jinja Branch)" class="p-2 rounded text-slate-800 bg-white w-2/3">
           <button onclick="createNewBranch()" class="bg-teal-600 text-white font-bold p-2 rounded w-1/3 hover:bg-teal-700">Generate Branch</button>
         </div>
 
-        <div id="branch-links-list" class="space-y-2 pt-2 border-t border-slate-700 max-h-40 overflow-y-auto"></div>
+        <div id="branch-links-list" class="space-y-2 pt-2 border-t border-slate-700 max-h-60 overflow-y-auto"></div>
       </div>
     </section>
 
   </main>
 
-  <!-- Edit Client Modal -->
+  <!-- Edit Client Details & Number Plate Modal -->
   <div id="edit-client-modal" class="fixed inset-0 bg-black/50 hidden z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-xl p-4 w-full max-w-sm space-y-3">
-      <h3 class="font-bold text-sm border-b pb-2">Edit Client Details</h3>
+      <h3 class="font-bold text-sm border-b pb-2">Edit Client & Plate Details</h3>
       <input type="hidden" id="edit-client-id">
       <div>
         <label class="block text-xs font-semibold mb-1 text-slate-600">Full Name</label>
@@ -489,6 +530,17 @@
       <div>
         <label class="block text-xs font-semibold mb-1 text-slate-600">Phone Number (Unique UG Format)</label>
         <input type="tel" id="edit-client-phone" class="w-full p-2 border rounded-lg text-sm">
+      </div>
+      <div>
+        <label class="block text-xs font-semibold mb-1 text-slate-600">Client Category</label>
+        <select id="edit-client-type" onchange="toggleBodaPlateInput('edit')" class="w-full p-2 border rounded-lg text-sm bg-white">
+          <option value="OTHERS">OTHERS</option>
+          <option value="BODABODA">BODABODA</option>
+        </select>
+      </div>
+      <div id="edit-plate-container" class="hidden">
+        <label class="block text-xs font-semibold mb-1 text-slate-600">Motorcycle Number Plate (Unique)</label>
+        <input type="text" id="edit-number-plate" class="w-full p-2 border rounded-lg text-sm uppercase bg-white">
       </div>
       <div class="flex gap-2 pt-2">
         <button onclick="closeEditClientModal()" class="w-1/2 border py-2 rounded-lg text-xs font-bold">Cancel</button>
@@ -546,12 +598,13 @@
 
     const STORAGE_PREFIX = `pmms_${branchCode}_`;
 
-    // Data Store
+    // Permanent Data Store (With Soft Deletes)
     let clients = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'clients')) || [];
     let loans = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'loans')) || [];
     let transactions = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'tx')) || [];
     let expenses = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'expenses')) || [];
     let branches = JSON.parse(localStorage.getItem('pmms_branches_master')) || [];
+    let consolidationRequests = JSON.parse(localStorage.getItem('pmms_consolidation_requests')) || [];
 
     let config = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'config')) || { 
       name: isMotherSystem ? 'PMMS MICROFINANCE LTD (MOTHER)' : `PMMS BRANCH (${branchCode.toUpperCase()})`, 
@@ -573,12 +626,50 @@
     const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
 
     window.addEventListener('DOMContentLoaded', () => {
+      checkBranchAuthorizationState();
       checkSessionTimeout();
       applyCompanyConfig();
       renderBranchList();
+      renderMotherConsolidationAlerts();
       liveCalculateDisbursement();
       calculateLoan();
     });
+
+    // 1 & 6. BRANCH SECURITY, APPROVAL & REMOTE SWITCH-OFF ENGINE
+    function checkBranchAuthorizationState() {
+      if (isMotherSystem) return; // Mother system is always authorized
+
+      branches = JSON.parse(localStorage.getItem('pmms_branches_master')) || [];
+      let currentBranch = branches.find(b => b.code === branchCode);
+
+      let overlay = document.getElementById('branch-lock-overlay');
+      let title = document.getElementById('branch-lock-title');
+      let msg = document.getElementById('branch-lock-msg');
+
+      if (!currentBranch) {
+        title.innerText = "Unregistered Branch Link";
+        msg.innerText = "This branch code does not exist on Mother System. Access denied.";
+        overlay.classList.remove('hidden');
+        return;
+      }
+
+      if (currentBranch.approval_status === 'PENDING_APPROVAL') {
+        title.innerText = "Approval Required From Mother System";
+        msg.innerText = `Branch "${currentBranch.name}" has requested access. The link cannot be used until authorized by Mother System Admin.`;
+        overlay.classList.remove('hidden');
+        return;
+      }
+
+      if (currentBranch.approval_status === 'REJECTED' || !currentBranch.is_active) {
+        title.innerText = "Branch Switched Off / Access Denied";
+        msg.innerText = `Access to branch "${currentBranch.name}" has been disabled or rejected by Mother System Admin.`;
+        overlay.classList.remove('hidden');
+        return;
+      }
+
+      // Branch is approved and active
+      overlay.classList.add('hidden');
+    }
 
     function checkSessionTimeout() {
       let lastLoginTime = localStorage.getItem(STORAGE_PREFIX + 'last_login');
@@ -606,6 +697,7 @@
       document.getElementById('login-overlay').classList.remove('hidden');
     }
 
+    // 5. PERMANENT DATA RETENTION (SOFT DELETE ENGINE)
     function saveAll() {
       localStorage.setItem(STORAGE_PREFIX + 'clients', JSON.stringify(clients));
       localStorage.setItem(STORAGE_PREFIX + 'loans', JSON.stringify(loans));
@@ -613,6 +705,7 @@
       localStorage.setItem(STORAGE_PREFIX + 'expenses', JSON.stringify(expenses));
       localStorage.setItem(STORAGE_PREFIX + 'config', JSON.stringify(config));
       localStorage.setItem('pmms_branches_master', JSON.stringify(branches));
+      localStorage.setItem('pmms_consolidation_requests', JSON.stringify(consolidationRequests));
     }
 
     function applyCompanyConfig() {
@@ -654,7 +747,7 @@
       alert('Settings saved successfully!');
     }
 
-    // Branch Creator (Supports 100+ Branches)
+    // Branch Generator & Remote Control Hub
     function createNewBranch() {
       if (!isMotherSystem) return alert('Only Mother System can create new branches.');
       let bName = document.getElementById('new-branch-name').value.trim();
@@ -664,11 +757,43 @@
       let baseUrl = window.location.origin + window.location.pathname;
       let branchLink = `${baseUrl}?branch=${bCode}`;
 
-      branches.push({ code: bCode, name: bName, link: branchLink, created: new Date().toISOString().split('T')[0] });
+      branches.push({ 
+        code: bCode, 
+        name: bName, 
+        link: branchLink, 
+        is_active: false, // Inactive until approved
+        approval_status: 'PENDING_APPROVAL', // Requires approval
+        created: new Date().toISOString().split('T')[0] 
+      });
+
       saveAll();
       renderBranchList();
       document.getElementById('new-branch-name').value = '';
-      alert(`New Branch Created Successfully!\nLink: ${branchLink}`);
+      alert(`New Branch Link Generated!\nLink: ${branchLink}\n\n* Note: Branch is set to PENDING_APPROVAL. Approve it in the Hub below when shared.`);
+    }
+
+    function toggleBranchApproval(code, status) {
+      if (!isMotherSystem) return;
+      let branch = branches.find(b => b.code === code);
+      if (branch) {
+        branch.approval_status = status;
+        branch.is_active = (status === 'APPROVED');
+        saveAll();
+        renderBranchList();
+        alert(`Branch ${branch.name} status updated to: ${status}`);
+      }
+    }
+
+    function toggleBranchActive(code, isActive) {
+      if (!isMotherSystem) return;
+      let branch = branches.find(b => b.code === code);
+      if (branch) {
+        branch.is_active = isActive;
+        if (!isActive) branch.approval_status = 'REJECTED';
+        saveAll();
+        renderBranchList();
+        alert(`Branch ${branch.name} access ${isActive ? 'ACTIVATED' : 'SWITCHED OFF'}.`);
+      }
     }
 
     function renderBranchList() {
@@ -681,19 +806,62 @@
       }
 
       container.innerHTML = branches.map(b => `
-        <div class="p-2 bg-slate-700 rounded flex justify-between items-center text-xs">
-          <div>
-            <div class="font-bold text-teal-300">${b.name}</div>
-            <div class="text-[10px] text-slate-400">${b.link}</div>
+        <div class="p-2.5 bg-slate-700 rounded space-y-2 text-xs">
+          <div class="flex justify-between items-start">
+            <div>
+              <div class="font-bold text-teal-300">${b.name} (${b.code})</div>
+              <div class="text-[10px] text-slate-300 break-all">${b.link}</div>
+            </div>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold ${
+              b.approval_status === 'APPROVED' ? 'bg-emerald-600 text-white' : 
+              b.approval_status === 'PENDING_APPROVAL' ? 'bg-amber-500 text-slate-900' : 'bg-red-600 text-white'
+            }">${b.approval_status}</span>
           </div>
-          <button onclick="navigator.clipboard.writeText('${b.link}'); alert('Branch Link Copied!');" class="bg-teal-600 px-2 py-1 rounded text-white font-bold">
-            Copy Link
-          </button>
+
+          <div class="flex flex-wrap gap-1.5 pt-1 border-t border-slate-600 justify-between items-center">
+            <button onclick="navigator.clipboard.writeText('${b.link}'); alert('Branch Link Copied!');" class="bg-slate-600 px-2 py-1 rounded text-white font-bold text-[10px]">
+              <i class="fa-solid fa-copy"></i> Copy Link
+            </button>
+            <div class="flex gap-1">
+              ${b.approval_status !== 'APPROVED' ? `
+                <button onclick="toggleBranchApproval('${b.code}', 'APPROVED')" class="bg-emerald-600 px-2 py-1 rounded text-white font-bold text-[10px]">
+                  Allow / Approve
+                </button>
+              ` : `
+                <button onclick="toggleBranchActive('${b.code}', false)" class="bg-red-600 px-2 py-1 rounded text-white font-bold text-[10px]">
+                  Switch Off
+                </button>
+              `}
+              ${b.approval_status === 'PENDING_APPROVAL' ? `
+                <button onclick="toggleBranchApproval('${b.code}', 'REJECTED')" class="bg-slate-800 px-2 py-1 rounded text-white font-bold text-[10px]">
+                  Reject
+                </button>
+              ` : ''}
+            </div>
+          </div>
         </div>
       `).join('');
     }
 
+    // 2. CLIENT CATEGORIZATION & UNIQUE BODA BODA PLATE ENGINE
+    function toggleBodaPlateInput(mode) {
+      if (mode === 'new') {
+        let cat = document.getElementById('new-client-category').value;
+        document.getElementById('new-plate-container').classList.toggle('hidden', cat !== 'BODABODA');
+      } else if (mode === 'edit') {
+        let cat = document.getElementById('edit-client-type').value;
+        document.getElementById('edit-plate-container').classList.toggle('hidden', cat !== 'BODABODA');
+      }
+    }
+
+    function isNumberPlateUnique(plate, excludeClientId = null) {
+      if (!plate) return true;
+      let cleanPlate = plate.trim().toUpperCase().replaceAll(' ', '');
+      return !clients.some(c => c.deleted_at === null && c.number_plate && c.number_plate.trim().toUpperCase().replaceAll(' ', '') === cleanPlate && c.id !== excludeClientId);
+    }
+
     function switchTab(tabId) {
+      checkBranchAuthorizationState();
       checkSessionTimeout();
       document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
       document.getElementById('tab-' + tabId).classList.remove('hidden');
@@ -715,12 +883,13 @@
 
     function isPhoneNumberUnique(phone, excludeClientId = null) {
       let cleanPhone = phone.trim().replaceAll(' ', '');
-      return !clients.some(c => c.phone.trim().replaceAll(' ', '') === cleanPhone && c.id !== excludeClientId);
+      return !clients.some(c => c.deleted_at === null && c.phone.trim().replaceAll(' ', '') === cleanPhone && c.id !== excludeClientId);
     }
 
-    // Arrears Calculation Logic
-    function calculateAccurateArrears(loan) {
-      if (loan.status !== 'Active') return 0;
+    // 4. ACCURATE ARREARS & ADVANCE DAYS CALCULATOR
+    function calculateAccurateArrearsAndAdvance(loan) {
+      if (!loan || loan.status !== 'Active') return { arrears: 0, advanceDays: 0 };
+      
       let start = new Date(loan.date);
       let today = new Date();
 
@@ -729,21 +898,26 @@
 
       let diffTime = today - start;
       let daysElapsed = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+      if (daysElapsed < 1) daysElapsed = 1;
 
-      if (daysElapsed <= 0) return 0;
+      let expectedPaidToDate = loan.dailyTarget * daysElapsed;
+      let actualTotalPaid = loan.totalPayable - loan.balance;
+      
+      let difference = actualTotalPaid - expectedPaidToDate;
 
-      let expectedTotal = loan.dailyTarget * daysElapsed;
-      let paidTotal = loan.totalPayable - loan.balance;
-      let arrears = expectedTotal - paidTotal;
-
-      return arrears > 0 ? Math.round(arrears) : 0;
+      if (difference < 0) {
+        return { arrears: Math.round(Math.abs(difference)), advanceDays: 0 };
+      } else {
+        let advanceDays = loan.dailyTarget > 0 ? Math.floor(difference / loan.dailyTarget) : 0;
+        return { arrears: 0, advanceDays };
+      }
     }
 
     // Guarantor Cap Check (Max 10 Active Clients per Guarantor)
     function checkGuarantorCap(gPhone) {
       if (!gPhone) return true;
       let cleanGPhone = gPhone.trim().replaceAll(' ', '');
-      let activeGuaranteedCount = loans.filter(l => l.status === 'Active' && l.guarantor && l.guarantor.phone.trim().replaceAll(' ', '') === cleanGPhone).length;
+      let activeGuaranteedCount = loans.filter(l => l.deleted_at === null && l.status === 'Active' && l.guarantor && l.guarantor.phone.trim().replaceAll(' ', '') === cleanGPhone).length;
       return activeGuaranteedCount < 10;
     }
 
@@ -775,19 +949,27 @@
     function searchDisburseClients(query) {
       let container = document.getElementById('disburse-search-results');
       if (!query) return container.classList.add('hidden');
-      let matches = clients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()) || c.acc.includes(query) || c.phone.includes(query));
+      
+      let matches = clients.filter(c => c.deleted_at === null && (
+        c.name.toLowerCase().includes(query.toLowerCase()) || 
+        c.acc.includes(query) || 
+        c.phone.includes(query) || 
+        (c.number_plate && c.number_plate.toLowerCase().includes(query.toLowerCase()))
+      ));
 
       container.innerHTML = matches.map(c => `
-        <div class="p-2 text-xs hover:bg-slate-100 cursor-pointer" onclick="selectDisburseClient(${c.id})">
-          <b>${c.name}</b> (${c.acc}) - ${c.phone}
+        <div class="p-2 text-xs hover:bg-slate-100 cursor-pointer flex justify-between" onclick="selectDisburseClient(${c.id})">
+          <span><b>${c.name}</b> (${c.acc}) - ${c.phone}</span>
+          ${c.client_type === 'BODABODA' ? `<span class="bg-teal-100 text-teal-800 px-1.5 py-0.5 rounded font-bold">${c.number_plate || 'PLATE MISSING'}</span>` : ''}
         </div>
       `).join('');
       container.classList.remove('hidden');
     }
 
     function selectDisburseClient(id) {
-      activeDisburseClient = clients.find(c => c.id === id);
-      document.getElementById('disburse-selected-name').innerText = `Primary Client: ${activeDisburseClient.name} (${activeDisburseClient.acc})`;
+      activeDisburseClient = clients.find(c => c.id === id && c.deleted_at === null);
+      let plateInfo = activeDisburseClient.client_type === 'BODABODA' ? ` | Plate: ${activeDisburseClient.number_plate}` : '';
+      document.getElementById('disburse-selected-name').innerText = `Primary Client: ${activeDisburseClient.name} (${activeDisburseClient.acc}${plateInfo})`;
       document.getElementById('disburse-search-results').classList.add('hidden');
       liveCalculateDisbursement();
     }
@@ -796,16 +978,21 @@
       let container = document.getElementById('merge-search-results');
       if (!query) return container.classList.add('hidden');
 
-      let matches = loans.filter(l => l.status === 'Active' && l.balance > 0).filter(l => {
-        let client = clients.find(c => c.id === l.clientId);
-        return client && (client.name.toLowerCase().includes(query.toLowerCase()) || client.phone.includes(query) || client.acc.includes(query));
+      let matches = loans.filter(l => l.deleted_at === null && l.status === 'Active' && l.balance > 0).filter(l => {
+        let client = clients.find(c => c.id === l.clientId && c.deleted_at === null);
+        return client && (
+          client.name.toLowerCase().includes(query.toLowerCase()) || 
+          client.phone.includes(query) || 
+          client.acc.includes(query) ||
+          (client.number_plate && client.number_plate.toLowerCase().includes(query.toLowerCase()))
+        );
       });
 
       container.innerHTML = matches.map(l => {
         let client = clients.find(c => c.id === l.clientId);
         return `
           <div class="p-2 text-xs hover:bg-slate-100 cursor-pointer flex justify-between" onclick="addLoanToCombineList(${l.id})">
-            <span><b>${client.name}</b> (${client.acc})</span>
+            <span><b>${client.name}</b> (${client.acc}) ${client.number_plate ? '['+client.number_plate+']' : ''}</span>
             <span class="font-bold text-amber-700">UGX ${l.balance.toLocaleString()}</span>
           </div>
         `;
@@ -865,6 +1052,7 @@
       document.getElementById('dis-daily').innerText = 'UGX ' + Math.round(dailyTarget).toLocaleString();
     }
 
+    // 7. LOAN DISBURSEMENT & MOTHER APPROVAL CONSOLIDATION ENGINE
     function processDisbursement() {
       let isNew = document.querySelector('input[name="client-type"]:checked').value === 'new';
       let principalInput = parseFloat(document.getElementById('disburse-principal').value) || 0;
@@ -875,7 +1063,6 @@
       let gPhone = document.getElementById('guarantor-phone').value;
       let gInfo = document.getElementById('guarantor-info').value;
 
-      // Guarantor Limit Check (Rule #9)
       if (gPhone && !checkGuarantorCap(gPhone)) {
         return alert('ERROR: This guarantor has reached the maximum cap of 10 active guaranteed loans!');
       }
@@ -884,22 +1071,35 @@
       if (isNew) {
         let name = document.getElementById('new-name').value;
         let phone = document.getElementById('new-phone').value;
+        let category = document.getElementById('new-client-category').value;
+        let plate = document.getElementById('new-number-plate').value.trim().toUpperCase();
+
         if (!name || !phone) return alert('Provide client name and phone number.');
         
         if (!validateUgandanPhone(phone)) {
-          return alert('INVALID PHONE: Provide a valid Ugandan phone number (e.g., 0771234567 or +256701234567).');
+          return alert('INVALID PHONE: Provide a valid Ugandan phone number.');
         }
 
         if (!isPhoneNumberUnique(phone)) {
           return alert('ERROR: Phone number already exists for another client!');
         }
 
+        if (category === 'BODABODA') {
+          if (!plate) return alert('Motorcycle Number Plate is mandatory for Boda Boda clients!');
+          if (!isNumberPlateUnique(plate)) {
+            return alert(`DUPLICATE NUMBER PLATE ERROR: Plate '${plate}' is already assigned to another client!`);
+          }
+        }
+
         client = { 
           id: Date.now(), 
           name, 
           phone, 
+          client_type: category,
+          number_plate: category === 'BODABODA' ? plate : null,
           acc: 'ACC' + Math.floor(1000 + Math.random() * 9000),
-          isNewClient: true
+          isNewClient: true,
+          deleted_at: null
         };
         clients.push(client);
 
@@ -909,30 +1109,55 @@
           amount: 10000,
           channel: 'Cash Fee',
           type: 'Ledger Fee',
-          date: new Date().toISOString().split('T')[0]
+          date: new Date().toISOString().split('T')[0],
+          deleted_at: null
         });
 
       } else {
         if (!activeDisburseClient) return alert('Select a primary client.');
         client = activeDisburseClient;
 
-        // Block client if already having an active loan (Rule #8)
-        let existingActive = loans.find(l => l.clientId === client.id && l.status === 'Active');
+        let existingActive = loans.find(l => l.deleted_at === null && l.clientId === client.id && l.status === 'Active');
         if (existingActive) {
           return alert(`CANNOT DISBURSE: Client ${client.name} currently has an active running loan balance of UGX ${existingActive.balance.toLocaleString()}.`);
         }
       }
 
-      // Combine selected loans and clear balances to 0 (Rule #3)
+      // If consolidation requested, check Mother System Approval Rule (#7)
       let mergedBalance = 0;
-      selectedLoansToCombine.forEach(lId => {
-        let loan = loans.find(l => l.id === lId);
-        if (loan) {
-          mergedBalance += loan.balance;
-          loan.status = 'Cleared & Merged into #' + client.acc;
-          loan.balance = 0;
+      if (selectedLoansToCombine.length > 0) {
+        if (!isMotherSystem) {
+          // Send Consolidation Request to Mother System
+          let reqId = Date.now();
+          consolidationRequests.push({
+            id: reqId,
+            mother_system_approved: null, // Pending
+            target_client_id: client.id,
+            target_client_name: client.name,
+            original_loan_ids: [...selectedLoansToCombine],
+            requested_by_branch_id: branchCode,
+            cash_principal: principalInput,
+            rate,
+            days,
+            guarantor: { name: gName, phone: gPhone, info: gInfo },
+            created_at: new Date().toISOString()
+          });
+          saveAll();
+          alert("LOAN CONSOLIDATION REQUEST SUBMITTED!\n\nCombining loans requires explicit approval from Mother System Admin. Access Mother System to approve this consolidation request.");
+          location.reload();
+          return;
+        } else {
+          // Executing on Mother System Directly
+          selectedLoansToCombine.forEach(lId => {
+            let loan = loans.find(l => l.id === lId);
+            if (loan) {
+              mergedBalance += loan.balance;
+              loan.status = 'Cleared & Merged into #' + client.acc;
+              loan.balance = 0;
+            }
+          });
         }
-      });
+      }
 
       let totalPrincipal = principalInput + mergedBalance;
       if (totalPrincipal <= 0) return alert('Principal amount must be greater than UGX 0.');
@@ -954,7 +1179,8 @@
         balance: totalPayable,
         status: 'Active',
         date: new Date().toISOString().split('T')[0],
-        guarantor: { name: gName, phone: gPhone, info: gInfo }
+        guarantor: { name: gName, phone: gPhone, info: gInfo },
+        deleted_at: null
       };
 
       loans.push(newLoan);
@@ -966,43 +1192,137 @@
         amount: 10000,
         channel: 'Cash Fee',
         type: 'Processing Fee',
-        date: new Date().toISOString().split('T')[0]
+        date: new Date().toISOString().split('T')[0],
+        deleted_at: null
       });
 
       saveAll();
-      alert('Loan Disbursed Successfully!\n- Merged selected loans cleared to 0 balance.\n- Fees recorded.');
+      alert('Loan Disbursed Successfully!');
       location.reload();
     }
 
-    // Batch Posting & Receipts with Arrears
+    // Mother System Consolidation Request Approval
+    function renderMotherConsolidationAlerts() {
+      let container = document.getElementById('mother-consolidation-alerts');
+      if (!container) return;
+
+      if (!isMotherSystem) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      let pending = consolidationRequests.filter(r => r.mother_system_approved === null);
+      if (pending.length === 0) {
+        container.classList.add('hidden');
+        return;
+      }
+
+      container.classList.remove('hidden');
+      container.innerHTML = pending.map(req => `
+        <div class="bg-amber-50 border border-amber-300 p-3 rounded-lg text-xs space-y-2">
+          <div class="flex justify-between font-bold text-amber-900">
+            <span><i class="fa-solid fa-code-pull-request"></i> Loan Consolidation Request (${req.requested_by_branch_id.toUpperCase()})</span>
+            <span class="text-[10px] text-amber-700">${new Date(req.created_at).toLocaleTimeString()}</span>
+          </div>
+          <div>Primary Client: <b>${req.target_client_name}</b> | Requested Loans to Merge: <b>${req.original_loan_ids.length} Loans</b></div>
+          <div class="flex gap-2 pt-1">
+            <button onclick="respondConsolidationRequest(${req.id}, true)" class="bg-emerald-600 text-white px-3 py-1 rounded font-bold hover:bg-emerald-700">Approve Consolidation</button>
+            <button onclick="respondConsolidationRequest(${req.id}, false)" class="bg-red-600 text-white px-3 py-1 rounded font-bold hover:bg-red-700">Reject Request</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function respondConsolidationRequest(reqId, isApproved) {
+      let req = consolidationRequests.find(r => r.id === reqId);
+      if (!req) return;
+
+      req.mother_system_approved = isApproved;
+
+      if (isApproved) {
+        let mergedBalance = 0;
+        req.original_loan_ids.forEach(lId => {
+          let loan = loans.find(l => l.id === lId);
+          if (loan) {
+            mergedBalance += loan.balance;
+            loan.status = 'Cleared & Merged';
+            loan.balance = 0;
+          }
+        });
+
+        let totalPrincipal = req.cash_principal + mergedBalance;
+        let interest = totalPrincipal * (req.rate / 100);
+        let totalPayable = totalPrincipal + interest;
+
+        let newLoan = {
+          id: Date.now(),
+          clientId: req.target_client_id,
+          principal: totalPrincipal,
+          cashPrincipal: req.cash_principal,
+          mergedPrincipal: mergedBalance,
+          rate: req.rate,
+          days: req.days,
+          interest,
+          totalPayable,
+          dailyTarget: totalPayable / req.days,
+          balance: totalPayable,
+          status: 'Active',
+          date: new Date().toISOString().split('T')[0],
+          guarantor: req.guarantor,
+          deleted_at: null
+        };
+
+        loans.push(newLoan);
+        alert('Consolidation APPROVED and new consolidated loan disbursed successfully!');
+      } else {
+        alert('Consolidation Request REJECTED.');
+      }
+
+      saveAll();
+      renderMotherConsolidationAlerts();
+    }
+
+    // Batch Posting & Receipts with Advance Days & Arrears
     function searchPostingClients(query) {
       let container = document.getElementById('post-search-results');
       if (!query) return container.classList.add('hidden');
-      let matches = clients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()) || c.acc.includes(query) || c.phone.includes(query));
+      
+      let matches = clients.filter(c => c.deleted_at === null && (
+        c.name.toLowerCase().includes(query.toLowerCase()) || 
+        c.acc.includes(query) || 
+        c.phone.includes(query) ||
+        (c.number_plate && c.number_plate.toLowerCase().includes(query.toLowerCase()))
+      ));
 
       container.innerHTML = matches.map(c => `
-        <div class="p-2 text-xs hover:bg-slate-100 cursor-pointer" onclick="selectPostingClient(${c.id})">
-          <b>${c.name}</b> (${c.acc}) - ${c.phone}
+        <div class="p-2 text-xs hover:bg-slate-100 cursor-pointer flex justify-between" onclick="selectPostingClient(${c.id})">
+          <span><b>${c.name}</b> (${c.acc}) - ${c.phone}</span>
+          ${c.client_type === 'BODABODA' ? `<span class="bg-teal-100 text-teal-800 px-1.5 py-0.5 rounded font-bold">${c.number_plate || 'PLATE MISSING'}</span>` : ''}
         </div>
       `).join('');
       container.classList.remove('hidden');
     }
 
     function selectPostingClient(id) {
-      activePostingClient = clients.find(c => c.id === id);
-      activePostingLoan = loans.find(l => l.clientId === id && l.status === 'Active');
+      activePostingClient = clients.find(c => c.id === id && c.deleted_at === null);
+      activePostingLoan = loans.find(l => l.clientId === id && l.status === 'Active' && l.deleted_at === null);
 
       if (!activePostingLoan) {
-        alert('This client has no active loan.');
+        alert('This client has no active running loan.');
         return;
       }
 
-      let dynamicArrears = calculateAccurateArrears(activePostingLoan);
+      let metrics = calculateAccurateArrearsAndAdvance(activePostingLoan);
 
       document.getElementById('post-client-name').innerText = activePostingClient.name;
       document.getElementById('post-client-acc').innerText = 'Acc: ' + activePostingClient.acc + ' | Phone: ' + activePostingClient.phone;
+      document.getElementById('post-client-type-info').innerText = activePostingClient.client_type === 'BODABODA' 
+        ? `Category: BODABODA | Motorcycle Plate: ${activePostingClient.number_plate}` 
+        : `Category: OTHERS`;
+
       document.getElementById('post-client-call').href = 'tel:' + activePostingClient.phone;
-      document.getElementById('post-arrears').innerText = 'UGX ' + dynamicArrears.toLocaleString();
+      document.getElementById('post-arrears').innerText = 'UGX ' + metrics.arrears.toLocaleString();
+      document.getElementById('post-advance').innerText = metrics.advanceDays + ' Days';
       document.getElementById('post-balance').innerText = 'UGX ' + activePostingLoan.balance.toLocaleString();
       document.getElementById('post-daily').innerText = 'UGX ' + Math.round(activePostingLoan.dailyTarget).toLocaleString();
 
@@ -1055,7 +1375,7 @@
           loan.status = 'Settled';
         }
 
-        let dynamicArrears = calculateAccurateArrears(loan);
+        let metrics = calculateAccurateArrearsAndAdvance(loan);
 
         let tx = {
           id: Date.now() + Math.floor(Math.random() * 100),
@@ -1064,15 +1384,16 @@
           amount: item.amount,
           channel: item.channel,
           type: 'Repayment',
-          date: new Date().toISOString().split('T')[0]
+          date: new Date().toISOString().split('T')[0],
+          deleted_at: null
         };
         transactions.push(tx);
 
         if (allowPrint) {
-          generateReceiptPDF(item.client, tx, loan.balance, dynamicArrears);
+          generateReceiptPDF(item.client, tx, loan.balance, metrics.arrears, metrics.advanceDays);
         }
 
-        alert(`AUTOMATED SMS RECEIPT\nSender: ${companyHeading}\nTo: ${item.client.phone}\nDear ${item.client.name}, payment of UGX ${item.amount.toLocaleString()} received via ${item.channel}.\nArrears: UGX ${dynamicArrears.toLocaleString()}\nNew Balance: UGX ${loan.balance.toLocaleString()}. Thank you!`);
+        alert(`AUTOMATED RECEIPT\nSender: ${companyHeading}\nTo: ${item.client.phone}\nDear ${item.client.name}, payment of UGX ${item.amount.toLocaleString()} received via ${item.channel}.\nAdvance Paid: ${metrics.advanceDays} Days\nArrears Balance: UGX ${metrics.arrears.toLocaleString()}\nNew Loan Balance: UGX ${loan.balance.toLocaleString()}. Thank you!`);
       });
 
       saveAll();
@@ -1082,9 +1403,10 @@
       location.reload();
     }
 
-    function generateReceiptPDF(client, tx, newBalance, arrears) {
+    // PDF Receipt Generator with Advance Days
+    function generateReceiptPDF(client, tx, newBalance, arrears, advanceDays) {
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ format: [80, 125], unit: 'mm' });
+      const doc = new jsPDF({ format: [80, 130], unit: 'mm' });
 
       let companyHeading = config.name || "PMMS MICROFINANCE";
 
@@ -1100,32 +1422,43 @@
       doc.text(`Date: ${tx.date}`, 5, 28);
       doc.text(`Client: ${client.name}`, 5, 33);
       doc.text(`Account: ${client.acc}`, 5, 38);
-      doc.text("--------------------------------------------------", 40, 43, { align: "center" });
+      if(client.client_type === 'BODABODA') {
+        doc.text(`Boda Plate: ${client.number_plate || 'N/A'}`, 5, 43);
+      }
+      doc.text("--------------------------------------------------", 40, 48, { align: "center" });
 
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
-      doc.text(`Amount Paid: UGX ${tx.amount.toLocaleString()}`, 5, 50);
+      doc.text(`Amount Paid: UGX ${tx.amount.toLocaleString()}`, 5, 55);
       doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
-      doc.text(`Channel: ${tx.channel}`, 5, 55);
-      doc.text(`Arrears Balance: UGX ${arrears.toLocaleString()}`, 5, 60);
-      doc.text(`Remaining Loan Balance: UGX ${newBalance.toLocaleString()}`, 5, 65);
+      doc.text(`Channel: ${tx.channel}`, 5, 60);
+      doc.text(`Advance Paid Days: ${advanceDays} Days`, 5, 65);
+      doc.text(`Arrears Balance: UGX ${arrears.toLocaleString()}`, 5, 70);
+      doc.text(`Remaining Loan Balance: UGX ${newBalance.toLocaleString()}`, 5, 75);
 
-      doc.text("--------------------------------------------------", 40, 72, { align: "center" });
-      doc.text("Thank you for choosing " + companyHeading, 40, 78, { align: "center" });
+      doc.text("--------------------------------------------------", 40, 82, { align: "center" });
+      doc.text("Thank you for choosing " + companyHeading, 40, 88, { align: "center" });
 
       doc.save(`Receipt_${client.name}_${tx.id}.pdf`);
     }
 
-    // Statements & Cleared Client Deletion
+    // Statements & Client Editing / Soft Deleting
     function searchStatementClients(query) {
       let container = document.getElementById('statement-search-results');
       if (!query) return container.classList.add('hidden');
-      let matches = clients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()) || c.acc.includes(query) || c.phone.includes(query));
+      
+      let matches = clients.filter(c => c.deleted_at === null && (
+        c.name.toLowerCase().includes(query.toLowerCase()) || 
+        c.acc.includes(query) || 
+        c.phone.includes(query) ||
+        (c.number_plate && c.number_plate.toLowerCase().includes(query.toLowerCase()))
+      ));
 
       container.innerHTML = matches.map(c => `
-        <div class="p-2 text-xs hover:bg-slate-100 cursor-pointer" onclick="viewStatement(${c.id})">
-          <b>${c.name}</b> (${c.acc}) - ${c.phone}
+        <div class="p-2 text-xs hover:bg-slate-100 cursor-pointer flex justify-between" onclick="viewStatement(${c.id})">
+          <span><b>${c.name}</b> (${c.acc}) - ${c.phone}</span>
+          ${c.client_type === 'BODABODA' ? `<span class="bg-teal-100 text-teal-800 px-1.5 py-0.5 rounded font-bold">${c.number_plate || 'PLATE MISSING'}</span>` : ''}
         </div>
       `).join('');
       container.classList.remove('hidden');
@@ -1134,11 +1467,15 @@
     function viewStatement(clientId) {
       activeStatementClientId = clientId;
       let client = clients.find(c => c.id === clientId);
-      let loan = loans.find(l => l.clientId === clientId && l.status === 'Active');
-      let clientActiveLoans = loans.filter(l => l.clientId === clientId && l.status === 'Active' && l.balance > 0);
+      let loan = loans.find(l => l.clientId === clientId && l.status === 'Active' && l.deleted_at === null);
+      let clientActiveLoans = loans.filter(l => l.clientId === clientId && l.status === 'Active' && l.balance > 0 && l.deleted_at === null);
 
       document.getElementById('st-name').innerText = client.name;
       document.getElementById('st-acc').innerText = 'Acc: ' + client.acc + ' | Phone: ' + client.phone;
+      document.getElementById('st-type-plate').innerText = client.client_type === 'BODABODA' 
+        ? `Category: BODABODA | Plate: ${client.number_plate}` 
+        : `Category: OTHERS`;
+
       document.getElementById('st-call-btn').href = 'tel:' + client.phone;
       document.getElementById('st-balance').innerText = loan ? 'Outstanding Balance: UGX ' + loan.balance.toLocaleString() : 'No Active Loan (Cleared)';
 
@@ -1154,20 +1491,71 @@
       document.getElementById('statement-search-results').classList.add('hidden');
     }
 
+    function openEditClientModal() {
+      if (!activeStatementClientId) return;
+      let client = clients.find(c => c.id === activeStatementClientId);
+      document.getElementById('edit-client-id').value = client.id;
+      document.getElementById('edit-client-name').value = client.name;
+      document.getElementById('edit-client-phone').value = client.phone;
+      document.getElementById('edit-client-type').value = client.client_type || 'OTHERS';
+      document.getElementById('edit-number-plate').value = client.number_plate || '';
+
+      toggleBodaPlateInput('edit');
+      document.getElementById('edit-client-modal').classList.remove('hidden');
+    }
+
+    function closeEditClientModal() {
+      document.getElementById('edit-client-modal').classList.add('hidden');
+    }
+
+    function saveEditedClient() {
+      let id = parseInt(document.getElementById('edit-client-id').value);
+      let client = clients.find(c => c.id === id);
+      let name = document.getElementById('edit-client-name').value;
+      let phone = document.getElementById('edit-client-phone').value;
+      let category = document.getElementById('edit-client-type').value;
+      let plate = document.getElementById('edit-number-plate').value.trim().toUpperCase();
+
+      if (!name || !phone) return alert('Name and phone number are required.');
+
+      if (!validateUgandanPhone(phone)) {
+        return alert('INVALID PHONE: Enter a valid Ugandan phone number.');
+      }
+
+      if (!isPhoneNumberUnique(phone, id)) {
+        return alert('ERROR: Phone number belongs to another client.');
+      }
+
+      if (category === 'BODABODA') {
+        if (!plate) return alert('Motorcycle number plate is required for Boda Boda clients!');
+        if (!isNumberPlateUnique(plate, id)) {
+          return alert(`DUPLICATE PLATE ERROR: Number plate '${plate}' is assigned to another client!`);
+        }
+      }
+
+      client.name = name;
+      client.phone = phone;
+      client.client_type = category;
+      client.number_plate = category === 'BODABODA' ? plate : null;
+
+      saveAll();
+      closeEditClientModal();
+      viewStatement(id);
+      alert('Client details updated successfully!');
+    }
+
+    // 5. SOFT DELETE CLIENT ENGINE
     function deleteClearedClient() {
       if (!activeStatementClientId) return;
       let client = clients.find(c => c.id === activeStatementClientId);
-      let hasActiveLoan = loans.some(l => l.clientId === activeStatementClientId && l.status === 'Active' && l.balance > 0);
+      let hasActiveLoan = loans.some(l => l.clientId === activeStatementClientId && l.status === 'Active' && l.balance > 0 && l.deleted_at === null);
 
-      if (hasActiveLoan) return alert('Cannot delete client with active loan balances.');
+      if (hasActiveLoan) return alert('Cannot delete client with active running loans.');
 
-      if (confirm(`Are you sure you want to permanently delete cleared client: ${client.name}?`)) {
-        clients = clients.filter(c => c.id !== activeStatementClientId);
-        loans = loans.filter(l => l.clientId !== activeStatementClientId);
-        transactions = transactions.filter(t => t.clientId !== activeStatementClientId);
-
+      if (confirm(`Soft Delete client record: ${client.name}? Data will be retained in database permanently.`)) {
+        client.deleted_at = new Date().toISOString();
         saveAll();
-        alert('Cleared client deleted successfully.');
+        alert('Client record soft deleted successfully.');
         location.reload();
       }
     }
@@ -1177,7 +1565,7 @@
       let fromDate = document.getElementById('filter-date-from').value;
       let toDate = document.getElementById('filter-date-to').value;
 
-      let txs = transactions.filter(t => t.clientId === activeStatementClientId);
+      let txs = transactions.filter(t => t.clientId === activeStatementClientId && t.deleted_at === null);
 
       if (fromDate) txs = txs.filter(t => t.date >= fromDate);
       if (toDate) txs = txs.filter(t => t.date <= toDate);
@@ -1198,20 +1586,21 @@
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
       let client = clients.find(c => c.id === activeStatementClientId);
-      let txs = transactions.filter(t => t.clientId === activeStatementClientId);
+      let txs = transactions.filter(t => t.clientId === activeStatementClientId && t.deleted_at === null);
 
       doc.setFontSize(16);
       doc.text(config.name || "PMMS MICROFINANCE", 14, 15);
       doc.setFontSize(10);
       doc.text(config.location || "", 14, 21);
       doc.text(`Statement of Account: ${client.name} (${client.acc})`, 14, 28);
+      if(client.client_type === 'BODABODA') doc.text(`Boda Boda Plate: ${client.number_plate || 'N/A'}`, 14, 34);
 
       let tableData = txs.map(t => [t.date, t.type || 'Repayment', `UGX ${t.amount.toLocaleString()}`, t.channel]);
-      doc.autoTable({ startY: 34, head: [['Date', 'Type', 'Amount', 'Channel']], body: tableData });
+      doc.autoTable({ startY: client.client_type === 'BODABODA' ? 40 : 34, head: [['Date', 'Type', 'Amount', 'Channel']], body: tableData });
       doc.save(`Statement_${client.name}.pdf`);
     }
 
-    // Reports & Aging Analysis
+    // Reports & Aging Analysis with Advance Days & Plates
     function addExpense() {
       let category = document.getElementById('exp-category').value;
       let amount = parseFloat(document.getElementById('exp-amount').value) || 0;
@@ -1229,18 +1618,21 @@
     }
 
     function renderReports() {
-      let totalClientsCount = clients.length;
-      let newClientsCount = clients.filter(c => c.isNewClient).length;
-      let activeLoansList = loans.filter(l => l.status === 'Active');
+      let activeClientsList = clients.filter(c => c.deleted_at === null);
+      let activeLoansList = loans.filter(l => l.deleted_at === null && l.status === 'Active');
+
+      let totalClientsCount = activeClientsList.length;
+      let newClientsCount = activeClientsList.filter(c => c.isNewClient).length;
       let activeClientsCount = new Set(activeLoansList.map(l => l.clientId)).size;
 
+      let activeTx = transactions.filter(t => t.deleted_at === null);
       let paidActiveClientsCount = new Set(
-        transactions.filter(t => t.type === 'Repayment' && activeLoansList.some(l => l.id === t.loanId)).map(t => t.clientId)
+        activeTx.filter(t => t.type === 'Repayment' && activeLoansList.some(l => l.id === t.loanId)).map(t => t.clientId)
       ).size;
 
       let collectionRate = activeClientsCount > 0 ? ((paidActiveClientsCount / activeClientsCount) * 100).toFixed(1) : '0.0';
 
-      let repayments = transactions.filter(t => t.type === 'Repayment');
+      let repayments = activeTx.filter(t => t.type === 'Repayment');
       let mtnTotal = repayments.filter(t => t.channel === 'MTN Mobile Money').reduce((s, t) => s + t.amount, 0);
       let airtelTotal = repayments.filter(t => t.channel === 'Airtel Mobile Money').reduce((s, t) => s + t.amount, 0);
       let allMobileMoney = mtnTotal + airtelTotal;
@@ -1248,13 +1640,14 @@
       let bankTransfers = repayments.filter(t => t.channel === 'Banking').reduce((s, t) => s + t.amount, 0);
       let totalCollections = cashCollected + allMobileMoney + bankTransfers;
 
-      let totalLoansDisbursedCount = loans.length;
-      let totalAmountDisbursed = loans.reduce((s, l) => s + (l.cashPrincipal || l.principal), 0);
+      let allLoans = loans.filter(l => l.deleted_at === null);
+      let totalLoansDisbursedCount = allLoans.length;
+      let totalAmountDisbursed = allLoans.reduce((s, l) => s + (l.cashPrincipal || l.principal), 0);
       let totalPrincipalBalance = activeLoansList.reduce((s, l) => s + l.principal, 0);
       let totalInterestBalance = activeLoansList.reduce((s, l) => s + l.interest, 0);
 
-      let processingFeesTotal = transactions.filter(t => t.type === 'Processing Fee').reduce((s, t) => s + t.amount, 0);
-      let ledgerFeesTotal = transactions.filter(t => t.type === 'Ledger Fee').reduce((s, t) => s + t.amount, 0);
+      let processingFeesTotal = activeTx.filter(t => t.type === 'Processing Fee').reduce((s, t) => s + t.amount, 0);
+      let ledgerFeesTotal = activeTx.filter(t => t.type === 'Ledger Fee').reduce((s, t) => s + t.amount, 0);
       let totalExpensesAmount = expenses.reduce((s, e) => s + e.amount, 0);
 
       let openingCash = config.openingCash || 0;
@@ -1287,21 +1680,30 @@
       document.getElementById('rep-closing-balance').innerText = 'UGX ' + overallClosingBalance.toLocaleString();
     }
 
+    // 2 & 4. AGING ANALYSIS TABLE WITH ADVANCE DAYS & BODA PLATES
     function renderAgingAnalysis() {
       let body = document.getElementById('aging-table-body');
-      body.innerHTML = clients.map(c => {
-        let loan = loans.find(l => l.clientId === c.id && l.status === 'Active');
-        let dynamicArrears = loan ? calculateAccurateArrears(loan) : 0;
+      let activeClients = clients.filter(c => c.deleted_at === null);
+
+      body.innerHTML = activeClients.map(c => {
+        let loan = loans.find(l => l.clientId === c.id && l.status === 'Active' && l.deleted_at === null);
+        let metrics = loan ? calculateAccurateArrearsAndAdvance(loan) : { arrears: 0, advanceDays: 0 };
+        
         let gDetails = (loan && loan.guarantor && loan.guarantor.name) 
-          ? `<b>${loan.guarantor.name}</b><br><span class="text-slate-400">${loan.guarantor.phone || 'N/A'}</span>` 
+          ? `<b>${loan.guarantor.name}</b><br><span class="text-slate-400 text-[10px]">${loan.guarantor.phone || 'N/A'}</span>` 
           : '<span class="text-slate-400">None</span>';
+
+        let plateBadge = (c.client_type === 'BODABODA' && c.number_plate) 
+          ? `<br><span class="inline-block bg-teal-100 text-teal-800 text-[10px] px-1 rounded font-bold">${c.number_plate}</span>` 
+          : '';
 
         return `
           <tr class="border-b">
-            <td class="p-2 font-bold">${c.name}<br><span class="font-normal text-slate-500">${c.phone}</span></td>
+            <td class="p-2 font-bold">${c.name} ${plateBadge}<br><span class="font-normal text-slate-500 text-[10px]">${c.phone}</span></td>
             <td class="p-2">${gDetails}</td>
             <td class="p-2 text-right font-bold text-blue-600">UGX ${loan ? loan.balance.toLocaleString() : '0'}</td>
-            <td class="p-2 text-right font-bold text-red-600">UGX ${dynamicArrears.toLocaleString()}</td>
+            <td class="p-2 text-right font-bold text-red-600">UGX ${metrics.arrears.toLocaleString()}</td>
+            <td class="p-2 text-right font-bold text-emerald-600">${metrics.advanceDays} Days</td>
           </tr>
         `;
       }).join('');
@@ -1313,33 +1715,36 @@
       doc.setFontSize(14);
       doc.text(`${config.name || "PMMS"} - Aging Analysis & Guarantor Report`, 14, 15);
 
-      let rows = clients.map(c => {
-        let loan = loans.find(l => l.clientId === c.id && l.status === 'Active');
-        let dynamicArrears = loan ? calculateAccurateArrears(loan) : 0;
+      let activeClients = clients.filter(c => c.deleted_at === null);
+      let rows = activeClients.map(c => {
+        let loan = loans.find(l => l.clientId === c.id && l.status === 'Active' && l.deleted_at === null);
+        let metrics = loan ? calculateAccurateArrearsAndAdvance(loan) : { arrears: 0, advanceDays: 0 };
         let gInfo = (loan && loan.guarantor && loan.guarantor.name) ? `${loan.guarantor.name} (${loan.guarantor.phone || ''})` : 'N/A';
-        return [c.name, c.phone, gInfo, loan ? `UGX ${loan.balance.toLocaleString()}` : 'UGX 0', `UGX ${dynamicArrears.toLocaleString()}`];
+        let plate = (c.client_type === 'BODABODA') ? c.number_plate || 'N/A' : 'N/A';
+
+        return [c.name, plate, c.phone, gInfo, loan ? `UGX ${loan.balance.toLocaleString()}` : 'UGX 0', `UGX ${metrics.arrears.toLocaleString()}`, `${metrics.advanceDays} Days`];
       });
 
-      doc.autoTable({ startY: 22, head: [['Client Name', 'Phone', 'Guarantor Details', 'Balance', 'Arrears']], body: rows });
+      doc.autoTable({ startY: 22, head: [['Client Name', 'Boda Plate', 'Phone', 'Guarantor', 'Balance', 'Arrears', 'Advance']], body: rows });
       doc.save(`Aging_Analysis_${new Date().toISOString().split('T')[0]}.pdf`);
     }
 
-    // Extended Financial Records Hub (Daily, Weekly, Monthly, Yearly)
+    // Financial Records Hub
     function renderRecordsHub() {
       let pType = document.getElementById('record-period-type').value;
       let container = document.getElementById('records-list-container');
       document.getElementById('records-period-heading').innerText = `${pType.toUpperCase()} Financial Records`;
 
       let groups = {};
+      let activeTx = transactions.filter(t => t.deleted_at === null);
 
-      transactions.forEach(t => {
-        let key = t.date; // Daily
-        if (pType === 'monthly') key = t.date.substring(0, 7); // YYYY-MM
-        if (pType === 'yearly') key = t.date.substring(0, 4); // YYYY
+      activeTx.forEach(t => {
+        let key = t.date;
+        if (pType === 'monthly') key = t.date.substring(0, 7);
+        if (pType === 'yearly') key = t.date.substring(0, 4);
         if (pType === 'weekly') {
           let d = new Date(t.date);
-          let weekNum = Math.ceil(d.getDate() / 7);
-          key = `${t.date.substring(0, 7)}-W${weekNum}`;
+          key = `${t.date.substring(0, 7)}-W${Math.ceil(d.getDate() / 7)}`;
         }
 
         if (!groups[key]) groups[key] = { collections: 0, count: 0 };
@@ -1376,7 +1781,7 @@
       doc.text(`${config.name || "PMMS"} - ${pType.toUpperCase()} Financial Overview Report`, 14, 15);
 
       let groups = {};
-      transactions.forEach(t => {
+      transactions.filter(t => t.deleted_at === null).forEach(t => {
         let key = t.date;
         if (pType === 'monthly') key = t.date.substring(0, 7);
         if (pType === 'yearly') key = t.date.substring(0, 4);
@@ -1394,20 +1799,35 @@
       doc.save(`Financial_Records_${pType}_${new Date().toISOString().split('T')[0]}.pdf`);
     }
 
-    // Defaulters List
+    // 3. DEFAULTERS LIST (STRICT REQUIREMENT: 30 CONSECUTIVE DAYS UNPAID)
     function renderDemandList() {
       let container = document.getElementById('demand-list-container');
-      let activeLoansList = loans.filter(l => l.status === 'Active');
+      let activeLoansList = loans.filter(l => l.deleted_at === null && l.status === 'Active' && l.balance > 0);
+      let today = new Date();
+      today.setHours(0,0,0,0);
 
-      // Filter: Active clients with ZERO arrears are excluded
-      let defaulters = activeLoansList.map(loan => {
-        let client = clients.find(c => c.id === loan.clientId);
-        let dynamicArrears = calculateAccurateArrears(loan);
-        return { loan, client, dynamicArrears };
-      }).filter(item => item.dynamicArrears > 0);
+      let defaulters = [];
+
+      activeLoansList.forEach(loan => {
+        let client = clients.find(c => c.id === loan.clientId && c.deleted_at === null);
+        if (!client) return;
+
+        // Find client's latest payment transaction date
+        let clientTx = transactions.filter(t => t.deleted_at === null && t.clientId === client.id && t.type === 'Repayment').sort((a,b) => new Date(b.date) - new Date(a.date));
+        
+        let lastPaymentDate = clientTx.length > 0 ? new Date(clientTx[0].date) : new Date(loan.date);
+        lastPaymentDate.setHours(0,0,0,0);
+
+        let diffDays = Math.floor((today - lastPaymentDate) / (1000 * 60 * 60 * 24));
+
+        if (diffDays >= 30) {
+          let metrics = calculateAccurateArrearsAndAdvance(loan);
+          defaulters.push({ loan, client, daysUnpaid: diffDays, arrears: metrics.arrears });
+        }
+      });
 
       if (defaulters.length === 0) {
-        container.innerHTML = `<div class="text-xs text-slate-500 text-center py-4">No defaulters found! All active clients are up-to-date with arrears.</div>`;
+        container.innerHTML = `<div class="text-xs text-slate-500 text-center py-4">No defaulters found! No client has gone 30+ days without paying.</div>`;
         return;
       }
 
@@ -1419,10 +1839,10 @@
               <i class="fa-solid fa-phone"></i> Call
             </a>
           </div>
-          <div class="text-slate-500">Account: ${item.client.acc} | Phone: ${item.client.phone}</div>
-          <div class="flex justify-between pt-1 font-bold border-t">
-            <span class="text-slate-600">Daily Target: UGX ${Math.round(item.loan.dailyTarget).toLocaleString()}</span>
-            <span class="text-red-600">Overdue Arrears: UGX ${item.dynamicArrears.toLocaleString()}</span>
+          <div class="text-slate-500">Account: ${item.client.acc} | Phone: ${item.client.phone} ${item.client.number_plate ? '| Plate: '+item.client.number_plate : ''}</div>
+          <div class="text-red-700 font-bold bg-red-50 p-1.5 rounded mt-1 flex justify-between">
+            <span>Consecutive Days Unpaid: ${item.daysUnpaid} Days</span>
+            <span>Arrears: UGX ${item.arrears.toLocaleString()}</span>
           </div>
         </div>
       `).join('');
@@ -1433,25 +1853,39 @@
       const doc = new jsPDF();
 
       doc.setFontSize(14);
-      doc.text(`${config.name || "PMMS"} - Defaulters List Report`, 14, 15);
+      doc.text(`${config.name || "PMMS"} - Defaulters Report (30+ Days Unpaid)`, 14, 15);
 
-      let activeLoansList = loans.filter(l => l.status === 'Active');
-      let defaulters = activeLoansList.map(loan => {
-        let client = clients.find(c => c.id === loan.clientId);
-        let dynamicArrears = calculateAccurateArrears(loan);
-        return { loan, client, dynamicArrears };
-      }).filter(item => item.dynamicArrears > 0);
+      let activeLoansList = loans.filter(l => l.deleted_at === null && l.status === 'Active' && l.balance > 0);
+      let today = new Date();
+      today.setHours(0,0,0,0);
 
-      let rows = defaulters.map(item => [
-        item.client.name, 
-        item.client.phone, 
-        `UGX ${Math.round(item.loan.dailyTarget).toLocaleString()}`, 
-        `UGX ${item.dynamicArrears.toLocaleString()}`, 
-        `UGX ${item.loan.balance.toLocaleString()}`
-      ]);
+      let rows = [];
 
-      doc.autoTable({ startY: 22, head: [['Defaulter Name', 'Phone Number', 'Daily Target', 'Arrears Balance', 'Total Balance']], body: rows });
-      doc.save(`Defaulters_List_${new Date().toISOString().split('T')[0]}.pdf`);
+      activeLoansList.forEach(loan => {
+        let client = clients.find(c => c.id === loan.clientId && c.deleted_at === null);
+        if (!client) return;
+
+        let clientTx = transactions.filter(t => t.deleted_at === null && t.clientId === client.id && t.type === 'Repayment').sort((a,b) => new Date(b.date) - new Date(a.date));
+        let lastPaymentDate = clientTx.length > 0 ? new Date(clientTx[0].date) : new Date(loan.date);
+        lastPaymentDate.setHours(0,0,0,0);
+
+        let diffDays = Math.floor((today - lastPaymentDate) / (1000 * 60 * 60 * 24));
+
+        if (diffDays >= 30) {
+          let metrics = calculateAccurateArrearsAndAdvance(loan);
+          rows.push([
+            client.name,
+            client.phone,
+            client.number_plate || 'N/A',
+            `${diffDays} Days`,
+            `UGX ${metrics.arrears.toLocaleString()}`,
+            `UGX ${loan.balance.toLocaleString()}`
+          ]);
+        }
+      });
+
+      doc.autoTable({ startY: 22, head: [['Client Name', 'Phone', 'Boda Plate', 'Unpaid Duration', 'Arrears', 'Balance']], body: rows });
+      doc.save(`Defaulters_30Days_${new Date().toISOString().split('T')[0]}.pdf`);
     }
   </script>
 </body>

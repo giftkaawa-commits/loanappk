@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>PMMS Enterprise Loan & Financial Manager</title>
+  <title>PMMS Enterprise Microfinance & Branch Network Manager</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- PDF Generation Libraries -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -43,7 +43,7 @@
         <p id="header-company-loc" class="text-xs text-slate-400"></p>
       </div>
       <div class="flex items-center gap-2">
-        <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300 font-semibold" id="header-default-term">20% / 30 Days</span>
+        <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300 font-semibold" id="header-branch-tag">Mother Branch</span>
         <button onclick="lockApp()" class="text-slate-400 hover:text-white text-xs p-1" title="Lock App"><i class="fa-solid fa-right-from-bracket"></i></button>
       </div>
     </div>
@@ -63,7 +63,7 @@
       
       <div>
         <label class="block text-xs font-semibold mb-1 text-slate-600">Search Active Client</label>
-        <input type="text" id="post-search" oninput="searchPostingClients(this.value)" placeholder="Search name, phone, or account..." class="w-full p-2.5 border rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-800">
+        <input type="text" id="post-search" oninput="searchPostingClients(this.value)" placeholder="Search name, UG phone (e.g. 077...), or account..." class="w-full p-2.5 border rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-800">
         <div id="post-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
       </div>
 
@@ -106,7 +106,7 @@
       </div>
     </section>
 
-    <!-- TAB 2: DISBURSEMENT & MULTI-LOAN CONSOLIDATION -->
+    <!-- TAB 2: DISBURSEMENT & MULTI-SEARCH LOAN CONSOLIDATION -->
     <section id="tab-disburse" class="tab-content space-y-4 hidden">
       <h2 class="text-lg font-bold border-b pb-2">Loan Disbursement & Roll-over</h2>
       
@@ -123,37 +123,39 @@
       <div id="new-client-fields" class="space-y-2 hidden border p-3 rounded-lg bg-white">
         <div class="font-bold text-xs text-slate-700">New Client Details</div>
         <input type="text" id="new-name" placeholder="Full Client Name" class="w-full p-2 border rounded text-xs">
-        <input type="tel" id="new-phone" placeholder="Phone Number (Must be Unique)" class="w-full p-2 border rounded text-xs">
+        <input type="tel" id="new-phone" placeholder="UG Phone (e.g., 0771234567 or +256701234567)" class="w-full p-2 border rounded text-xs">
         <p class="text-[11px] text-teal-700 italic">* Automatic Ledger Fee of UGX 10,000 applies to new clients.</p>
       </div>
 
       <!-- Existing Client Search -->
       <div id="existing-client-fields">
-        <input type="text" id="disburse-search" oninput="searchDisburseClients(this.value)" placeholder="Search main recipient client..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        <input type="text" id="disburse-search" oninput="searchDisburseClients(this.value)" placeholder="Search primary client for new loan..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
         <div id="disburse-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
         <div id="disburse-selected-name" class="text-xs font-bold text-green-700 mt-1"></div>
       </div>
 
       <!-- GUARANTOR DETAILS SECTION -->
       <div class="bg-slate-50 border p-3 rounded-lg space-y-2">
-        <div class="text-xs font-bold text-slate-700"><i class="fa-solid fa-user-shield"></i> Guarantor Information</div>
+        <div class="text-xs font-bold text-slate-700"><i class="fa-solid fa-user-shield"></i> Guarantor Information (Max 10 Active Client Cap)</div>
         <div class="grid grid-cols-2 gap-2">
-          <input type="text" id="guarantor-name" placeholder="Guarantor Full Name" class="p-2 border rounded text-xs bg-white">
-          <input type="tel" id="guarantor-phone" placeholder="Guarantor Phone" class="p-2 border rounded text-xs bg-white">
+          <input type="text" id="guarantor-name" placeholder="Guarantor Name" class="p-2 border rounded text-xs bg-white">
+          <input type="tel" id="guarantor-phone" placeholder="UG Guarantor Phone (07...)" class="p-2 border rounded text-xs bg-white">
         </div>
-        <input type="text" id="guarantor-info" placeholder="Guarantor National ID / Residence Address" class="w-full p-2 border rounded text-xs bg-white">
+        <input type="text" id="guarantor-info" placeholder="Guarantor National ID / Address" class="w-full p-2 border rounded text-xs bg-white">
       </div>
 
-      <!-- MULTI-LOAN CONSOLIDATION SECTION -->
+      <!-- MULTI-SEARCH CONSOLIDATION SELECTOR -->
       <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg text-xs space-y-2">
-        <div class="flex justify-between items-center">
-          <span class="font-bold text-amber-900"><i class="fa-solid fa-layer-group"></i> Combine Multiple Active Loans</span>
-          <button onclick="toggleConsolidationPanel()" class="bg-amber-200 text-amber-900 px-2 py-0.5 rounded font-bold">Toggle Selector</button>
-        </div>
-        <p class="text-[11px] text-amber-700">Merge outstanding balances from other clients into this loan.</p>
+        <div class="font-bold text-amber-900"><i class="fa-solid fa-layer-group"></i> Combine Outstanding Loans From Search</div>
+        <p class="text-[11px] text-amber-800">Search and pick active loans across clients to merge into this loan. Selected balances will be set to UGX 0.</p>
         
-        <div id="consolidation-selector-panel" class="hidden space-y-2 pt-2 border-t border-amber-200">
-          <div id="active-loans-checkbox-list" class="max-h-36 overflow-y-auto space-y-1 pr-1"></div>
+        <input type="text" id="merge-search-input" oninput="searchLoansToCombine(this.value)" placeholder="Type client name/phone to merge loan..." class="w-full p-2 border rounded text-xs bg-white">
+        <div id="merge-search-results" class="bg-white border rounded divide-y max-h-32 overflow-y-auto hidden"></div>
+
+        <!-- Selected Merged List -->
+        <div id="selected-merged-loans-container" class="space-y-1 pt-1">
+          <div class="text-[10px] text-slate-500 font-bold uppercase">Loans Marked for Consolidation:</div>
+          <div id="selected-merged-loans-list" class="space-y-1"></div>
         </div>
       </div>
 
@@ -220,7 +222,7 @@
       </div>
     </section>
 
-    <!-- TAB 4: STATEMENTS & CLIENT EDIT -->
+    <!-- TAB 4: STATEMENTS & CLIENT EDIT / DELETE -->
     <section id="tab-statement" class="tab-content space-y-4 hidden">
       <h2 class="text-lg font-bold border-b pb-2">Client Statements & Management</h2>
       
@@ -253,6 +255,9 @@
               <button onclick="openEditClientModal()" class="bg-slate-200 text-slate-800 px-2 py-1 rounded text-xs font-bold hover:bg-slate-300">
                 <i class="fa-solid fa-pen-to-square"></i> Edit
               </button>
+              <button id="btn-delete-cleared-client" onclick="deleteClearedClient()" class="bg-red-100 text-red-700 px-2 py-1 rounded text-xs font-bold hover:bg-red-200 hidden">
+                <i class="fa-solid fa-user-xmark"></i> Delete Cleared
+              </button>
               <a id="st-call-btn" href="#" class="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold flex items-center gap-1">
                 <i class="fa-solid fa-phone"></i>
               </a>
@@ -280,15 +285,13 @@
       </div>
     </section>
 
-    <!-- TAB 5: FINANCIAL DASHBOARD & SUMMARY -->
+    <!-- TAB 5: FINANCIAL DASHBOARD -->
     <section id="tab-reports" class="tab-content space-y-4 hidden">
       <h2 class="text-lg font-bold border-b pb-2">Financial Summary Overview</h2>
 
-      <!-- General Summary Card -->
       <div class="bg-slate-800 text-white p-4 rounded-xl space-y-3 shadow-lg">
         <h3 class="text-xs font-bold uppercase tracking-wider text-teal-400 border-b border-slate-700 pb-2">Portfolio Executive Dashboard</h3>
         
-        <!-- Metrics Grid 1 -->
         <div class="grid grid-cols-2 gap-2 text-xs">
           <div class="bg-slate-700/60 p-2 rounded">
             <span class="text-slate-400 block text-[10px]">Total Clients</span>
@@ -308,7 +311,6 @@
           </div>
         </div>
 
-        <!-- Collections & Money Channels -->
         <div class="border-t border-slate-700 pt-2 text-xs space-y-1">
           <div class="text-[11px] font-bold text-slate-300">Liquidity & Collections Breakdown</div>
           <div class="flex justify-between text-slate-300"><span>Opening Cash:</span> <span id="rep-opening-cash" class="font-bold text-white">UGX 0</span></div>
@@ -321,7 +323,6 @@
           <div class="flex justify-between font-bold text-emerald-400 border-t border-slate-700 pt-1"><span>Total Collections:</span> <span id="rep-total-collections">UGX 0</span></div>
         </div>
 
-        <!-- Disbursements & Balances -->
         <div class="border-t border-slate-700 pt-2 text-xs space-y-1">
           <div class="text-[11px] font-bold text-slate-300">Loans & Revenue Streams</div>
           <div class="flex justify-between text-slate-300"><span>Loans Disbursed (Count):</span> <span id="rep-disbursed-count" class="font-bold text-white">0</span></div>
@@ -333,13 +334,11 @@
           <div class="flex justify-between text-red-300"><span>Total Expenses:</span> <span id="rep-expenses" class="font-bold">UGX 0</span></div>
         </div>
 
-        <!-- Closing Balance -->
         <div class="border-t border-slate-600 pt-2 text-xs">
           <div class="flex justify-between font-bold text-sm text-teal-300">
             <span>Closing Balance (Cash + MM):</span>
             <span id="rep-closing-balance">UGX 0</span>
           </div>
-          <span class="text-[10px] text-slate-400 italic">* Computed as (Opening Cash + Cash Collected - Cash Disbursed - Expenses) + Total Mobile Money.</span>
         </div>
       </div>
 
@@ -347,18 +346,20 @@
       <div class="bg-white p-3 border rounded-lg space-y-2">
         <h4 class="text-xs font-bold text-slate-700">Record Company Expense</h4>
         <div class="grid grid-cols-2 gap-2">
-          <input type="text" id="exp-category" placeholder="Expense Category (e.g. Rent, Airtime)" class="p-2 border rounded text-xs bg-white">
+          <input type="text" id="exp-category" placeholder="Expense Category" class="p-2 border rounded text-xs bg-white">
           <input type="number" id="exp-amount" placeholder="Amount (UGX)" class="p-2 border rounded text-xs bg-white">
         </div>
         <input type="text" id="exp-narration" placeholder="Expense Narration / Details..." class="w-full p-2 border rounded text-xs bg-white">
         <button onclick="addExpense()" class="w-full bg-slate-700 text-white py-1.5 rounded text-xs font-bold hover:bg-slate-800">Add Expense</button>
       </div>
+    </section>
 
-      <!-- Aging Analysis Table -->
-      <div class="flex justify-between items-center border-t pt-2">
-        <h3 class="font-bold text-sm">Aging Analysis & Guarantors</h3>
+    <!-- TAB 6: AGING ANALYSIS & GUARANTORS -->
+    <section id="tab-aging" class="tab-content space-y-4 hidden">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h2 class="text-lg font-bold">Aging Analysis & Guarantors</h2>
         <button onclick="exportPDFAging()" class="bg-slate-800 text-white px-2.5 py-1 rounded text-xs font-bold">
-          <i class="fa-solid fa-download"></i> PDF
+          <i class="fa-solid fa-download"></i> PDF Report
         </button>
       </div>
 
@@ -366,8 +367,8 @@
         <table class="w-full text-left border-collapse text-xs">
           <thead>
             <tr class="bg-slate-800 text-white text-[11px]">
-              <th class="p-2">Client</th>
-              <th class="p-2">Guarantor Info</th>
+              <th class="p-2">Client Name</th>
+              <th class="p-2">Guarantor & Phone</th>
               <th class="p-2 text-right">Balance</th>
               <th class="p-2 text-right">Arrears</th>
             </tr>
@@ -377,39 +378,50 @@
       </div>
     </section>
 
-    <!-- TAB 6: ALL DAILY TRANSACTIONS LEDGER -->
-    <section id="tab-daily-ledger" class="tab-content space-y-4 hidden">
+    <!-- TAB 7: EXTENDED RECORDS HUB (DAILY, WEEKLY, MONTHLY, YEARLY) -->
+    <section id="tab-records" class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
-        <h2 class="text-lg font-bold">Daily All-Transactions Ledger</h2>
-        <input type="date" id="daily-ledger-date" onchange="renderDailyLedger()" class="p-1 border rounded text-xs">
+        <h2 class="text-lg font-bold">Financial Records Hub</h2>
+        <select id="record-period-type" onchange="renderRecordsHub()" class="p-1 border rounded text-xs font-bold">
+          <option value="daily">Daily View</option>
+          <option value="weekly">Weekly View</option>
+          <option value="monthly">Monthly Overview</option>
+          <option value="yearly">Yearly / Annual Overview</option>
+        </select>
       </div>
 
       <div class="bg-white p-3 border rounded-lg space-y-3">
         <div class="flex justify-between items-center">
-          <span class="text-xs font-bold text-slate-700">Full Audit Trail (Cash In / Out / Fees)</span>
-          <button onclick="exportPDFDailyLedger()" class="bg-teal-700 text-white px-2.5 py-1 rounded text-xs font-bold">
-            <i class="fa-solid fa-file-pdf"></i> Export PDF
+          <span class="text-xs font-bold text-slate-700" id="records-period-heading">Daily Record Log</span>
+          <button onclick="exportRecordsPDF()" class="bg-teal-700 text-white px-2.5 py-1 rounded text-xs font-bold">
+            <i class="fa-solid fa-file-pdf"></i> Download PDF
           </button>
         </div>
-        <div id="daily-ledger-list" class="space-y-2 max-h-96 overflow-y-auto"></div>
+        <div id="records-list-container" class="space-y-2 max-h-96 overflow-y-auto"></div>
       </div>
     </section>
 
-    <!-- TAB 7: DEMAND LIST -->
+    <!-- TAB 8: DEFAULTERS LIST (ACTIVE CLIENTS WITH ZERO ARREARS EXCLUDED) -->
     <section id="tab-demand" class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
-        <h2 class="text-lg font-bold">Demand & Defaulters List</h2>
+        <h2 class="text-lg font-bold text-red-700">Defaulters List</h2>
         <button onclick="exportPDFDemand()" class="bg-red-600 text-white px-2.5 py-1 rounded text-xs font-bold flex items-center gap-1">
-          <i class="fa-solid fa-file-pdf"></i> PDF List
+          <i class="fa-solid fa-file-pdf"></i> Defaulters PDF
         </button>
       </div>
 
+      <p class="text-xs text-slate-500 italic">* Active clients with zero arrears are excluded from this list.</p>
       <div id="demand-list-container" class="space-y-2"></div>
     </section>
 
-    <!-- TAB 8: COMPANY SETTINGS & SECURITY PIN -->
+    <!-- TAB 9: SETUP, CAPITAL & BRANCH MANAGEMENT -->
     <section id="tab-settings" class="tab-content space-y-4 hidden">
-      <h2 class="text-lg font-bold border-b pb-2">Company Setup & Capitalization</h2>
+      <h2 class="text-lg font-bold border-b pb-2">Setup, Capital & Branch System</h2>
+
+      <!-- Mother Admin Notice -->
+      <div id="branch-access-warning" class="hidden bg-amber-100 text-amber-900 p-2 rounded text-xs font-bold">
+        ⚠️ Branch Mode: Settings can only be modified by Mother System Admin.
+      </div>
 
       <div class="bg-white p-4 border rounded-lg space-y-3 text-xs">
         <div>
@@ -444,9 +456,22 @@
             <input type="number" id="cfg-days" placeholder="30" class="w-full p-2.5 border rounded-lg text-sm">
           </div>
         </div>
-        <button onclick="saveCompanySettings()" class="w-full bg-slate-800 text-white py-2.5 rounded-lg text-sm font-bold hover:bg-slate-900">
+        <button id="btn-save-settings" onclick="saveCompanySettings()" class="w-full bg-slate-800 text-white py-2.5 rounded-lg text-sm font-bold hover:bg-slate-900">
           Save Settings
         </button>
+      </div>
+
+      <!-- BRANCH MANAGEMENT SECTION (100+ BRANCHES) -->
+      <div id="branch-management-box" class="bg-slate-800 text-white p-4 rounded-lg space-y-3 text-xs">
+        <h3 class="font-bold text-teal-400 border-b border-slate-700 pb-1">Open & Deploy New Branch (100+ Branches Allowed)</h3>
+        <p class="text-slate-300">Create isolated branches with separate databases that link to this identical system on other devices.</p>
+        
+        <div class="flex gap-2">
+          <input type="text" id="new-branch-name" placeholder="Branch Name (e.g. Jinja Branch)" class="p-2 rounded text-slate-800 bg-white w-2/3">
+          <button onclick="createNewBranch()" class="bg-teal-600 text-white font-bold p-2 rounded w-1/3 hover:bg-teal-700">Generate Branch</button>
+        </div>
+
+        <div id="branch-links-list" class="space-y-2 pt-2 border-t border-slate-700 max-h-40 overflow-y-auto"></div>
       </div>
     </section>
 
@@ -462,7 +487,7 @@
         <input type="text" id="edit-client-name" class="w-full p-2 border rounded-lg text-sm">
       </div>
       <div>
-        <label class="block text-xs font-semibold mb-1 text-slate-600">Phone Number (Unique)</label>
+        <label class="block text-xs font-semibold mb-1 text-slate-600">Phone Number (Unique UG Format)</label>
         <input type="tel" id="edit-client-phone" class="w-full p-2 border rounded-lg text-sm">
       </div>
       <div class="flex gap-2 pt-2">
@@ -474,35 +499,39 @@
 
   <!-- Bottom Navigation -->
   <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-2 text-[10px] text-slate-600 font-medium z-40 overflow-x-auto">
-    <button onclick="switchTab('posting')" class="flex flex-col items-center py-1 min-w-[48px] text-slate-800 font-bold" id="nav-posting">
+    <button onclick="switchTab('posting')" class="flex flex-col items-center py-1 min-w-[44px] text-slate-800 font-bold" id="nav-posting">
       <i class="fa-solid fa-receipt text-sm mb-0.5"></i>
       <span>Posting</span>
     </button>
-    <button onclick="switchTab('disburse')" class="flex flex-col items-center py-1 min-w-[48px]" id="nav-disburse">
+    <button onclick="switchTab('disburse')" class="flex flex-col items-center py-1 min-w-[44px]" id="nav-disburse">
       <i class="fa-solid fa-hand-holding-dollar text-sm mb-0.5"></i>
       <span>Disburse</span>
     </button>
-    <button onclick="switchTab('calc')" class="flex flex-col items-center py-1 min-w-[48px]" id="nav-calc">
+    <button onclick="switchTab('calc')" class="flex flex-col items-center py-1 min-w-[44px]" id="nav-calc">
       <i class="fa-solid fa-calculator text-sm mb-0.5"></i>
       <span>Calc</span>
     </button>
-    <button onclick="switchTab('statement')" class="flex flex-col items-center py-1 min-w-[48px]" id="nav-statement">
+    <button onclick="switchTab('statement')" class="flex flex-col items-center py-1 min-w-[44px]" id="nav-statement">
       <i class="fa-solid fa-file-invoice text-sm mb-0.5"></i>
       <span>Statements</span>
     </button>
-    <button onclick="switchTab('reports')" class="flex flex-col items-center py-1 min-w-[48px]" id="nav-reports">
+    <button onclick="switchTab('reports')" class="flex flex-col items-center py-1 min-w-[44px]" id="nav-reports">
       <i class="fa-solid fa-chart-pie text-sm mb-0.5"></i>
       <span>Reports</span>
     </button>
-    <button onclick="switchTab('daily-ledger')" class="flex flex-col items-center py-1 min-w-[48px]" id="nav-daily-ledger">
-      <i class="fa-solid fa-book text-sm mb-0.5"></i>
-      <span>Ledger</span>
+    <button onclick="switchTab('aging')" class="flex flex-col items-center py-1 min-w-[44px]" id="nav-aging">
+      <i class="fa-solid fa-clock-rotate-left text-sm mb-0.5"></i>
+      <span>Aging</span>
     </button>
-    <button onclick="switchTab('demand')" class="flex flex-col items-center py-1 min-w-[48px]" id="nav-demand">
-      <i class="fa-solid fa-triangle-exclamation text-sm mb-0.5"></i>
-      <span>Demand</span>
+    <button onclick="switchTab('records')" class="flex flex-col items-center py-1 min-w-[44px]" id="nav-records">
+      <i class="fa-solid fa-folder-closed text-sm mb-0.5"></i>
+      <span>Records</span>
     </button>
-    <button onclick="switchTab('settings')" class="flex flex-col items-center py-1 min-w-[48px]" id="nav-settings">
+    <button onclick="switchTab('demand')" class="flex flex-col items-center py-1 min-w-[44px]" id="nav-demand">
+      <i class="fa-solid fa-triangle-exclamation text-sm mb-0.5 text-red-600"></i>
+      <span class="text-red-600">Defaulters</span>
+    </button>
+    <button onclick="switchTab('settings')" class="flex flex-col items-center py-1 min-w-[44px]" id="nav-settings">
       <i class="fa-solid fa-gear text-sm mb-0.5"></i>
       <span>Setup</span>
     </button>
@@ -510,13 +539,22 @@
 
   <!-- JavaScript Application Engine -->
   <script>
-    // Storage Initialization
-    let clients = JSON.parse(localStorage.getItem('pmms_clients')) || [];
-    let loans = JSON.parse(localStorage.getItem('pmms_loans')) || [];
-    let transactions = JSON.parse(localStorage.getItem('pmms_tx')) || [];
-    let expenses = JSON.parse(localStorage.getItem('pmms_expenses')) || [];
-    let config = JSON.parse(localStorage.getItem('pmms_config')) || { 
-      name: 'PMMS MICROFINANCE LTD', 
+    // Branch URL & Local Storage Prefix Management
+    const urlParams = new URLSearchParams(window.location.search);
+    const branchCode = urlParams.get('branch') || 'mother';
+    const isMotherSystem = (branchCode === 'mother');
+
+    const STORAGE_PREFIX = `pmms_${branchCode}_`;
+
+    // Data Store
+    let clients = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'clients')) || [];
+    let loans = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'loans')) || [];
+    let transactions = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'tx')) || [];
+    let expenses = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'expenses')) || [];
+    let branches = JSON.parse(localStorage.getItem('pmms_branches_master')) || [];
+
+    let config = JSON.parse(localStorage.getItem(STORAGE_PREFIX + 'config')) || { 
+      name: isMotherSystem ? 'PMMS MICROFINANCE LTD (MOTHER)' : `PMMS BRANCH (${branchCode.toUpperCase()})`, 
       location: 'Kampala, Uganda', 
       defaultRate: 20, 
       defaultDays: 30, 
@@ -530,21 +568,20 @@
     let activePostingLoan = null;
     let activeDisburseClient = null;
     let activeStatementClientId = null;
+    let selectedLoansToCombine = [];
 
-    // Session Management (10-Hour Expiry Rule)
     const TEN_HOURS_MS = 10 * 60 * 60 * 1000;
 
     window.addEventListener('DOMContentLoaded', () => {
       checkSessionTimeout();
       applyCompanyConfig();
-      populateConsolidationList();
+      renderBranchList();
       liveCalculateDisbursement();
       calculateLoan();
-      document.getElementById('daily-ledger-date').value = new Date().toISOString().split('T')[0];
     });
 
     function checkSessionTimeout() {
-      let lastLoginTime = localStorage.getItem('pmms_last_login');
+      let lastLoginTime = localStorage.getItem(STORAGE_PREFIX + 'last_login');
       let now = Date.now();
       if (!lastLoginTime || (now - parseInt(lastLoginTime)) > TEN_HOURS_MS) {
         lockApp();
@@ -556,7 +593,7 @@
       let storedPin = config.pin || '1234';
 
       if (inputPin === storedPin) {
-        localStorage.setItem('pmms_last_login', Date.now().toString());
+        localStorage.setItem(STORAGE_PREFIX + 'last_login', Date.now().toString());
         document.getElementById('login-overlay').classList.add('hidden');
         document.getElementById('login-pin').value = '';
       } else {
@@ -570,17 +607,18 @@
     }
 
     function saveAll() {
-      localStorage.setItem('pmms_clients', JSON.stringify(clients));
-      localStorage.setItem('pmms_loans', JSON.stringify(loans));
-      localStorage.setItem('pmms_tx', JSON.stringify(transactions));
-      localStorage.setItem('pmms_expenses', JSON.stringify(expenses));
-      localStorage.setItem('pmms_config', JSON.stringify(config));
+      localStorage.setItem(STORAGE_PREFIX + 'clients', JSON.stringify(clients));
+      localStorage.setItem(STORAGE_PREFIX + 'loans', JSON.stringify(loans));
+      localStorage.setItem(STORAGE_PREFIX + 'tx', JSON.stringify(transactions));
+      localStorage.setItem(STORAGE_PREFIX + 'expenses', JSON.stringify(expenses));
+      localStorage.setItem(STORAGE_PREFIX + 'config', JSON.stringify(config));
+      localStorage.setItem('pmms_branches_master', JSON.stringify(branches));
     }
 
     function applyCompanyConfig() {
-      document.getElementById('header-company-name').innerText = config.name || 'PMMS MICROFINANCE LTD';
+      document.getElementById('header-company-name').innerText = config.name || 'PMMS MICROFINANCE';
       document.getElementById('header-company-loc').innerText = config.location || '';
-      document.getElementById('header-default-term').innerText = `${config.defaultRate || 20}% / ${config.defaultDays || 30} Days`;
+      document.getElementById('header-branch-tag').innerText = branchCode.toUpperCase();
       
       document.getElementById('cfg-name').value = config.name || '';
       document.getElementById('cfg-loc').value = config.location || '';
@@ -589,10 +627,21 @@
       document.getElementById('cfg-days').value = config.defaultDays || 30;
       document.getElementById('cfg-opening-cash').value = config.openingCash || 0;
       document.getElementById('cfg-capital').value = config.capitalization || 0;
+
+      // Restrict Branch Admin Access
+      if (!isMotherSystem) {
+        document.getElementById('branch-access-warning').classList.remove('hidden');
+        document.getElementById('cfg-pin').disabled = true;
+        document.getElementById('cfg-opening-cash').disabled = true;
+        document.getElementById('cfg-capital').disabled = true;
+        document.getElementById('btn-save-settings').classList.add('hidden');
+        document.getElementById('branch-management-box').classList.add('hidden');
+      }
     }
 
     function saveCompanySettings() {
-      config.name = document.getElementById('cfg-name').value || 'PMMS MICROFINANCE LTD';
+      if (!isMotherSystem) return alert('Only Mother System Admin can modify system settings.');
+      config.name = document.getElementById('cfg-name').value || 'PMMS MICROFINANCE';
       config.location = document.getElementById('cfg-loc').value || '';
       config.pin = document.getElementById('cfg-pin').value || '1234';
       config.defaultRate = parseFloat(document.getElementById('cfg-rate').value) || 20;
@@ -602,7 +651,46 @@
 
       saveAll();
       applyCompanyConfig();
-      alert('Company settings & Capitalization saved successfully!');
+      alert('Settings saved successfully!');
+    }
+
+    // Branch Creator (Supports 100+ Branches)
+    function createNewBranch() {
+      if (!isMotherSystem) return alert('Only Mother System can create new branches.');
+      let bName = document.getElementById('new-branch-name').value.trim();
+      if (!bName) return alert('Enter branch name.');
+
+      let bCode = 'br_' + Math.floor(1000 + Math.random() * 9000);
+      let baseUrl = window.location.origin + window.location.pathname;
+      let branchLink = `${baseUrl}?branch=${bCode}`;
+
+      branches.push({ code: bCode, name: bName, link: branchLink, created: new Date().toISOString().split('T')[0] });
+      saveAll();
+      renderBranchList();
+      document.getElementById('new-branch-name').value = '';
+      alert(`New Branch Created Successfully!\nLink: ${branchLink}`);
+    }
+
+    function renderBranchList() {
+      let container = document.getElementById('branch-links-list');
+      if (!container) return;
+
+      if (branches.length === 0) {
+        container.innerHTML = `<div class="text-slate-400 italic">No active branches created yet.</div>`;
+        return;
+      }
+
+      container.innerHTML = branches.map(b => `
+        <div class="p-2 bg-slate-700 rounded flex justify-between items-center text-xs">
+          <div>
+            <div class="font-bold text-teal-300">${b.name}</div>
+            <div class="text-[10px] text-slate-400">${b.link}</div>
+          </div>
+          <button onclick="navigator.clipboard.writeText('${b.link}'); alert('Branch Link Copied!');" class="bg-teal-600 px-2 py-1 rounded text-white font-bold">
+            Copy Link
+          </button>
+        </div>
+      `).join('');
     }
 
     function switchTab(tabId) {
@@ -612,38 +700,51 @@
       document.querySelectorAll('nav button').forEach(el => el.classList.remove('text-slate-800', 'font-bold'));
       document.getElementById('nav-' + tabId).classList.add('text-slate-800', 'font-bold');
 
-      if (tabId === 'disburse') populateConsolidationList();
       if (tabId === 'reports') renderReports();
-      if (tabId === 'daily-ledger') renderDailyLedger();
+      if (tabId === 'aging') renderAgingAnalysis();
+      if (tabId === 'records') renderRecordsHub();
       if (tabId === 'demand') renderDemandList();
     }
 
-    // Phone Number Uniqueness Enforcement
+    // Ugandan Phone Number Validation
+    function validateUgandanPhone(phone) {
+      let clean = phone.trim().replaceAll(' ', '').replaceAll('-', '');
+      let ugRegex = /^(\+?256|0)[37]\d{8}$/;
+      return ugRegex.test(clean);
+    }
+
     function isPhoneNumberUnique(phone, excludeClientId = null) {
       let cleanPhone = phone.trim().replaceAll(' ', '');
       return !clients.some(c => c.phone.trim().replaceAll(' ', '') === cleanPhone && c.id !== excludeClientId);
     }
 
-    // Dynamic Accurate Arrears Calculation Logic
+    // Arrears Calculation Logic
     function calculateAccurateArrears(loan) {
       if (loan.status !== 'Active') return 0;
       let start = new Date(loan.date);
       let today = new Date();
 
-      // Clear time components
       start.setHours(0,0,0,0);
       today.setHours(0,0,0,0);
 
       let diffTime = today - start;
       let daysElapsed = Math.floor(diffTime / (1000 * 60 * 60 * 24));
 
-      if (daysElapsed <= 0) return 0; // Starts accumulating tomorrow
+      if (daysElapsed <= 0) return 0;
 
       let expectedTotal = loan.dailyTarget * daysElapsed;
       let paidTotal = loan.totalPayable - loan.balance;
       let arrears = expectedTotal - paidTotal;
 
       return arrears > 0 ? Math.round(arrears) : 0;
+    }
+
+    // Guarantor Cap Check (Max 10 Active Clients per Guarantor)
+    function checkGuarantorCap(gPhone) {
+      if (!gPhone) return true;
+      let cleanGPhone = gPhone.trim().replaceAll(' ', '');
+      let activeGuaranteedCount = loans.filter(l => l.status === 'Active' && l.guarantor && l.guarantor.phone.trim().replaceAll(' ', '') === cleanGPhone).length;
+      return activeGuaranteedCount < 10;
     }
 
     // Calculator Logic
@@ -662,7 +763,7 @@
       document.getElementById('c-daily').innerText = 'UGX ' + Math.round(daily).toLocaleString();
     }
 
-    // Disbursement & Consolidation
+    // Disburse & Multi-Search Combining
     function toggleClientMode(isNew) {
       document.getElementById('new-client-fields').classList.toggle('hidden', !isNew);
       document.getElementById('existing-client-fields').classList.toggle('hidden', isNew);
@@ -688,47 +789,57 @@
       activeDisburseClient = clients.find(c => c.id === id);
       document.getElementById('disburse-selected-name').innerText = `Primary Client: ${activeDisburseClient.name} (${activeDisburseClient.acc})`;
       document.getElementById('disburse-search-results').classList.add('hidden');
-      populateConsolidationList();
       liveCalculateDisbursement();
     }
 
-    function toggleConsolidationPanel() {
-      document.getElementById('consolidation-selector-panel').classList.toggle('hidden');
+    function searchLoansToCombine(query) {
+      let container = document.getElementById('merge-search-results');
+      if (!query) return container.classList.add('hidden');
+
+      let matches = loans.filter(l => l.status === 'Active' && l.balance > 0).filter(l => {
+        let client = clients.find(c => c.id === l.clientId);
+        return client && (client.name.toLowerCase().includes(query.toLowerCase()) || client.phone.includes(query) || client.acc.includes(query));
+      });
+
+      container.innerHTML = matches.map(l => {
+        let client = clients.find(c => c.id === l.clientId);
+        return `
+          <div class="p-2 text-xs hover:bg-slate-100 cursor-pointer flex justify-between" onclick="addLoanToCombineList(${l.id})">
+            <span><b>${client.name}</b> (${client.acc})</span>
+            <span class="font-bold text-amber-700">UGX ${l.balance.toLocaleString()}</span>
+          </div>
+        `;
+      }).join('');
+      container.classList.remove('hidden');
     }
 
-    function populateConsolidationList() {
-      let activeLoans = loans.filter(l => l.status === 'Active' && l.balance > 0);
-      let container = document.getElementById('active-loans-checkbox-list');
+    function addLoanToCombineList(loanId) {
+      if (!selectedLoansToCombine.includes(loanId)) {
+        selectedLoansToCombine.push(loanId);
+      }
+      document.getElementById('merge-search-results').classList.add('hidden');
+      document.getElementById('merge-search-input').value = '';
+      renderSelectedLoansToCombine();
+      liveCalculateDisbursement();
+    }
 
-      if (activeLoans.length === 0) {
-        container.innerHTML = `<div class="text-slate-500 italic">No active loans available to merge.</div>`;
+    function renderSelectedLoansToCombine() {
+      let container = document.getElementById('selected-merged-loans-list');
+      if (selectedLoansToCombine.length === 0) {
+        container.innerHTML = `<div class="text-slate-400 italic">No loans selected for consolidation.</div>`;
         return;
       }
 
-      container.innerHTML = activeLoans.map(loan => {
+      container.innerHTML = selectedLoansToCombine.map((lId, idx) => {
+        let loan = loans.find(l => l.id === lId);
         let client = clients.find(c => c.id === loan.clientId);
-        let isCurrentClient = activeDisburseClient && activeDisburseClient.id === client.id;
         return `
-          <label class="flex items-center justify-between p-1.5 border rounded bg-white text-xs cursor-pointer">
-            <span class="flex items-center gap-2">
-              <input type="checkbox" value="${loan.id}" class="combine-loan-checkbox" onchange="liveCalculateDisbursement()">
-              <b>${client ? client.name : 'Unknown'}</b> ${isCurrentClient ? '<span class="text-blue-600 font-bold">(Self)</span>' : ''}
-            </span>
-            <span class="font-bold text-amber-700">UGX ${loan.balance.toLocaleString()}</span>
-          </label>
+          <div class="p-1.5 border rounded bg-white flex justify-between items-center text-xs">
+            <div><b>${client.name}</b>: UGX ${loan.balance.toLocaleString()}</div>
+            <button onclick="selectedLoansToCombine.splice(${idx}, 1); renderSelectedLoansToCombine(); liveCalculateDisbursement();" class="text-red-600 font-bold px-1">Remove</button>
+          </div>
         `;
       }).join('');
-    }
-
-    function getMergedSelectedLoansBalance() {
-      let selectedCheckboxes = document.querySelectorAll('.combine-loan-checkbox:checked');
-      let totalMerged = 0;
-      selectedCheckboxes.forEach(cb => {
-        let loanId = parseInt(cb.value);
-        let loan = loans.find(l => l.id === loanId);
-        if (loan) totalMerged += loan.balance;
-      });
-      return totalMerged;
     }
 
     function liveCalculateDisbursement() {
@@ -736,7 +847,11 @@
       let rate = parseFloat(document.getElementById('disburse-rate').value) || config.defaultRate || 20;
       let days = parseFloat(document.getElementById('disburse-days').value) || config.defaultDays || 30;
 
-      let mergedBalance = getMergedSelectedLoansBalance();
+      let mergedBalance = selectedLoansToCombine.reduce((s, id) => {
+        let l = loans.find(x => x.id === id);
+        return s + (l ? l.balance : 0);
+      }, 0);
+
       let totalEffectivePrincipal = principalInput + mergedBalance;
       let interest = totalEffectivePrincipal * (rate / 100);
       let totalPayable = totalEffectivePrincipal + interest;
@@ -760,12 +875,21 @@
       let gPhone = document.getElementById('guarantor-phone').value;
       let gInfo = document.getElementById('guarantor-info').value;
 
+      // Guarantor Limit Check (Rule #9)
+      if (gPhone && !checkGuarantorCap(gPhone)) {
+        return alert('ERROR: This guarantor has reached the maximum cap of 10 active guaranteed loans!');
+      }
+
       let client;
       if (isNew) {
         let name = document.getElementById('new-name').value;
         let phone = document.getElementById('new-phone').value;
-        if (!name || !phone) return alert('Provide both client name and phone number.');
+        if (!name || !phone) return alert('Provide client name and phone number.');
         
+        if (!validateUgandanPhone(phone)) {
+          return alert('INVALID PHONE: Provide a valid Ugandan phone number (e.g., 0771234567 or +256701234567).');
+        }
+
         if (!isPhoneNumberUnique(phone)) {
           return alert('ERROR: Phone number already exists for another client!');
         }
@@ -779,7 +903,6 @@
         };
         clients.push(client);
 
-        // Record Mandatory UGX 10,000 Ledger Fee for New Clients
         transactions.push({
           id: Date.now() + 1,
           clientId: client.id,
@@ -792,17 +915,21 @@
       } else {
         if (!activeDisburseClient) return alert('Select a primary client.');
         client = activeDisburseClient;
+
+        // Block client if already having an active loan (Rule #8)
+        let existingActive = loans.find(l => l.clientId === client.id && l.status === 'Active');
+        if (existingActive) {
+          return alert(`CANNOT DISBURSE: Client ${client.name} currently has an active running loan balance of UGX ${existingActive.balance.toLocaleString()}.`);
+        }
       }
 
-      let selectedCheckboxes = document.querySelectorAll('.combine-loan-checkbox:checked');
+      // Combine selected loans and clear balances to 0 (Rule #3)
       let mergedBalance = 0;
-
-      selectedCheckboxes.forEach(cb => {
-        let loanId = parseInt(cb.value);
-        let loan = loans.find(l => l.id === loanId);
+      selectedLoansToCombine.forEach(lId => {
+        let loan = loans.find(l => l.id === lId);
         if (loan) {
           mergedBalance += loan.balance;
-          loan.status = 'Merged into #' + client.acc;
+          loan.status = 'Cleared & Merged into #' + client.acc;
           loan.balance = 0;
         }
       });
@@ -832,7 +959,6 @@
 
       loans.push(newLoan);
 
-      // Record Mandatory UGX 10,000 Processing Fee for Every Loan
       transactions.push({
         id: Date.now() + 2,
         loanId: newLoan.id,
@@ -844,11 +970,11 @@
       });
 
       saveAll();
-      alert('Loan Disbursed Successfully!\n- Processing Fee UGX 10,000 auto-recorded.' + (isNew ? '\n- Ledger Fee UGX 10,000 auto-recorded.' : ''));
+      alert('Loan Disbursed Successfully!\n- Merged selected loans cleared to 0 balance.\n- Fees recorded.');
       location.reload();
     }
 
-    // Posting Batch Logic
+    // Batch Posting & Receipts with Arrears
     function searchPostingClients(query) {
       let container = document.getElementById('post-search-results');
       if (!query) return container.classList.add('hidden');
@@ -919,7 +1045,7 @@
       if (batchQueue.length === 0) return alert('Batch queue is empty.');
 
       let allowPrint = document.getElementById('toggle-print-receipt').checked;
-      let companyHeading = config.name || 'PMMS MICROFINANCE LTD';
+      let companyHeading = config.name || 'PMMS MICROFINANCE';
 
       batchQueue.forEach(item => {
         let loan = loans.find(l => l.id === item.loan.id);
@@ -928,6 +1054,8 @@
           loan.balance = 0;
           loan.status = 'Settled';
         }
+
+        let dynamicArrears = calculateAccurateArrears(loan);
 
         let tx = {
           id: Date.now() + Math.floor(Math.random() * 100),
@@ -941,10 +1069,10 @@
         transactions.push(tx);
 
         if (allowPrint) {
-          generateReceiptPDF(item.client, tx, loan.balance);
+          generateReceiptPDF(item.client, tx, loan.balance, dynamicArrears);
         }
 
-        alert(`AUTOMATED SMS RECEIPT SENT\nSender: ${companyHeading}\nTo: ${item.client.phone}\nDear ${item.client.name}, payment of UGX ${item.amount.toLocaleString()} received via ${item.channel}. New Balance: UGX ${loan.balance.toLocaleString()}. Thank you!`);
+        alert(`AUTOMATED SMS RECEIPT\nSender: ${companyHeading}\nTo: ${item.client.phone}\nDear ${item.client.name}, payment of UGX ${item.amount.toLocaleString()} received via ${item.channel}.\nArrears: UGX ${dynamicArrears.toLocaleString()}\nNew Balance: UGX ${loan.balance.toLocaleString()}. Thank you!`);
       });
 
       saveAll();
@@ -954,11 +1082,11 @@
       location.reload();
     }
 
-    function generateReceiptPDF(client, tx, newBalance) {
+    function generateReceiptPDF(client, tx, newBalance, arrears) {
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ format: [80, 120], unit: 'mm' });
+      const doc = new jsPDF({ format: [80, 125], unit: 'mm' });
 
-      let companyHeading = config.name || "PMMS MICROFINANCE LTD";
+      let companyHeading = config.name || "PMMS MICROFINANCE";
 
       doc.setFontSize(9);
       doc.setFont("helvetica", "bold");
@@ -980,15 +1108,16 @@
       doc.setFontSize(7);
       doc.setFont("helvetica", "normal");
       doc.text(`Channel: ${tx.channel}`, 5, 55);
-      doc.text(`Remaining Balance: UGX ${newBalance.toLocaleString()}`, 5, 60);
+      doc.text(`Arrears Balance: UGX ${arrears.toLocaleString()}`, 5, 60);
+      doc.text(`Remaining Loan Balance: UGX ${newBalance.toLocaleString()}`, 5, 65);
 
-      doc.text("--------------------------------------------------", 40, 67, { align: "center" });
-      doc.text("Thank you for choosing " + companyHeading, 40, 73, { align: "center" });
+      doc.text("--------------------------------------------------", 40, 72, { align: "center" });
+      doc.text("Thank you for choosing " + companyHeading, 40, 78, { align: "center" });
 
       doc.save(`Receipt_${client.name}_${tx.id}.pdf`);
     }
 
-    // Statements & Client Profile Management
+    // Statements & Cleared Client Deletion
     function searchStatementClients(query) {
       let container = document.getElementById('statement-search-results');
       if (!query) return container.classList.add('hidden');
@@ -1006,25 +1135,41 @@
       activeStatementClientId = clientId;
       let client = clients.find(c => c.id === clientId);
       let loan = loans.find(l => l.clientId === clientId && l.status === 'Active');
+      let clientActiveLoans = loans.filter(l => l.clientId === clientId && l.status === 'Active' && l.balance > 0);
 
       document.getElementById('st-name').innerText = client.name;
       document.getElementById('st-acc').innerText = 'Acc: ' + client.acc + ' | Phone: ' + client.phone;
       document.getElementById('st-call-btn').href = 'tel:' + client.phone;
-      document.getElementById('st-balance').innerText = loan ? 'Outstanding Balance: UGX ' + loan.balance.toLocaleString() : 'No Active Loan';
+      document.getElementById('st-balance').innerText = loan ? 'Outstanding Balance: UGX ' + loan.balance.toLocaleString() : 'No Active Loan (Cleared)';
 
-      if (loan && loan.guarantor && loan.guarantor.name) {
-        document.getElementById('st-guarantor').innerText = `Guarantor: ${loan.guarantor.name} (${loan.guarantor.phone || 'N/A'})`;
+      let btnDeleteCleared = document.getElementById('btn-delete-cleared-client');
+      if (clientActiveLoans.length === 0) {
+        btnDeleteCleared.classList.remove('hidden');
       } else {
-        document.getElementById('st-guarantor').innerText = '';
+        btnDeleteCleared.classList.add('hidden');
       }
-
-      let loanControls = document.getElementById('st-loan-controls');
-      if (loan) loanControls.classList.remove('hidden');
-      else loanControls.classList.add('hidden');
 
       applyDateFilter();
       document.getElementById('statement-view').classList.remove('hidden');
       document.getElementById('statement-search-results').classList.add('hidden');
+    }
+
+    function deleteClearedClient() {
+      if (!activeStatementClientId) return;
+      let client = clients.find(c => c.id === activeStatementClientId);
+      let hasActiveLoan = loans.some(l => l.clientId === activeStatementClientId && l.status === 'Active' && l.balance > 0);
+
+      if (hasActiveLoan) return alert('Cannot delete client with active loan balances.');
+
+      if (confirm(`Are you sure you want to permanently delete cleared client: ${client.name}?`)) {
+        clients = clients.filter(c => c.id !== activeStatementClientId);
+        loans = loans.filter(l => l.clientId !== activeStatementClientId);
+        transactions = transactions.filter(t => t.clientId !== activeStatementClientId);
+
+        saveAll();
+        alert('Cleared client deleted successfully.');
+        location.reload();
+      }
     }
 
     function applyDateFilter() {
@@ -1048,51 +1193,6 @@
       `).join('');
     }
 
-    function reverseActiveLoan() {
-      if (!activeStatementClientId) return;
-      let loan = loans.find(l => l.clientId === activeStatementClientId && l.status === 'Active');
-      if (!loan) return alert('No active loan found to reverse.');
-
-      if (confirm('Are you sure you want to reverse/delete this active loan?')) {
-        loans = loans.filter(l => l.id !== loan.id);
-        transactions = transactions.filter(t => t.loanId !== loan.id);
-        saveAll();
-        alert('Loan reversed successfully.');
-        location.reload();
-      }
-    }
-
-    function openEditClientModal() {
-      if (!activeStatementClientId) return;
-      let client = clients.find(c => c.id === activeStatementClientId);
-      document.getElementById('edit-client-id').value = client.id;
-      document.getElementById('edit-client-name').value = client.name;
-      document.getElementById('edit-client-phone').value = client.phone;
-      document.getElementById('edit-client-modal').classList.remove('hidden');
-    }
-
-    function closeEditClientModal() {
-      document.getElementById('edit-client-modal').classList.add('hidden');
-    }
-
-    function saveEditedClient() {
-      let id = parseInt(document.getElementById('edit-client-id').value);
-      let newPhone = document.getElementById('edit-client-phone').value;
-
-      if (!isPhoneNumberUnique(newPhone, id)) {
-        return alert('ERROR: This phone number is already used by another client.');
-      }
-
-      let client = clients.find(c => c.id === id);
-      client.name = document.getElementById('edit-client-name').value;
-      client.phone = newPhone;
-
-      saveAll();
-      closeEditClientModal();
-      viewStatement(id);
-      alert('Client details updated.');
-    }
-
     function exportPDFStatement() {
       if (!activeStatementClientId) return;
       const { jsPDF } = window.jspdf;
@@ -1101,38 +1201,25 @@
       let txs = transactions.filter(t => t.clientId === activeStatementClientId);
 
       doc.setFontSize(16);
-      doc.text(config.name || "PMMS MICROFINANCE LTD", 14, 15);
+      doc.text(config.name || "PMMS MICROFINANCE", 14, 15);
       doc.setFontSize(10);
       doc.text(config.location || "", 14, 21);
       doc.text(`Statement of Account: ${client.name} (${client.acc})`, 14, 28);
-      doc.text(`Phone: ${client.phone}`, 14, 33);
 
       let tableData = txs.map(t => [t.date, t.type || 'Repayment', `UGX ${t.amount.toLocaleString()}`, t.channel]);
-      doc.autoTable({
-        startY: 38,
-        head: [['Date', 'Type', 'Amount', 'Channel']],
-        body: tableData
-      });
-
+      doc.autoTable({ startY: 34, head: [['Date', 'Type', 'Amount', 'Channel']], body: tableData });
       doc.save(`Statement_${client.name}.pdf`);
     }
 
-    // Financial Reports & Comprehensive Dashboard
+    // Reports & Aging Analysis
     function addExpense() {
       let category = document.getElementById('exp-category').value;
       let amount = parseFloat(document.getElementById('exp-amount').value) || 0;
       let narration = document.getElementById('exp-narration').value;
 
-      if (!category || amount <= 0 || !narration) return alert('Enter category, amount, and narration details.');
+      if (!category || amount <= 0 || !narration) return alert('Enter category, amount, and narration.');
 
-      expenses.push({ 
-        id: Date.now(), 
-        category, 
-        amount, 
-        narration, 
-        date: new Date().toISOString().split('T')[0] 
-      });
-
+      expenses.push({ id: Date.now(), category, amount, narration, date: new Date().toISOString().split('T')[0] });
       saveAll();
       document.getElementById('exp-category').value = '';
       document.getElementById('exp-amount').value = '';
@@ -1142,23 +1229,17 @@
     }
 
     function renderReports() {
-      // General Counts
       let totalClientsCount = clients.length;
       let newClientsCount = clients.filter(c => c.isNewClient).length;
-
       let activeLoansList = loans.filter(l => l.status === 'Active');
       let activeClientsCount = new Set(activeLoansList.map(l => l.clientId)).size;
 
-      // Active clients who made at least one payment
       let paidActiveClientsCount = new Set(
-        transactions
-          .filter(t => t.type === 'Repayment' && activeLoansList.some(l => l.id === t.loanId))
-          .map(t => t.clientId)
+        transactions.filter(t => t.type === 'Repayment' && activeLoansList.some(l => l.id === t.loanId)).map(t => t.clientId)
       ).size;
 
       let collectionRate = activeClientsCount > 0 ? ((paidActiveClientsCount / activeClientsCount) * 100).toFixed(1) : '0.0';
 
-      // Money Collections Breakdown
       let repayments = transactions.filter(t => t.type === 'Repayment');
       let mtnTotal = repayments.filter(t => t.channel === 'MTN Mobile Money').reduce((s, t) => s + t.amount, 0);
       let airtelTotal = repayments.filter(t => t.channel === 'Airtel Mobile Money').reduce((s, t) => s + t.amount, 0);
@@ -1167,10 +1248,8 @@
       let bankTransfers = repayments.filter(t => t.channel === 'Banking').reduce((s, t) => s + t.amount, 0);
       let totalCollections = cashCollected + allMobileMoney + bankTransfers;
 
-      // Disbursements & Revenue
       let totalLoansDisbursedCount = loans.length;
       let totalAmountDisbursed = loans.reduce((s, l) => s + (l.cashPrincipal || l.principal), 0);
-      
       let totalPrincipalBalance = activeLoansList.reduce((s, l) => s + l.principal, 0);
       let totalInterestBalance = activeLoansList.reduce((s, l) => s + l.interest, 0);
 
@@ -1181,11 +1260,9 @@
       let openingCash = config.openingCash || 0;
       let capitalization = config.capitalization || 0;
 
-      // Closing Balance = (Opening Cash + Capitalization + Cash Collected + Fees - Cash Disbursed - Expenses) + All Mobile Money + Bank
       let closingCashAtHand = (openingCash + capitalization + cashCollected + processingFeesTotal + ledgerFeesTotal) - totalAmountDisbursed - totalExpensesAmount;
       let overallClosingBalance = closingCashAtHand + allMobileMoney + bankTransfers;
 
-      // Update UI Metrics
       document.getElementById('rep-total-clients').innerText = totalClientsCount;
       document.getElementById('rep-active-clients').innerText = `${activeClientsCount} (${paidActiveClientsCount} Paid)`;
       document.getElementById('rep-new-clients').innerText = newClientsCount;
@@ -1208,8 +1285,9 @@
       document.getElementById('rep-ledger-fees').innerText = 'UGX ' + ledgerFeesTotal.toLocaleString();
       document.getElementById('rep-expenses').innerText = 'UGX ' + totalExpensesAmount.toLocaleString();
       document.getElementById('rep-closing-balance').innerText = 'UGX ' + overallClosingBalance.toLocaleString();
+    }
 
-      // Aging Analysis Table
+    function renderAgingAnalysis() {
       let body = document.getElementById('aging-table-body');
       body.innerHTML = clients.map(c => {
         let loan = loans.find(l => l.clientId === c.id && l.status === 'Active');
@@ -1232,156 +1310,122 @@
     function exportPDFAging() {
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
-
       doc.setFontSize(14);
-      doc.text(`${config.name || "PMMS"} - Aging Analysis Report`, 14, 15);
+      doc.text(`${config.name || "PMMS"} - Aging Analysis & Guarantor Report`, 14, 15);
 
       let rows = clients.map(c => {
         let loan = loans.find(l => l.clientId === c.id && l.status === 'Active');
         let dynamicArrears = loan ? calculateAccurateArrears(loan) : 0;
         let gInfo = (loan && loan.guarantor && loan.guarantor.name) ? `${loan.guarantor.name} (${loan.guarantor.phone || ''})` : 'N/A';
-
         return [c.name, c.phone, gInfo, loan ? `UGX ${loan.balance.toLocaleString()}` : 'UGX 0', `UGX ${dynamicArrears.toLocaleString()}`];
       });
 
-      doc.autoTable({
-        startY: 22,
-        head: [['Client Name', 'Phone', 'Guarantor Details', 'Loan Balance', 'Accurate Arrears']],
-        body: rows
-      });
-
+      doc.autoTable({ startY: 22, head: [['Client Name', 'Phone', 'Guarantor Details', 'Balance', 'Arrears']], body: rows });
       doc.save(`Aging_Analysis_${new Date().toISOString().split('T')[0]}.pdf`);
     }
 
-    // Daily All-Transactions Ledger Audit Trail
-    function renderDailyLedger() {
-      let selectedDate = document.getElementById('daily-ledger-date').value;
-      let container = document.getElementById('daily-ledger-list');
+    // Extended Financial Records Hub (Daily, Weekly, Monthly, Yearly)
+    function renderRecordsHub() {
+      let pType = document.getElementById('record-period-type').value;
+      let container = document.getElementById('records-list-container');
+      document.getElementById('records-period-heading').innerText = `${pType.toUpperCase()} Financial Records`;
 
-      let dayTxs = transactions.filter(t => t.date === selectedDate);
-      let dayLoans = loans.filter(l => l.date === selectedDate);
-      let dayExpenses = expenses.filter(e => e.date === selectedDate);
+      let groups = {};
 
-      let entries = [];
+      transactions.forEach(t => {
+        let key = t.date; // Daily
+        if (pType === 'monthly') key = t.date.substring(0, 7); // YYYY-MM
+        if (pType === 'yearly') key = t.date.substring(0, 4); // YYYY
+        if (pType === 'weekly') {
+          let d = new Date(t.date);
+          let weekNum = Math.ceil(d.getDate() / 7);
+          key = `${t.date.substring(0, 7)}-W${weekNum}`;
+        }
 
-      dayLoans.forEach(l => {
-        let client = clients.find(c => c.id === l.clientId);
-        entries.push({
-          time: 'Disbursement',
-          title: `Loan Disbursed to ${client ? client.name : 'Client'}`,
-          amount: `- UGX ${(l.cashPrincipal || l.principal).toLocaleString()}`,
-          color: 'text-blue-600',
-          badge: 'Cash Out'
-        });
+        if (!groups[key]) groups[key] = { collections: 0, count: 0 };
+        groups[key].collections += t.amount;
+        groups[key].count += 1;
       });
 
-      dayTxs.forEach(t => {
-        let client = clients.find(c => c.id === t.clientId);
-        entries.push({
-          time: t.channel,
-          title: `${t.type || 'Repayment'} - ${client ? client.name : 'Client'}`,
-          amount: `+ UGX ${t.amount.toLocaleString()}`,
-          color: 'text-green-600',
-          badge: 'Cash In'
-        });
-      });
+      let keys = Object.keys(groups).sort().reverse();
 
-      dayExpenses.forEach(e => {
-        entries.push({
-          time: e.category,
-          title: `Expense: ${e.narration}`,
-          amount: `- UGX ${e.amount.toLocaleString()}`,
-          color: 'text-red-600',
-          badge: 'Expense'
-        });
-      });
-
-      if (entries.length === 0) {
-        container.innerHTML = `<div class="text-xs text-slate-400 italic text-center py-4">No transactions recorded for ${selectedDate}.</div>`;
+      if (keys.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-400 italic text-center py-4">No historical records available.</div>`;
         return;
       }
 
-      container.innerHTML = entries.map(e => `
+      container.innerHTML = keys.map(k => `
         <div class="bg-slate-50 p-2.5 border rounded-lg text-xs flex justify-between items-center">
           <div>
-            <div class="font-bold text-slate-800">${e.title}</div>
-            <div class="text-slate-400 text-[10px]">${e.time}</div>
+            <div class="font-bold text-slate-800">${pType.toUpperCase()} Period: ${k}</div>
+            <div class="text-slate-400 text-[10px]">${groups[k].count} Recorded Payment Transactions</div>
           </div>
-          <div class="text-right">
-            <div class="font-bold ${e.color}">${e.amount}</div>
-            <span class="text-[9px] bg-slate-200 px-1.5 py-0.5 rounded font-semibold">${e.badge}</span>
+          <div class="text-right font-bold text-emerald-600">
+            UGX ${groups[k].collections.toLocaleString()}
           </div>
         </div>
       `).join('');
     }
 
-    function exportPDFDailyLedger() {
-      let selectedDate = document.getElementById('daily-ledger-date').value;
+    function exportRecordsPDF() {
+      let pType = document.getElementById('record-period-type').value;
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
 
       doc.setFontSize(14);
-      doc.text(`${config.name || "PMMS"} - Daily All-Transactions Ledger (${selectedDate})`, 14, 15);
+      doc.text(`${config.name || "PMMS"} - ${pType.toUpperCase()} Financial Overview Report`, 14, 15);
 
-      let dayTxs = transactions.filter(t => t.date === selectedDate);
-      let dayLoans = loans.filter(l => l.date === selectedDate);
-      let dayExpenses = expenses.filter(e => e.date === selectedDate);
-
-      let rows = [];
-
-      dayLoans.forEach(l => {
-        let client = clients.find(c => c.id === l.clientId);
-        rows.push([selectedDate, 'Loan Disbursement', client ? client.name : 'N/A', `- UGX ${(l.cashPrincipal || l.principal).toLocaleString()}`, 'Cash Out']);
+      let groups = {};
+      transactions.forEach(t => {
+        let key = t.date;
+        if (pType === 'monthly') key = t.date.substring(0, 7);
+        if (pType === 'yearly') key = t.date.substring(0, 4);
+        if (pType === 'weekly') {
+          let d = new Date(t.date);
+          key = `${t.date.substring(0, 7)}-W${Math.ceil(d.getDate() / 7)}`;
+        }
+        if (!groups[key]) groups[key] = 0;
+        groups[key] += t.amount;
       });
 
-      dayTxs.forEach(t => {
-        let client = clients.find(c => c.id === t.clientId);
-        rows.push([selectedDate, t.type || 'Repayment', client ? client.name : 'N/A', `+ UGX ${t.amount.toLocaleString()}`, t.channel]);
-      });
+      let rows = Object.keys(groups).sort().reverse().map(k => [k, `UGX ${groups[k].toLocaleString()}`]);
 
-      dayExpenses.forEach(e => {
-        rows.push([selectedDate, `Expense: ${e.category}`, e.narration, `- UGX ${e.amount.toLocaleString()}`, 'Expense Out']);
-      });
-
-      doc.autoTable({
-        startY: 22,
-        head: [['Date', 'Transaction Type', 'Details/Client', 'Amount', 'Channel/Category']],
-        body: rows
-      });
-
-      doc.save(`Daily_Ledger_${selectedDate}.pdf`);
+      doc.autoTable({ startY: 22, head: [[`${pType.toUpperCase()} Period`, 'Total Collections']], body: rows });
+      doc.save(`Financial_Records_${pType}_${new Date().toISOString().split('T')[0]}.pdf`);
     }
 
-    // Demand & Defaulters List
+    // Defaulters List
     function renderDemandList() {
-      let activeLoansList = loans.filter(l => l.status === 'Active');
       let container = document.getElementById('demand-list-container');
+      let activeLoansList = loans.filter(l => l.status === 'Active');
 
-      if (activeLoansList.length === 0) {
-        container.innerHTML = `<div class="text-xs text-slate-500 text-center py-4">No active loans or demand records found.</div>`;
+      // Filter: Active clients with ZERO arrears are excluded
+      let defaulters = activeLoansList.map(loan => {
+        let client = clients.find(c => c.id === loan.clientId);
+        let dynamicArrears = calculateAccurateArrears(loan);
+        return { loan, client, dynamicArrears };
+      }).filter(item => item.dynamicArrears > 0);
+
+      if (defaulters.length === 0) {
+        container.innerHTML = `<div class="text-xs text-slate-500 text-center py-4">No defaulters found! All active clients are up-to-date with arrears.</div>`;
         return;
       }
 
-      container.innerHTML = activeLoansList.map(loan => {
-        let client = clients.find(c => c.id === loan.clientId);
-        let dynamicArrears = calculateAccurateArrears(loan);
-
-        return `
-          <div class="bg-white p-3 border rounded-lg text-xs space-y-1">
-            <div class="flex justify-between items-center">
-              <span class="font-bold text-sm text-slate-800">${client.name}</span>
-              <a href="tel:${client.phone}" class="bg-green-600 text-white px-2 py-0.5 rounded text-[11px] font-bold">
-                <i class="fa-solid fa-phone"></i> Call
-              </a>
-            </div>
-            <div class="text-slate-500">Account: ${client.acc} | Phone: ${client.phone}</div>
-            <div class="flex justify-between pt-1 font-bold border-t">
-              <span class="text-slate-600">Daily Target: UGX ${Math.round(loan.dailyTarget).toLocaleString()}</span>
-              <span class="text-red-600">Arrears: UGX ${dynamicArrears.toLocaleString()}</span>
-            </div>
+      container.innerHTML = defaulters.map(item => `
+        <div class="bg-white p-3 border rounded-lg text-xs space-y-1 border-l-4 border-l-red-600">
+          <div class="flex justify-between items-center">
+            <span class="font-bold text-sm text-slate-800">${item.client.name}</span>
+            <a href="tel:${item.client.phone}" class="bg-green-600 text-white px-2 py-0.5 rounded text-[11px] font-bold">
+              <i class="fa-solid fa-phone"></i> Call
+            </a>
           </div>
-        `;
-      }).join('');
+          <div class="text-slate-500">Account: ${item.client.acc} | Phone: ${item.client.phone}</div>
+          <div class="flex justify-between pt-1 font-bold border-t">
+            <span class="text-slate-600">Daily Target: UGX ${Math.round(item.loan.dailyTarget).toLocaleString()}</span>
+            <span class="text-red-600">Overdue Arrears: UGX ${item.dynamicArrears.toLocaleString()}</span>
+          </div>
+        </div>
+      `).join('');
     }
 
     function exportPDFDemand() {
@@ -1389,22 +1433,25 @@
       const doc = new jsPDF();
 
       doc.setFontSize(14);
-      doc.text(`${config.name || "PMMS"} - Client Demand & Defaulter List`, 14, 15);
+      doc.text(`${config.name || "PMMS"} - Defaulters List Report`, 14, 15);
 
       let activeLoansList = loans.filter(l => l.status === 'Active');
-      let rows = activeLoansList.map(loan => {
+      let defaulters = activeLoansList.map(loan => {
         let client = clients.find(c => c.id === loan.clientId);
         let dynamicArrears = calculateAccurateArrears(loan);
-        return [client.name, client.phone, `UGX ${Math.round(loan.dailyTarget).toLocaleString()}`, `UGX ${dynamicArrears.toLocaleString()}`, `UGX ${loan.balance.toLocaleString()}`];
-      });
+        return { loan, client, dynamicArrears };
+      }).filter(item => item.dynamicArrears > 0);
 
-      doc.autoTable({
-        startY: 22,
-        head: [['Client Name', 'Phone Number', 'Daily Target', 'Accurate Arrears', 'Total Balance']],
-        body: rows
-      });
+      let rows = defaulters.map(item => [
+        item.client.name, 
+        item.client.phone, 
+        `UGX ${Math.round(item.loan.dailyTarget).toLocaleString()}`, 
+        `UGX ${item.dynamicArrears.toLocaleString()}`, 
+        `UGX ${item.loan.balance.toLocaleString()}`
+      ]);
 
-      doc.save(`Demand_List_${new Date().toISOString().split('T')[0]}.pdf`);
+      doc.autoTable({ startY: 22, head: [['Defaulter Name', 'Phone Number', 'Daily Target', 'Arrears Balance', 'Total Balance']], body: rows });
+      doc.save(`Defaulters_List_${new Date().toISOString().split('T')[0]}.pdf`);
     }
   </script>
 </body>

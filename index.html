@@ -1887,6 +1887,295 @@
       doc.autoTable({ startY: 22, head: [['Client Name', 'Phone', 'Boda Plate', 'Unpaid Duration', 'Arrears', 'Balance']], body: rows });
       doc.save(`Defaulters_30Days_${new Date().toISOString().split('T')[0]}.pdf`);
     }
+                        let totalInterestBalance = activeLoansList.reduce((s, l) => s + l.interest, 0);
+
+          let processingFeesTotal = activeTx.filter(t => t.type === 'Processing Fee').reduce((s, t) => s + t.amount, 0);
+          let ledgerFeesTotal = activeTx.filter(t => t.type === 'Ledger Fee').reduce((s, t) => s + t.amount, 0);
+
+          let activeExpenses = expenses.filter(e => e.deleted_at === null || e.deleted_at === undefined);
+          let totalExpensesAmount = activeExpenses.reduce((s, e) => s + e.amount, 0);
+
+          let openingCash = parseFloat(config.openingCash) || 0;
+          let capitalization = parseFloat(config.capitalization) || 0;
+          let closingBalance = (openingCash + capitalization + totalCollections + processingFeesTotal + ledgerFeesTotal) - (totalAmountDisbursed + totalExpensesAmount);
+
+          document.getElementById('rep-total-clients').innerText = totalClientsCount;
+          document.getElementById('rep-active-clients').innerText = `${activeClientsCount} (${paidActiveClientsCount} Paid)`;
+          document.getElementById('rep-new-clients').innerText = newClientsCount;
+          document.getElementById('rep-collection-rate').innerText = `${collectionRate}%`;
+
+          document.getElementById('rep-opening-cash').innerText = 'UGX ' + openingCash.toLocaleString();
+          document.getElementById('rep-capitalization').innerText = 'UGX ' + capitalization.toLocaleString();
+          document.getElementById('rep-cash-collected').innerText = 'UGX ' + cashCollected.toLocaleString();
+          document.getElementById('rep-mtn').innerText = 'UGX ' + mtnTotal.toLocaleString();
+          document.getElementById('rep-airtel').innerText = 'UGX ' + airtelTotal.toLocaleString();
+          document.getElementById('rep-total-mm').innerText = 'UGX ' + allMobileMoney.toLocaleString();
+          document.getElementById('rep-bank').innerText = 'UGX ' + bankTransfers.toLocaleString();
+          document.getElementById('rep-total-collections').innerText = 'UGX ' + totalCollections.toLocaleString();
+
+          document.getElementById('rep-disbursed-count').innerText = totalLoansDisbursedCount;
+          document.getElementById('rep-disbursed-amount').innerText = 'UGX ' + totalAmountDisbursed.toLocaleString();
+          document.getElementById('rep-principal-balance').innerText = 'UGX ' + totalPrincipalBalance.toLocaleString();
+          document.getElementById('rep-interest-balance').innerText = 'UGX ' + totalInterestBalance.toLocaleString();
+          document.getElementById('rep-processing-fees').innerText = 'UGX ' + processingFeesTotal.toLocaleString();
+          document.getElementById('rep-ledger-fees').innerText = 'UGX ' + ledgerFeesTotal.toLocaleString();
+          document.getElementById('rep-expenses').innerText = 'UGX ' + totalExpensesAmount.toLocaleString();
+          document.getElementById('rep-closing-balance').innerText = 'UGX ' + closingBalance.toLocaleString();
+        }
+
+        // Aging Analysis Engine
+        function renderAgingAnalysis() {
+          let tbody = document.getElementById('aging-table-body');
+          let activeLoansList = loans.filter(l => l.deleted_at === null && l.status === 'Active');
+
+          if (activeLoansList.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="5" class="p-3 text-center italic text-slate-400">No active loans found.</td></tr>`;
+            return;
+          }
+
+          tbody.innerHTML = activeLoansList.map(loan => {
+            let client = clients.find(c => c.id === loan.clientId && c.deleted_at === null);
+            if (!client) return '';
+
+            let metrics = calculateAccurateArrearsAndAdvance(loan);
+            let gName = loan.guarantor ? loan.guarantor.name : 'N/A';
+
+            return `
+              <tr class="border-b hover:bg-slate-50">
+                <td class="p-2">
+                  <div class="font-bold text-slate-800">${client.name}</div>
+                  <div class="text-[10px] text-slate-500">${client.acc} ${client.number_plate ? '[' + client.number_plate + ']' : ''}</div>
+                </td>
+                <td class="p-2">
+                  <div class="font-medium text-slate-700">${gName}</div>
+                  <div class="text-[10px] text-slate-400">${loan.guarantor ? loan.guarantor.phone : ''}</div>
+                </td>
+                <td class="p-2 text-right font-semibold text-blue-600">UGX ${loan.balance.toLocaleString()}</td>
+                <td class="p-2 text-right font-bold text-red-500">UGX ${metrics.arrears.toLocaleString()}</td>
+                <td class="p-2 text-right font-bold text-emerald-600">${metrics.advanceDays} Days</td>
+              </tr>
+            `;
+          }).join('');
+        }
+
+        function exportPDFAging() {
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF();
+
+          doc.setFontSize(14);
+          doc.text(config.name || "PMMS MICROFINANCE", 14, 15);
+          doc.setFontSize(10);
+          doc.text("Portfolio Aging Analysis & Guarantors Report", 14, 21);
+
+          let activeLoansList = loans.filter(l => l.deleted_at === null && l.status === 'Active');
+          let tableData = activeLoansList.map(l => {
+            let client = clients.find(c => c.id === l.clientId && c.deleted_at === null);
+            let metrics = calculateAccurateArrearsAndAdvance(l);
+            return [
+              client ? `${client.name} (${client.acc})` : 'N/A',
+              client && client.number_plate ? client.number_plate : 'N/A',
+              l.guarantor ? l.guarantor.name : 'N/A',
+              `UGX ${l.balance.toLocaleString()}`,
+              `UGX ${metrics.arrears.toLocaleString()}`,
+              `${metrics.advanceDays} Days`
+            ];
+          });
+
+          doc.autoTable({
+            startY: 26,
+            head: [['Client & Acc', 'Plate', 'Guarantor', 'Balance', 'Arrears', 'Advance Days']],
+            body: tableData
+          });
+
+          doc.save("Aging_Analysis_Report.pdf");
+        }
+
+        // Extended Financial Records Hub
+        function renderRecordsHub() {
+          let periodType = document.getElementById('record-period-type').value;
+          let container = document.getElementById('records-list-container');
+          let heading = document.getElementById('records-period-heading');
+
+          heading.innerText = `${periodType.toUpperCase()} Record Log`;
+
+          let activeTx = transactions.filter(t => t.deleted_at === null);
+          let grouped = {};
+
+          activeTx.forEach(t => {
+            let key = t.date;
+            if (periodType === 'weekly') {
+              let d = new Date(t.date);
+              let week = Math.ceil(d.getDate() / 7);
+              key = `${d.getFullYear()}-${d.getMonth() + 1}-W${week}`;
+            } else if (periodType === 'monthly') {
+              key = t.date.substring(0, 7);
+            } else if (periodType === 'yearly') {
+              key = t.date.substring(0, 4);
+            }
+
+            if (!grouped[key]) grouped[key] = { repayments: 0, fees: 0, count: 0 };
+
+            if (t.type === 'Repayment') {
+              grouped[key].repayments += t.amount;
+            } else {
+              grouped[key].fees += t.amount;
+            }
+            grouped[key].count++;
+          });
+
+          let keys = Object.keys(grouped).sort().reverse();
+
+          if (keys.length === 0) {
+            container.innerHTML = `<div class="text-slate-400 italic text-xs">No transactions recorded for this view.</div>`;
+            return;
+          }
+
+          container.innerHTML = keys.map(k => `
+            <div class="p-2.5 bg-slate-50 border rounded-lg text-xs space-y-1">
+              <div class="flex justify-between font-bold text-slate-800 border-b pb-1">
+                <span>Period: ${k}</span>
+                <span class="text-teal-700">${grouped[k].count} Txns</span>
+              </div>
+              <div class="flex justify-between text-slate-600">
+                <span>Repayments Collected:</span>
+                <span class="font-semibold text-slate-800">UGX ${grouped[k].repayments.toLocaleString()}</span>
+              </div>
+              <div class="flex justify-between text-slate-600">
+                <span>Fee Income Collected:</span>
+                <span class="font-semibold text-purple-700">UGX ${grouped[k].fees.toLocaleString()}</span>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        function exportRecordsPDF() {
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF();
+          let periodType = document.getElementById('record-period-type').value;
+
+          doc.setFontSize(14);
+          doc.text(config.name || "PMMS MICROFINANCE", 14, 15);
+          doc.setFontSize(10);
+          doc.text(`Financial Records Summary (${periodType.toUpperCase()})`, 14, 21);
+
+          let activeTx = transactions.filter(t => t.deleted_at === null);
+          let tableData = activeTx.map(t => [t.date, t.clientId, t.type, `UGX ${t.amount.toLocaleString()}`, t.channel]);
+
+          doc.autoTable({
+            startY: 26,
+            head: [['Date', 'Client ID', 'Type', 'Amount', 'Channel']],
+            body: tableData
+          });
+
+          doc.save(`Financial_Records_${periodType}.pdf`);
+        }
+
+        // Defaulters List Engine (30+ Days Unpaid)
+        function renderDemandList() {
+          let container = document.getElementById('demand-list-container');
+          let activeLoansList = loans.filter(l => l.deleted_at === null && l.status === 'Active');
+
+          let today = new Date();
+          today.setHours(0,0,0,0);
+
+          let defaulters = [];
+
+          activeLoansList.forEach(loan => {
+            let client = clients.find(c => c.id === loan.clientId && c.deleted_at === null);
+            if (!client) return;
+
+            let clientTx = transactions.filter(t => t.loanId === loan.id && t.type === 'Repayment' && t.deleted_at === null);
+
+            let lastPaymentDate = loan.date;
+            if (clientTx.length > 0) {
+              let sorted = clientTx.sort((a, b) => new Date(b.date) - new Date(a.date));
+              lastPaymentDate = sorted[0].date;
+            }
+
+            let lastDateObj = new Date(lastPaymentDate);
+            lastDateObj.setHours(0,0,0,0);
+
+            let daysUnpaid = Math.floor((today - lastDateObj) / (1000 * 60 * 60 * 24));
+
+            if (daysUnpaid >= 30) {
+              defaulters.push({ loan, client, daysUnpaid, lastPaymentDate });
+            }
+          });
+
+          if (defaulters.length === 0) {
+            container.innerHTML = `<div class="bg-emerald-50 text-emerald-800 p-4 rounded-lg text-xs font-bold text-center">
+              <i class="fa-solid fa-circle-check"></i> Great news! No active clients are in default (30+ consecutive days unpaid).
+            </div>`;
+            return;
+          }
+
+          container.innerHTML = defaulters.map(d => `
+            <div class="bg-red-50 border border-red-200 p-3 rounded-lg text-xs space-y-1">
+              <div class="flex justify-between font-bold text-red-900">
+                <span>${d.client.name} (${d.client.acc})</span>
+                <span class="bg-red-600 text-white px-2 py-0.5 rounded text-[10px]">${d.daysUnpaid} DAYS UNPAID</span>
+              </div>
+              <div class="text-slate-700">Phone: <b>${d.client.phone}</b> ${d.client.number_plate ? '| Plate: <b>' + d.client.number_plate + '</b>' : ''}</div>
+              <div class="text-slate-600">Guarantor: <b>${d.loan.guarantor ? d.loan.guarantor.name + ' (' + d.loan.guarantor.phone + ')' : 'N/A'}</b></div>
+              <div class="flex justify-between pt-1 border-t border-red-200">
+                <span>Outstanding Balance: <b class="text-red-700">UGX ${d.loan.balance.toLocaleString()}</b></span>
+                <a href="tel:${d.client.phone}" class="bg-red-700 text-white px-2 py-0.5 rounded font-bold text-[10px] flex items-center gap-1">
+                  <i class="fa-solid fa-phone"></i> Call Client
+                </a>
+              </div>
+            </div>
+          `).join('');
+        }
+
+        function exportPDFDemand() {
+          const { jsPDF } = window.jspdf;
+          const doc = new jsPDF();
+
+          doc.setFontSize(14);
+          doc.text(config.name || "PMMS MICROFINANCE", 14, 15);
+          doc.setFontSize(10);
+          doc.text("30+ Days Defaulters Notice List", 14, 21);
+
+          let activeLoansList = loans.filter(l => l.deleted_at === null && l.status === 'Active');
+          let today = new Date();
+          today.setHours(0,0,0,0);
+
+          let rows = [];
+
+          activeLoansList.forEach(loan => {
+            let client = clients.find(c => c.id === loan.clientId && c.deleted_at === null);
+            if (!client) return;
+
+            let clientTx = transactions.filter(t => t.loanId === loan.id && t.type === 'Repayment' && t.deleted_at === null);
+
+            let lastPaymentDate = loan.date;
+            if (clientTx.length > 0) {
+              let sorted = clientTx.sort((a, b) => new Date(b.date) - new Date(a.date));
+              lastPaymentDate = sorted[0].date;
+            }
+
+            let daysUnpaid = Math.floor((today - new Date(lastPaymentDate)) / (1000 * 60 * 60 * 24));
+
+            if (daysUnpaid >= 30) {
+              rows.push([
+                `${client.name} (${client.acc})`,
+                client.phone,
+                loan.guarantor ? `${loan.guarantor.name} (${loan.guarantor.phone})` : 'N/A',
+                `UGX ${loan.balance.toLocaleString()}`,
+                `${daysUnpaid} Days`
+              ]);
+            }
+          });
+
+          doc.autoTable({
+            startY: 26,
+            head: [['Client & Acc', 'Phone', 'Guarantor', 'Balance', 'Days Unpaid']],
+            body: rows
+          });
+
+          doc.save("Defaulters_30Days_Report.pdf");
+        }
+    
   </script>
 </body>
 </html>

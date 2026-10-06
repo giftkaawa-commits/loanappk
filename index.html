@@ -253,7 +253,7 @@
       <button onclick="processDisbursement()" class="w-full bg-slate-800 text-white py-3 rounded-lg font-bold text-sm hover:bg-slate-900 shadow">DISBURSE LOAN</button>
     </section>
 
-    <!-- NEW TAB: FIELD OFFICERS PORTFOLIOS (20+ OFFICERS ENGINE) -->
+    <!-- TAB: FIELD OFFICERS PORTFOLIOS -->
     <section id="tab-officers" class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
         <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-users-gear text-teal-600"></i> Field Officers Hub (20+ Portfolios)</h2>
@@ -282,7 +282,7 @@
       <div id="officers-container" class="space-y-3"></div>
     </section>
 
-    <!-- NEW TAB: AI LOAN CALCULATOR & ANALYTICS ENGINE -->
+    <!-- TAB: AI LOAN CALCULATOR & ANALYTICS ENGINE -->
     <section id="tab-ai-calc" class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
         <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
@@ -509,14 +509,27 @@
     <section id="tab-settings" class="tab-content space-y-4 hidden">
       <h2 class="text-lg font-bold border-b pb-2">Setup, Capital & Remote Branch Switch</h2>
 
+      <!-- Terminal Branch Designation Selector -->
+      <div class="bg-white p-4 border rounded-lg space-y-3 text-xs">
+        <h3 class="font-bold text-slate-800 border-b pb-1 text-sm"><i class="fa-solid fa-sitemap text-teal-600"></i> Terminal Configuration</h3>
+        <div>
+          <label class="block font-semibold mb-1 text-slate-600">System Mode / Branch Designation</label>
+          <select id="cfg-branch-type" onchange="updateBranchTypeSetting(this.value)" class="w-full p-2.5 border rounded-lg text-sm bg-slate-50 font-bold">
+            <option value="MOTHER_BRANCH">Mother Branch (Primary Control System)</option>
+            <option value="CHILD_BRANCH">Child Branch (Remote Terminal)</option>
+          </select>
+          <p class="text-[11px] text-slate-500 mt-1">Note: Mother System terminals remain active and are exempt from remote lockout procedures.</p>
+        </div>
+      </div>
+
       <!-- Mother System Control Panel -->
       <div class="bg-slate-900 text-white p-4 rounded-xl space-y-3 shadow-lg">
         <h3 class="text-xs font-bold uppercase text-teal-400 border-b border-slate-700 pb-1"><i class="fa-solid fa-network-wired"></i> Mother Branch Remote Lock Switch</h3>
-        <p class="text-xs text-slate-300">Control branch terminal access. When set to **OFF**, the branch system freezes completely until turned back **ON**.</p>
+        <p class="text-xs text-slate-300">Control remote branch terminal access. When set to **OFF**, child branch terminals freeze completely until turned back **ON**.</p>
         
         <div class="flex items-center justify-between bg-slate-800 p-3 rounded border border-slate-700">
           <div>
-            <div class="font-bold text-sm">Branch Access Status</div>
+            <div class="font-bold text-sm">Remote Branch Access Status</div>
             <div id="branch-status-label" class="text-xs font-semibold text-emerald-400">ACTIVE / ON</div>
           </div>
           <div class="flex gap-2">
@@ -551,7 +564,8 @@
       pin: "1234",
       companyName: "PMMS Microfinance Ltd",
       companyLoc: "Kampala, Uganda",
-      branchApproved: true,
+      branchType: "MOTHER_BRANCH", // 'MOTHER_BRANCH' or 'CHILD_BRANCH'
+      branchApproved: true,       // Remote Lock Switch: true = ON, false = OFF
       clients: [],
       officers: [
         { id: "off-1", name: "John Okello", phone: "0771000001" },
@@ -580,11 +594,18 @@
       if (saved) {
         try { state = Object.assign(state, JSON.parse(saved)); } catch(e){}
       }
+      
+      // Sync UI elements with loaded state
       document.getElementById("header-company-name").innerText = state.companyName || "Loan Manager (PMMS)";
       document.getElementById("header-company-loc").innerText = state.companyLoc || "";
       document.getElementById("cfg-name").value = state.companyName || "";
       document.getElementById("cfg-loc").value = state.companyLoc || "";
       document.getElementById("cfg-pin").value = state.pin || "1234";
+      
+      const typeSelect = document.getElementById("cfg-branch-type");
+      if (typeSelect) typeSelect.value = state.branchType || "MOTHER_BRANCH";
+      
+      updateHeaderBranchTag();
       updateBranchStatusUI();
     }
 
@@ -592,13 +613,28 @@
       localStorage.setItem("pmms_app_state", JSON.stringify(state));
     }
 
-    // BRANCH KILL SWITCH / ON-OFF ENGINE
+    function updateHeaderBranchTag() {
+      const tag = document.getElementById("header-branch-tag");
+      if (tag) {
+        tag.innerText = state.branchType === "MOTHER_BRANCH" ? "Mother Branch" : "Remote Branch";
+      }
+    }
+
+    function updateBranchTypeSetting(newType) {
+      state.branchType = newType;
+      saveState();
+      updateHeaderBranchTag();
+      checkBranchAuthorizationState();
+      alert(`Terminal set to ${newType === 'MOTHER_BRANCH' ? 'Mother Branch' : 'Child Branch'}`);
+    }
+
+    // BRANCH KILL SWITCH / ON-OFF ENGINE WITH MOTHER BRANCH EXEMPTION
     function setBranchStatus(isOn) {
       state.branchApproved = isOn;
       saveState();
       updateBranchStatusUI();
       checkBranchAuthorizationState();
-      alert(`Branch status set to ${isOn ? 'ON (Active)' : 'OFF (Deactivated)'}`);
+      alert(`Remote branch access status set to ${isOn ? 'ON (Active)' : 'OFF (Deactivated)'}`);
     }
 
     function updateBranchStatusUI() {
@@ -612,14 +648,34 @@
       }
     }
 
+    // LOCK ENFORCEMENT LOGIC: EXEMPT MOTHER BRANCH FROM DEACTIVATION
     function checkBranchAuthorizationState() {
       const overlay = document.getElementById("branch-lock-overlay");
+      
+      // Mother Branch is exempt from lockout logic
+      if (state.branchType === "MOTHER_BRANCH") {
+        overlay.classList.add("hidden");
+        return;
+      }
+
+      // Child branches freeze when switch is OFF
       if (!state.branchApproved) {
         overlay.classList.remove("hidden");
       } else {
         overlay.classList.add("hidden");
       }
     }
+
+    // EMERGENCY RECOVERY CONSOLE TOOL
+    window.pmms_forceUnlock = function() {
+      state.branchType = "MOTHER_BRANCH";
+      state.branchApproved = true;
+      saveState();
+      checkBranchAuthorizationState();
+      updateHeaderBranchTag();
+      updateBranchStatusUI();
+      console.log("PMMS Mother Branch access restored successfully.");
+    };
 
     // SECURITY PIN
     function verifyPin() {
@@ -638,7 +694,10 @@
 
     // TAB NAVIGATION
     function showTab(tabId) {
-      if (!state.branchApproved) return checkBranchAuthorizationState();
+      if (state.branchType !== "MOTHER_BRANCH" && !state.branchApproved) {
+        return checkBranchAuthorizationState();
+      }
+      
       document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
       document.getElementById(tabId).classList.remove("hidden");
       
@@ -686,7 +745,6 @@
 
       let html = "";
       state.officers.forEach(off => {
-        // Calculate Officer Portfolio Metrics
         const assignedClients = state.clients.filter(c => c.officerId === off.id);
         const totalClientsCount = assignedClients.length;
         
@@ -700,7 +758,6 @@
           totalDailyTargets += (c.dailyTarget || 0);
           if (c.createdDate === selectedDate) newClientsCount++;
           
-          // Sum up payments on selected date
           (c.txHistory || []).forEach(tx => {
             if (tx.date === selectedDate && tx.type === 'repayment') {
               totalCollected += tx.amount;
@@ -767,7 +824,7 @@
 
       let advice = "";
       if (risk === 'high') {
-        advice = "⚠️ High Risk Portfolio Entry: Require a verified guarantor with motor vehicle/boda registration card. Set daily collection targets.";
+        advice = "⚠️️ High Risk Portfolio Entry: Require a verified guarantor with motor vehicle/boda registration card. Set daily collection targets.";
       } else if (risk === 'low') {
         advice = "✅ Low Risk Client: Eligible for lower interest incentives (15%) and flexible weekly repayments.";
       } else {
@@ -860,7 +917,6 @@
       saveState();
       alert(`Loan of UGX ${principal.toLocaleString()} disbursed successfully to ${clientName}!`);
       
-      // Reset inputs
       document.getElementById("disburse-principal").value = "";
       document.getElementById("new-name").value = "";
       showTab("tab-posting");
@@ -1064,7 +1120,10 @@
       state.companyName = document.getElementById("cfg-name").value;
       state.companyLoc = document.getElementById("cfg-loc").value;
       state.pin = document.getElementById("cfg-pin").value || "1234";
+      state.branchType = document.getElementById("cfg-branch-type").value || "MOTHER_BRANCH";
       saveState();
+      updateHeaderBranchTag();
+      checkBranchAuthorizationState();
       alert("Settings saved successfully!");
     }
   </script>

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <title>PMMS Enterprise Microfinance & Branch Network Manager</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- PDF Generation Libraries -->
@@ -18,198 +18,274 @@
       #printable-area { position: absolute; left: 0; top: 0; width: 100%; }
       .no-print { display: none !important; }
     }
+    /* Touch target optimizations for mobile devices */
+    button, input, select {
+      touch-action: manipulation;
+    }
+    /* Custom scrollbar for responsive sub-nav */
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans pb-28">
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen pb-28 md:pb-12">
 
-  <!-- SECURITY PIN LOGIN OVERLAY -->
-  <div id="login-overlay" class="fixed inset-0 bg-slate-900 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl p-6 w-full max-w-sm text-center space-y-4 shadow-2xl">
-      <div class="w-16 h-16 bg-slate-100 text-slate-800 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
-        <i class="fa-solid fa-shield-halved"></i>
+  <!-- BRANCH REMOTE KILL SWITCH OVERLAY -->
+  <div id="kill-switch-overlay" class="fixed inset-0 bg-red-950/95 z-[100] flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl p-6 md:p-8 w-full max-w-md text-center space-y-4 shadow-2xl border-4 border-red-600">
+      <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-3xl font-bold animate-pulse">
+        <i class="fa-solid fa-power-off"></i>
       </div>
-      <div>
-        <h2 id="login-title" class="text-xl font-bold text-slate-800">PMMS Secure Access</h2>
-        <p class="text-xs text-slate-500 mt-1">Enter PIN to access terminal.</p>
+      <h2 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight">BRANCH SYSTEM SUSPENDED</h2>
+      <p class="text-xs md:text-sm text-slate-600 leading-relaxed">
+        This terminal branch has been temporarily deactivated by HQ / Central Mother System. All data remains safe, encrypted, and preserved in local storage.
+      </p>
+      <div class="bg-red-50 border border-red-200 p-3 rounded-xl text-xs text-red-800 font-medium">
+        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Contact Central Management to restore operations.
       </div>
-      <div>
-        <input type="password" id="login-pin" maxlength="6" placeholder="Enter PIN" class="w-full text-center text-2xl tracking-widest p-3 border rounded-xl font-bold bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-800">
+      <div class="pt-2 border-t">
+        <button onclick="unlockViaMasterOverride()" class="text-[11px] text-slate-400 hover:text-slate-600 underline">
+          Master Security Override
+        </button>
       </div>
-      <button onclick="verifyPin()" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold text-sm hover:bg-slate-900 shadow-md">
-        UNLOCK APP
-      </button>
     </div>
   </div>
 
-  <!-- BRANCH APPROVAL LOCK OVERLAY (KILL SWITCH) -->
-  <div id="branch-lock-overlay" class="fixed inset-0 bg-slate-950/95 z-50 flex items-center justify-center p-4 hidden">
-    <div class="bg-white rounded-2xl p-6 w-full max-w-md text-center space-y-4 shadow-2xl border-t-4 border-red-600">
-      <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
-        <i class="fa-solid fa-power-off"></i>
+  <!-- ACCOUNT AUTHENTICATION / SIGN-UP OVERLAY -->
+  <div id="auth-overlay" class="fixed inset-0 bg-slate-900/95 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-sm text-center space-y-4 shadow-2xl">
+      <div class="w-14 h-14 bg-slate-100 text-slate-800 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+        <i class="fa-solid fa-user-shield"></i>
       </div>
-      <div>
-        <h2 id="branch-lock-title" class="text-xl font-bold text-slate-900">Branch Terminal Deactivated</h2>
-        <p id="branch-lock-msg" class="text-xs text-slate-600 mt-2 leading-relaxed">
-          This branch system has been switched OFF remotely by Mother System Admin. Operations are suspended until activated.
-        </p>
+      
+      <!-- AUTH TABS -->
+      <div class="flex border-b text-xs font-bold">
+        <button id="tab-btn-login" onclick="switchAuthTab('login')" class="w-1/2 py-2 text-slate-800 border-b-2 border-slate-800">LOGIN</button>
+        <button id="tab-btn-register" onclick="switchAuthTab('register')" class="w-1/2 py-2 text-slate-400">CREATE ACCOUNT</button>
       </div>
-      <button onclick="checkBranchAuthorizationState()" class="w-full bg-slate-800 text-white py-2.5 rounded-xl font-bold text-xs hover:bg-slate-900">
-        <i class="fa-solid fa-rotate-right"></i> Check Authorization Status
-      </button>
+
+      <!-- FORM 1: LOGIN -->
+      <div id="auth-form-login" class="space-y-3 text-left">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1">Gmail or Username</label>
+          <input type="text" id="login-identifier" placeholder="e.g. user@gmail.com" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-800">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1">Password</label>
+          <input type="password" id="login-password" placeholder="••••••••" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-800">
+        </div>
+        <button onclick="handleLogin()" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold text-xs hover:bg-slate-900 shadow-md active:scale-[0.98] transition">
+          ACCESS TERMINAL
+        </button>
+      </div>
+
+      <!-- FORM 2: REGISTER ACCOUNT -->
+      <div id="auth-form-register" class="space-y-3 text-left hidden">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1">Full Name</label>
+          <input type="text" id="reg-name" placeholder="John Doe" class="w-full p-2 border rounded-xl text-xs bg-slate-50">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1">Gmail Address (*Required)</label>
+          <input type="email" id="reg-email" placeholder="example@gmail.com" class="w-full p-2 border rounded-xl text-xs bg-slate-50">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1">Username</label>
+          <input type="text" id="reg-username" placeholder="johndoe" class="w-full p-2 border rounded-xl text-xs bg-slate-50">
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1">Password</label>
+          <input type="password" id="reg-password" placeholder="Minimum 6 characters" class="w-full p-2 border rounded-xl text-xs bg-slate-50">
+        </div>
+        <button onclick="sendGmailVerificationCode()" class="w-full bg-teal-600 text-white py-2.5 rounded-xl font-bold text-xs hover:bg-teal-700 shadow-md active:scale-[0.98] transition">
+          SEND VERIFICATION CODE TO GMAIL
+        </button>
+      </div>
+
+      <!-- FORM 3: GMAIL VERIFICATION STEP -->
+      <div id="auth-form-verify" class="space-y-3 text-left hidden">
+        <div class="bg-teal-50 border border-teal-200 p-2.5 rounded-xl text-[11px] text-teal-800">
+          A 6-digit security code was dispatched to <strong id="verify-email-target"></strong>.
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1">Enter Verification Code</label>
+          <input type="text" id="verify-code-input" maxlength="6" placeholder="Enter 6-digit code" class="w-full p-2.5 border rounded-xl text-center text-lg tracking-widest font-bold bg-slate-50">
+        </div>
+        <button onclick="confirmGmailVerification()" class="w-full bg-emerald-600 text-white py-2.5 rounded-xl font-bold text-xs hover:bg-emerald-700 shadow-md active:scale-[0.98] transition">
+          VERIFY GMAIL & CREATE ACCOUNT
+        </button>
+      </div>
+
     </div>
   </div>
 
   <!-- Header -->
-  <header class="bg-slate-800 text-white p-4 shadow-md sticky top-0 z-10 no-print">
-    <div class="flex justify-between items-center max-w-xl mx-auto">
+  <header class="bg-slate-800 text-white p-3 md:p-4 shadow-md sticky top-0 z-30 no-print">
+    <div class="flex justify-between items-center max-w-7xl mx-auto px-1 md:px-4">
       <div>
-        <h1 class="text-lg font-bold flex items-center gap-2">
+        <h1 class="text-base md:text-xl font-bold flex items-center gap-2">
           <i class="fa-solid fa-building-columns text-teal-400"></i>
           <span id="header-company-name">Loan Manager (PMMS)</span>
         </h1>
-        <p id="header-company-loc" class="text-xs text-slate-400"></p>
+        <p id="header-user-tag" class="text-[10px] md:text-xs text-slate-400">User: Guest</p>
       </div>
       <div class="flex items-center gap-2">
-        <button onclick="triggerQuickPrint()" class="bg-slate-700 hover:bg-slate-600 text-teal-300 text-xs px-2.5 py-1 rounded font-bold flex items-center gap-1" title="Print Current Screen">
-          <i class="fa-solid fa-print"></i> Print
+        <button onclick="triggerQuickPrint()" class="bg-slate-700 hover:bg-slate-600 text-teal-300 text-xs px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1 transition" title="Print Current Screen">
+          <i class="fa-solid fa-print"></i> <span class="hidden sm:inline">Print</span>
         </button>
-        <span class="text-xs bg-slate-700 px-2 py-1 rounded text-slate-300 font-semibold" id="header-branch-tag">Mother Branch</span>
-        <button onclick="lockApp()" class="text-slate-400 hover:text-white text-xs p-1" title="Lock App"><i class="fa-solid fa-right-from-bracket"></i></button>
+        <button onclick="lockApp()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs px-2.5 py-1.5 rounded-lg font-bold transition" title="Lock App">
+          <i class="fa-solid fa-right-from-bracket"></i>
+        </button>
       </div>
     </div>
   </header>
 
-  <!-- Navigation Bar -->
-  <nav class="bg-slate-900 text-slate-300 text-xs py-2 px-4 sticky top-14 z-10 overflow-x-auto no-print border-b border-slate-700">
-    <div class="flex space-x-3 max-w-xl mx-auto whitespace-nowrap">
-      <button onclick="showTab('tab-posting')" class="hover:text-white font-semibold">Posting</button>
-      <button onclick="showTab('tab-disburse')" class="hover:text-white font-semibold">Disburse</button>
-      <button onclick="showTab('tab-officers')" class="hover:text-white font-semibold text-teal-400">Field Officers</button>
-      <button onclick="showTab('tab-bankings')" class="hover:text-white font-semibold text-blue-400"><i class="fa-solid fa-building-columns"></i> Bankings</button>
-      <button onclick="showTab('tab-capital')" class="hover:text-white font-semibold text-emerald-400"><i class="fa-solid fa-coins"></i> Capitalization</button>
-      <button onclick="showTab('tab-calc')" class="hover:text-white font-semibold">Calc</button>
-      <button onclick="showTab('tab-statement')" class="hover:text-white font-semibold">Statements</button>
-      <button onclick="showTab('tab-reports')" class="hover:text-white font-semibold">Reports</button>
-      <button onclick="showTab('tab-aging')" class="hover:text-white font-semibold">Aging</button>
-      <button onclick="showTab('tab-records')" class="hover:text-white font-semibold">Records Hub</button>
-      <button onclick="showTab('tab-demand')" class="hover:text-white font-semibold text-red-400">Defaulters</button>
-      <button onclick="showTab('tab-settings')" class="hover:text-white font-semibold">Settings</button>
+  <!-- Responsive Navigation Bar -->
+  <nav class="bg-slate-900 text-slate-300 text-xs py-2.5 px-2 md:px-6 sticky top-[52px] md:top-[60px] z-20 overflow-x-auto no-scrollbar no-print border-b border-slate-700 shadow-inner">
+    <div class="flex space-x-2 md:space-x-4 max-w-7xl mx-auto whitespace-nowrap px-1">
+      <button onclick="showTab('tab-posting')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Posting</button>
+      <button onclick="showTab('tab-disburse')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Disburse</button>
+      <button onclick="showTab('tab-officers')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-teal-400 transition">Officers</button>
+      <button onclick="showTab('tab-bankings')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-blue-400 transition"><i class="fa-solid fa-building-columns mr-1"></i>Bankings</button>
+      <button onclick="showTab('tab-capital')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-emerald-400 transition"><i class="fa-solid fa-coins mr-1"></i>Capital</button>
+      <button onclick="showTab('tab-statement')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Statements</button>
+      <button onclick="showTab('tab-reports')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Reports</button>
+      <button onclick="showTab('tab-aging')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Aging</button>
+      <button onclick="showTab('tab-records')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Records</button>
+      <button onclick="showTab('tab-demand')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-red-400 transition">Defaulters</button>
+      <button onclick="showTab('tab-settings')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Settings</button>
     </div>
   </nav>
 
   <!-- Printable Hidden Wrapper for Browser Printing -->
   <div id="printable-area" class="hidden p-6 bg-white text-slate-900"></div>
 
-  <!-- Main Container -->
-  <main class="p-4 max-w-xl mx-auto space-y-4">
+  <!-- Main Responsive Container -->
+  <main class="p-3 md:p-6 max-w-7xl mx-auto space-y-4">
 
     <!-- TAB 1: BATCH POSTING -->
     <section id="tab-posting" class="tab-content space-y-4">
-      <h2 class="text-lg font-bold border-b pb-2 flex justify-between items-center">
+      <h2 class="text-base md:text-lg font-bold border-b pb-2 flex justify-between items-center">
         <span>Repayment & Batch Posting</span>
-        <label class="text-xs font-normal flex items-center gap-1 cursor-pointer bg-slate-200 px-2 py-1 rounded">
+        <label class="text-xs font-normal flex items-center gap-1 cursor-pointer bg-slate-200 px-2.5 py-1 rounded-lg">
           <input type="checkbox" id="toggle-print-receipt" checked class="rounded"> Print/PDF Receipt
         </label>
       </h2>
       
-      <div>
-        <label class="block text-xs font-semibold mb-1 text-slate-600">Search Active Client</label>
-        <input type="text" id="post-search" oninput="searchPostingClients(this.value)" placeholder="Search name, phone, plate, or account..." class="w-full p-2.5 border rounded-lg bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-800">
-        <div id="post-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
-      </div>
-
-      <div id="post-selected-card" class="bg-slate-800 text-white p-3 rounded-lg hidden text-sm space-y-1">
-        <div class="flex justify-between items-start">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="space-y-4">
           <div>
-            <div class="font-bold text-base" id="post-client-name"></div>
-            <div class="text-slate-300 text-xs" id="post-client-acc"></div>
-            <div class="text-teal-300 text-xs font-semibold" id="post-client-type-info"></div>
-            <div class="text-slate-400 text-[11px]" id="post-client-officer">Officer: Unassigned</div>
+            <label class="block text-xs font-semibold mb-1 text-slate-600">Search Active Client</label>
+            <input type="text" id="post-search" oninput="searchPostingClients(this.value)" placeholder="Search name, phone, plate, or account..." class="w-full p-3 border rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-800 shadow-sm">
+            <div id="post-search-results" class="bg-white border rounded-xl mt-1 divide-y max-h-48 overflow-y-auto hidden shadow-lg"></div>
           </div>
-          <a id="post-client-call" href="#" class="bg-green-600 text-white px-2.5 py-1 rounded-full text-xs font-bold flex items-center gap-1">
-            <i class="fa-solid fa-phone"></i> Call
-          </a>
-        </div>
-        <div class="grid grid-cols-4 gap-1 pt-2 border-t border-slate-700 text-center">
-          <div><span class="block text-[10px] text-slate-400">Arrears</span><span id="post-arrears" class="text-red-400 font-bold text-xs"></span></div>
-          <div><span class="block text-[10px] text-slate-400">Advance</span><span id="post-advance" class="text-emerald-400 font-bold text-xs"></span></div>
-          <div><span class="block text-[10px] text-slate-400">Balance</span><span id="post-balance" class="text-blue-400 font-bold text-xs"></span></div>
-          <div><span class="block text-[10px] text-slate-400">Daily Target</span><span id="post-daily" class="text-green-400 font-bold text-xs"></span></div>
-        </div>
-      </div>
 
-      <div id="post-form" class="space-y-3 hidden">
-        <div class="flex gap-2">
-          <input type="number" id="post-amount" placeholder="Amount Paid (UGX)" class="w-1/2 p-2.5 border rounded-lg bg-white text-sm">
-          <select id="post-channel" class="w-1/2 p-2.5 border rounded-lg bg-white text-sm">
-            <option value="Cash">Cash</option>
-            <option value="MTN Mobile Money">MTN Mobile Money</option>
-            <option value="Airtel Mobile Money">Airtel Mobile Money</option>
-            <option value="Banking">Bank Transfer</option>
-          </select>
-        </div>
-        <button onclick="addToBatch()" class="w-full bg-teal-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-teal-700">Add to Batch</button>
-      </div>
+          <div id="post-selected-card" class="bg-slate-800 text-white p-4 rounded-xl hidden text-sm space-y-2 shadow-md">
+            <div class="flex justify-between items-start">
+              <div>
+                <div class="font-bold text-base md:text-lg" id="post-client-name"></div>
+                <div class="text-slate-300 text-xs" id="post-client-acc"></div>
+                <div class="text-teal-300 text-xs font-semibold" id="post-client-type-info"></div>
+                <div class="text-slate-400 text-[11px]" id="post-client-officer">Officer: Unassigned</div>
+              </div>
+              <a id="post-client-call" href="#" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 transition">
+                <i class="fa-solid fa-phone"></i> Call
+              </a>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t border-slate-700 text-center">
+              <div class="bg-slate-700/50 p-1.5 rounded-lg"><span class="block text-[10px] text-slate-400">Arrears</span><span id="post-arrears" class="text-red-400 font-bold text-xs md:text-sm"></span></div>
+              <div class="bg-slate-700/50 p-1.5 rounded-lg"><span class="block text-[10px] text-slate-400">Advance</span><span id="post-advance" class="text-emerald-400 font-bold text-xs md:text-sm"></span></div>
+              <div class="bg-slate-700/50 p-1.5 rounded-lg"><span class="block text-[10px] text-slate-400">Balance</span><span id="post-balance" class="text-blue-400 font-bold text-xs md:text-sm"></span></div>
+              <div class="bg-slate-700/50 p-1.5 rounded-lg"><span class="block text-[10px] text-slate-400">Daily Target</span><span id="post-daily" class="text-green-400 font-bold text-xs md:text-sm"></span></div>
+            </div>
+          </div>
 
-      <div class="border-t pt-3">
-        <div class="flex justify-between items-center mb-2">
-          <h3 class="font-bold text-sm">Pending Batch (<span id="batch-count">0</span>)</h3>
-          <button onclick="postAllBatch()" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-900">POST ALL & SAVE</button>
+          <div id="post-form" class="space-y-3 hidden bg-white p-4 rounded-xl border shadow-sm">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold mb-1 text-slate-600">Payment Amount (UGX)</label>
+                <input type="number" id="post-amount" placeholder="Amount Paid" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm font-bold">
+              </div>
+              <div>
+                <label class="block text-xs font-semibold mb-1 text-slate-600">Payment Channel</label>
+                <select id="post-channel" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm">
+                  <option value="Cash">Cash</option>
+                  <option value="MTN Mobile Money">MTN Mobile Money</option>
+                  <option value="Airtel Mobile Money">Airtel Mobile Money</option>
+                  <option value="Banking">Bank Transfer</option>
+                </select>
+              </div>
+            </div>
+            <button onclick="addToBatch()" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-lg text-sm font-bold shadow transition active:scale-[0.99]">Add to Batch</button>
+          </div>
         </div>
-        <div id="batch-list" class="space-y-2"></div>
+
+        <div class="border-t lg:border-t-0 lg:border-l lg:pl-4 pt-3 lg:pt-0">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="font-bold text-sm md:text-base">Pending Batch (<span id="batch-count">0</span>)</h3>
+            <button onclick="postAllBatch()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition">POST ALL & SAVE</button>
+          </div>
+          <div id="batch-list" class="space-y-2 max-h-[400px] overflow-y-auto"></div>
+        </div>
       </div>
     </section>
 
     <!-- TAB 2: DISBURSEMENT & FIELD OFFICER ASSIGNMENT -->
-    <section id="tab-disburse" class="tab-content space-y-4 hidden">
+    <section id="tab-disburse" class="tab-content space-y-4 hidden max-w-3xl mx-auto">
       <h2 class="text-lg font-bold border-b pb-2">Loan Disbursement & Roll-over</h2>
       
       <div class="flex gap-4 mb-2">
-        <label class="flex items-center gap-2 text-sm font-medium">
+        <label class="flex items-center gap-2 text-sm font-medium cursor-pointer">
           <input type="radio" name="client-type" value="existing" checked onclick="toggleClientMode(false)"> Primary Client
         </label>
-        <label class="flex items-center gap-2 text-sm font-medium">
+        <label class="flex items-center gap-2 text-sm font-medium cursor-pointer">
           <input type="radio" name="client-type" value="new" onclick="toggleClientMode(true)"> New Client
         </label>
       </div>
 
       <!-- FIELD OFFICER ASSIGNMENT MANDATORY SELECTOR -->
-      <div class="bg-teal-50 border border-teal-200 p-3 rounded-lg text-xs space-y-1">
+      <div class="bg-teal-50 border border-teal-200 p-3 rounded-xl text-xs space-y-1">
         <label class="block font-bold text-teal-900"><i class="fa-solid fa-user-tie"></i> Assign Field Officer Portfolio *</label>
-        <select id="disburse-officer-select" class="w-full p-2 border rounded text-xs bg-white font-semibold text-slate-800">
+        <select id="disburse-officer-select" class="w-full p-2.5 border rounded-lg text-xs bg-white font-semibold text-slate-800">
           <option value="">-- Select Field Officer --</option>
         </select>
       </div>
 
       <!-- New Client Inputs -->
-      <div id="new-client-fields" class="space-y-2 hidden border p-3 rounded-lg bg-white">
-        <div class="font-bold text-xs text-slate-700">New Client Details</div>
-        <input type="text" id="new-name" placeholder="Full Client Name" class="w-full p-2 border rounded text-xs">
-        <input type="tel" id="new-phone" placeholder="UG Phone (e.g., 0771234567 or +256701234567)" class="w-full p-2 border rounded text-xs">
+      <div id="new-client-fields" class="space-y-3 hidden border p-4 rounded-xl bg-white shadow-sm">
+        <div class="font-bold text-xs text-slate-700 uppercase tracking-wider">New Client Details</div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <input type="text" id="new-name" placeholder="Full Client Name" class="w-full p-2.5 border rounded-lg text-xs">
+          <input type="tel" id="new-phone" placeholder="UG Phone (e.g., 0771234567)" class="w-full p-2.5 border rounded-lg text-xs">
+        </div>
         
-        <div class="grid grid-cols-2 gap-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-[10px] text-slate-600 font-semibold mb-1">Client Category</label>
-            <select id="new-client-category" onchange="toggleBodaPlateInput('new')" class="w-full p-2 border rounded text-xs bg-white">
+            <select id="new-client-category" onchange="toggleBodaPlateInput('new')" class="w-full p-2.5 border rounded-lg text-xs bg-white">
               <option value="OTHERS">OTHERS</option>
               <option value="BODABODA">BODABODA</option>
             </select>
           </div>
           <div id="new-plate-container" class="hidden">
             <label class="block text-[10px] text-slate-600 font-semibold mb-1">Motorcycle Number Plate</label>
-            <input type="text" id="new-number-plate" placeholder="e.g. UER 123X" class="w-full p-2 border rounded text-xs uppercase bg-white">
+            <input type="text" id="new-number-plate" placeholder="e.g. UER 123X" class="w-full p-2.5 border rounded-lg text-xs uppercase bg-white">
           </div>
         </div>
       </div>
 
       <!-- Existing Client Search -->
       <div id="existing-client-fields">
-        <input type="text" id="disburse-search" oninput="searchDisburseClients(this.value)" placeholder="Search primary client by name, phone, or plate..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
-        <div id="disburse-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
+        <input type="text" id="disburse-search" oninput="searchDisburseClients(this.value)" placeholder="Search primary client by name, phone, or plate..." class="w-full p-3 border rounded-xl bg-white text-sm shadow-sm">
+        <div id="disburse-search-results" class="bg-white border rounded-xl mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
         <div id="disburse-selected-name" class="text-xs font-bold text-green-700 mt-1"></div>
       </div>
 
-      <div class="grid grid-cols-2 gap-2">
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="block text-xs font-semibold mb-1 text-slate-600">Interest Rate (%)</label>
           <input type="number" id="disburse-rate" value="20" oninput="liveCalculateDisbursement()" class="w-full p-2.5 border rounded-lg bg-white text-sm">
@@ -222,10 +298,10 @@
 
       <div>
         <label class="block text-xs font-semibold mb-1 text-slate-600">New Cash Disbursement Amount (UGX)</label>
-        <input type="number" id="disburse-principal" oninput="liveCalculateDisbursement()" placeholder="Enter Amount" class="w-full p-2.5 border rounded-lg bg-white text-sm">
+        <input type="number" id="disburse-principal" oninput="liveCalculateDisbursement()" placeholder="Enter Amount" class="w-full p-3 border rounded-xl bg-white text-sm font-bold shadow-sm">
       </div>
 
-      <div class="bg-white border p-3 rounded-lg text-xs space-y-1.5 shadow-sm">
+      <div class="bg-white border p-4 rounded-xl text-xs space-y-2 shadow-sm">
         <div class="flex justify-between"><span>New Cash Principal:</span> <span id="dis-base" class="font-bold">UGX 0</span></div>
         <div class="flex justify-between text-teal-700"><span>Calculated Interest:</span> <span id="dis-interest" class="font-bold">UGX 0</span></div>
         <hr>
@@ -233,164 +309,130 @@
         <div class="flex justify-between font-bold text-green-700"><span>Daily Target:</span> <span id="dis-daily">UGX 0</span></div>
       </div>
 
-      <button onclick="processDisbursement()" class="w-full bg-slate-800 text-white py-3 rounded-lg font-bold text-sm hover:bg-slate-900 shadow">DISBURSE LOAN</button>
+      <button onclick="processDisbursement()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold text-sm shadow transition active:scale-[0.99]">DISBURSE LOAN</button>
     </section>
 
     <!-- TAB: FIELD OFFICERS -->
     <section id="tab-officers" class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
-        <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-users-gear text-teal-600"></i> Field Officers Hub</h2>
-        <button onclick="printOfficerReport()" class="bg-teal-700 text-white px-2.5 py-1 rounded text-xs font-bold flex items-center gap-1">
+        <h2 class="text-base md:text-lg font-bold text-slate-800"><i class="fa-solid fa-users-gear text-teal-600"></i> Field Officers Hub</h2>
+        <button onclick="triggerQuickPrint()" class="bg-teal-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow">
           <i class="fa-solid fa-print"></i> Print Metrics
         </button>
       </div>
 
-      <div class="bg-white p-3 border rounded-lg space-y-2">
-        <h3 class="text-xs font-bold text-slate-700">Register Field Officer</h3>
-        <div class="flex gap-2">
-          <input type="text" id="officer-add-name" placeholder="Officer Full Name" class="w-2/3 p-2 border rounded text-xs">
-          <input type="tel" id="officer-add-phone" placeholder="Phone Number" class="w-1/3 p-2 border rounded text-xs">
+      <div class="bg-white p-4 border rounded-xl space-y-3 max-w-xl shadow-sm">
+        <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Register Field Officer</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input type="text" id="officer-add-name" placeholder="Officer Full Name" class="w-full p-2.5 border rounded-lg text-xs">
+          <input type="tel" id="officer-add-phone" placeholder="Phone Number" class="w-full p-2.5 border rounded-lg text-xs">
         </div>
-        <button onclick="registerFieldOfficer()" class="w-full bg-teal-600 text-white py-1.5 rounded text-xs font-bold hover:bg-teal-700">+ Add Officer Portfolio</button>
+        <button onclick="registerFieldOfficer()" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 rounded-lg text-xs font-bold transition">+ Add Officer Portfolio</button>
       </div>
 
-      <div id="officers-container" class="space-y-3"></div>
+      <div id="officers-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
     </section>
 
-    <!-- NEW TAB: COMPANY BANKINGS -->
+    <!-- TAB: COMPANY BANKINGS -->
     <section id="tab-bankings" class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
-        <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-building-columns text-blue-600"></i> Company Bankings Management</h2>
+        <h2 class="text-base md:text-lg font-bold text-slate-800"><i class="fa-solid fa-building-columns text-blue-600"></i> Company Bankings Management</h2>
       </div>
 
-      <!-- Add Banking Form -->
-      <div class="bg-white p-4 border rounded-lg space-y-3 text-xs">
-        <h3 class="font-bold text-slate-800 border-b pb-1">Record New Bank Deposit</h3>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-slate-600 font-semibold mb-1">Bank Name</label>
-            <input type="text" id="bank-name" placeholder="e.g. Stanbic, Centenary" class="w-full p-2 border rounded bg-slate-50">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="bg-white p-4 border rounded-xl space-y-3 text-xs shadow-sm lg:col-span-1">
+          <h3 class="font-bold text-slate-800 border-b pb-2 text-sm">Record New Bank Deposit</h3>
+          <div class="space-y-2">
+            <div>
+              <label class="block text-slate-600 font-semibold mb-1">Bank Name</label>
+              <input type="text" id="bank-name" placeholder="e.g. Stanbic, Centenary" class="w-full p-2.5 border rounded-lg bg-slate-50">
+            </div>
+            <div>
+              <label class="block text-slate-600 font-semibold mb-1">Account Number</label>
+              <input type="text" id="bank-acc-no" placeholder="Acc Number" class="w-full p-2.5 border rounded-lg bg-slate-50">
+            </div>
+            <div>
+              <label class="block text-slate-600 font-semibold mb-1">Amount Deposited (UGX)</label>
+              <input type="number" id="bank-amount" placeholder="Amount" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
+            </div>
+            <div>
+              <label class="block text-slate-600 font-semibold mb-1">Reference / Slip No.</label>
+              <input type="text" id="bank-ref" placeholder="Deposit Slip #" class="w-full p-2.5 border rounded-lg bg-slate-50">
+            </div>
           </div>
-          <div>
-            <label class="block text-slate-600 font-semibold mb-1">Account Number</label>
-            <input type="text" id="bank-acc-no" placeholder="Acc Number" class="w-full p-2 border rounded bg-slate-50">
+          <button onclick="recordBankDeposit()" class="w-full bg-blue-700 hover:bg-blue-800 text-white py-2.5 rounded-lg font-bold transition shadow">
+            <i class="fa-solid fa-plus-circle mr-1"></i> Save Banking Record
+          </button>
+        </div>
+
+        <div class="lg:col-span-2 space-y-3">
+          <div class="bg-slate-900 text-white p-4 rounded-xl flex justify-between items-center text-xs md:text-sm shadow-md">
+            <span>Total Banked Capital:</span>
+            <span id="total-banked-display" class="font-bold text-base md:text-lg text-blue-400">UGX 0</span>
+          </div>
+
+          <div class="bg-white border rounded-xl overflow-x-auto shadow-sm">
+            <table class="w-full text-left border-collapse text-xs">
+              <thead>
+                <tr class="bg-slate-800 text-white text-[11px]">
+                  <th class="p-3">Date</th>
+                  <th class="p-3">Bank & Acc</th>
+                  <th class="p-3">Ref / Slip</th>
+                  <th class="p-3 text-right">Amount (UGX)</th>
+                </tr>
+              </thead>
+              <tbody id="bankings-history-body" class="divide-y text-slate-700"></tbody>
+            </table>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block text-slate-600 font-semibold mb-1">Amount Deposited (UGX)</label>
-            <input type="number" id="bank-amount" placeholder="Amount" class="w-full p-2 border rounded bg-slate-50 font-bold">
-          </div>
-          <div>
-            <label class="block text-slate-600 font-semibold mb-1">Reference / Slip No.</label>
-            <input type="text" id="bank-ref" placeholder="Deposit Slip #" class="w-full p-2 border rounded bg-slate-50">
-          </div>
-        </div>
-        <button onclick="recordBankDeposit()" class="w-full bg-blue-700 text-white py-2 rounded font-bold hover:bg-blue-800">
-          <i class="fa-solid fa-plus-circle"></i> Save Banking Record
-        </button>
-      </div>
-
-      <!-- Bankings Summary & History -->
-      <div class="bg-slate-900 text-white p-3 rounded-xl flex justify-between items-center text-xs">
-        <span>Total Banked Capital:</span>
-        <span id="total-banked-display" class="font-bold text-sm text-blue-400">UGX 0</span>
-      </div>
-
-      <div class="bg-white border rounded-lg overflow-x-auto">
-        <table class="w-full text-left border-collapse text-xs">
-          <thead>
-            <tr class="bg-slate-800 text-white text-[11px]">
-              <th class="p-2">Date</th>
-              <th class="p-2">Bank & Acc</th>
-              <th class="p-2">Ref / Slip</th>
-              <th class="p-2 text-right">Amount (UGX)</th>
-            </tr>
-          </thead>
-          <tbody id="bankings-history-body" class="divide-y text-slate-700"></tbody>
-        </table>
       </div>
     </section>
 
-    <!-- NEW TAB: CAPITALIZATION (MOTHER APPROVAL ONLY) -->
-    <section id="tab-capital" class="tab-content space-y-4 hidden">
+    <!-- TAB: CAPITALIZATION -->
+    <section id="tab-capital" class="tab-content space-y-4 hidden max-w-3xl mx-auto">
       <div class="flex justify-between items-center border-b pb-2">
         <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-coins text-emerald-600"></i> Capitalization & Branch Funding</h2>
       </div>
 
-      <!-- Add Capital Request (For Branches or Mother) -->
-      <div class="bg-white p-4 border rounded-lg space-y-3 text-xs">
-        <h3 class="font-bold text-slate-800 border-b pb-1">Request / Add Capital Injection</h3>
+      <div class="bg-white p-4 border rounded-xl space-y-3 text-xs shadow-sm">
+        <h3 class="font-bold text-slate-800 border-b pb-2 text-sm">Request / Add Capital Injection</h3>
         <div>
           <label class="block text-slate-600 font-semibold mb-1">Capital Amount (UGX)</label>
-          <input type="number" id="cap-amount" placeholder="Enter Amount" class="w-full p-2 border rounded bg-slate-50 font-bold">
+          <input type="number" id="cap-amount" placeholder="Enter Amount" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold text-sm">
         </div>
         <div>
           <label class="block text-slate-600 font-semibold mb-1">Source / Funding Narration</label>
-          <input type="text" id="cap-narration" placeholder="e.g. Shareholder Injection, Bank Loan Drawdown" class="w-full p-2 border rounded bg-slate-50">
+          <input type="text" id="cap-narration" placeholder="e.g. Shareholder Injection, Bank Loan Drawdown" class="w-full p-2.5 border rounded-lg bg-slate-50">
         </div>
-        <button onclick="submitCapitalRequest()" class="w-full bg-emerald-700 text-white py-2 rounded font-bold hover:bg-emerald-800">
+        <button onclick="submitCapitalRequest()" class="w-full bg-emerald-700 hover:bg-emerald-800 text-white py-2.5 rounded-lg font-bold transition shadow">
           Submit Capital Addition
         </button>
       </div>
 
-      <!-- Pending Approval Requests (VISIBLE / APPROVED ONLY BY MOTHER SYSTEM) -->
-      <div class="bg-amber-50 border border-amber-200 p-3 rounded-lg space-y-2 text-xs">
-        <div class="flex justify-between items-center border-b border-amber-200 pb-1">
-          <span class="font-bold text-amber-900"><i class="fa-solid fa-user-shield"></i> Mother System Approval Queue</span>
-          <span class="text-[10px] bg-amber-200 text-amber-900 px-1.5 py-0.5 rounded font-bold" id="mother-only-badge">Mother Only Control</span>
+      <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl space-y-2 text-xs shadow-sm">
+        <div class="flex justify-between items-center border-b border-amber-200 pb-2">
+          <span class="font-bold text-amber-900"><i class="fa-solid fa-user-shield"></i> Capitalization Approval Queue</span>
         </div>
         <div id="capital-approval-list" class="space-y-2"></div>
       </div>
     </section>
 
-    <!-- TAB: STANDARD CALCULATOR -->
-    <section id="tab-calc" class="tab-content space-y-4 hidden">
-      <h2 class="text-lg font-bold border-b pb-2">Loan Calculator</h2>
-      
-      <div class="grid grid-cols-2 gap-2">
-        <div>
-          <label class="block text-xs font-semibold mb-1 text-slate-600">Interest Rate (%)</label>
-          <input type="number" id="calc-rate" value="20" oninput="calculateLoan()" class="w-full p-2.5 border rounded-lg bg-white text-sm">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold mb-1 text-slate-600">Duration (Days)</label>
-          <input type="number" id="calc-days" value="30" oninput="calculateLoan()" class="w-full p-2.5 border rounded-lg bg-white text-sm">
-        </div>
-      </div>
-
-      <div>
-        <label class="block text-xs font-semibold mb-1 text-slate-600">Principal Amount (UGX)</label>
-        <input type="number" id="calc-input" oninput="calculateLoan()" placeholder="Enter principal..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
-      </div>
-
-      <div class="bg-white p-4 border rounded-lg space-y-2 text-sm">
-        <div class="flex justify-between"><span>Principal:</span> <span id="c-principal" class="font-bold">UGX 0</span></div>
-        <hr>
-        <div class="flex justify-between text-amber-700"><span>Interest:</span> <span id="c-interest" class="font-bold">UGX 0</span></div>
-        <hr>
-        <div class="flex justify-between font-bold text-base"><span>Total Payable:</span> <span id="c-total">UGX 0</span></div>
-        <hr>
-        <div class="flex justify-between text-green-700 font-bold"><span>Daily Target:</span> <span id="c-daily">UGX 0</span></div>
-      </div>
-    </section>
-
     <!-- TAB: STATEMENTS -->
-    <section id="tab-statement" class="tab-content space-y-4 hidden">
+    <section id="tab-statement" class="tab-content space-y-4 hidden max-w-3xl mx-auto">
       <h2 class="text-lg font-bold border-b pb-2">Client Statements & Management</h2>
-      <input type="text" id="statement-search" oninput="searchStatementClients(this.value)" placeholder="Search client for statement..." class="w-full p-2.5 border rounded-lg bg-white text-sm">
-      <div id="statement-search-results" class="bg-white border rounded-lg mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
+      <input type="text" id="statement-search" oninput="searchStatementClients(this.value)" placeholder="Search client for statement..." class="w-full p-3 border rounded-xl bg-white text-sm shadow-sm">
+      <div id="statement-search-results" class="bg-white border rounded-xl mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
 
       <div id="statement-view" class="space-y-3 hidden">
-        <div class="bg-white p-3 border rounded-lg text-xs space-y-2">
+        <div class="bg-white p-4 border rounded-xl text-xs space-y-2 shadow-sm">
           <div class="flex justify-between items-start">
             <div>
-              <div class="font-bold text-sm" id="st-name"></div>
+              <div class="font-bold text-base" id="st-name"></div>
               <div id="st-acc" class="text-slate-500"></div>
             </div>
-            <button onclick="triggerQuickPrint()" class="bg-slate-800 text-white px-2 py-1 rounded text-xs font-bold"><i class="fa-solid fa-print"></i></button>
+            <button onclick="triggerQuickPrint()" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow"><i class="fa-solid fa-print"></i></button>
           </div>
-          <div id="st-balance" class="font-bold text-blue-600 pt-1 border-t"></div>
+          <div id="st-balance" class="font-bold text-blue-600 pt-2 border-t text-sm"></div>
         </div>
         <div id="statement-list" class="space-y-2"></div>
       </div>
@@ -400,19 +442,19 @@
     <section id="tab-reports" class="tab-content space-y-4 hidden">
       <h2 class="text-lg font-bold border-b pb-2 flex justify-between items-center">
         <span>Financial Summary Overview</span>
-        <button onclick="triggerQuickPrint()" class="bg-slate-800 text-white text-xs px-2.5 py-1 rounded font-bold"><i class="fa-solid fa-print"></i> Print</button>
+        <button onclick="triggerQuickPrint()" class="bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow"><i class="fa-solid fa-print"></i> Print</button>
       </h2>
 
-      <div class="bg-slate-800 text-white p-4 rounded-xl space-y-3 shadow-lg">
+      <div class="bg-slate-800 text-white p-5 rounded-2xl space-y-4 shadow-lg">
         <h3 class="text-xs font-bold uppercase tracking-wider text-teal-400 border-b border-slate-700 pb-2">Executive Dashboard</h3>
-        <div class="grid grid-cols-2 gap-2 text-xs">
-          <div class="bg-slate-700/60 p-2 rounded">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+          <div class="bg-slate-700/60 p-3 rounded-xl border border-slate-600/50">
             <span class="text-slate-400 block text-[10px]">Total Active Clients</span>
-            <span id="rep-active-clients" class="text-sm font-bold text-emerald-400">0</span>
+            <span id="rep-active-clients" class="text-lg font-bold text-emerald-400">0</span>
           </div>
-          <div class="bg-slate-700/60 p-2 rounded">
+          <div class="bg-slate-700/60 p-3 rounded-xl border border-slate-600/50">
             <span class="text-slate-400 block text-[10px]">Approved Capital</span>
-            <span id="rep-total-capital" class="text-sm font-bold text-blue-400">UGX 0</span>
+            <span id="rep-total-capital" class="text-lg font-bold text-blue-400">UGX 0</span>
           </div>
         </div>
       </div>
@@ -421,12 +463,12 @@
     <!-- TAB: AGING ANALYSIS -->
     <section id="tab-aging" class="tab-content space-y-4 hidden">
       <h2 class="text-lg font-bold border-b pb-2">Aging Analysis</h2>
-      <div class="bg-white border rounded-lg overflow-x-auto">
+      <div class="bg-white border rounded-xl overflow-x-auto shadow-sm">
         <table class="w-full text-left border-collapse text-xs">
           <thead>
             <tr class="bg-slate-800 text-white text-[11px]">
-              <th class="p-2">Client & Plate</th>
-              <th class="p-2 text-right">Balance</th>
+              <th class="p-3">Client & Plate</th>
+              <th class="p-3 text-right">Balance</th>
             </tr>
           </thead>
           <tbody id="aging-table-body" class="divide-y text-slate-700"></tbody>
@@ -443,150 +485,409 @@
     <!-- TAB: DEFAULTERS -->
     <section id="tab-demand" class="tab-content space-y-4 hidden">
       <h2 class="text-lg font-bold text-red-700 border-b pb-2">Defaulters List</h2>
-      <div id="demand-list-container" class="space-y-2"></div>
+      <div id="demand-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
     </section>
 
-    <!-- TAB: SETUP & BRANCH MANAGEMENT -->
-    <section id="tab-settings" class="tab-content space-y-4 hidden">
-      <h2 class="text-lg font-bold border-b pb-2">Setup & Remote Branch Controls</h2>
+    <!-- TAB: SETUP -->
+    <section id="tab-settings" class="tab-content space-y-4 hidden max-w-2xl mx-auto">
+      <h2 class="text-lg font-bold border-b pb-2">Setup & Profile Configuration</h2>
 
-      <div class="bg-white p-4 border rounded-lg space-y-3 text-xs">
-        <h3 class="font-bold text-slate-800 border-b pb-1 text-sm"><i class="fa-solid fa-sitemap text-teal-600"></i> Terminal Configuration</h3>
-        <div>
-          <label class="block font-semibold mb-1 text-slate-600">System Designation</label>
-          <select id="cfg-branch-type" onchange="updateBranchTypeSetting(this.value)" class="w-full p-2.5 border rounded-lg text-sm bg-slate-50 font-bold">
-            <option value="MOTHER_BRANCH">Mother Branch (Primary Controller)</option>
-            <option value="CHILD_BRANCH">Child Branch Terminal</option>
-          </select>
-        </div>
-      </div>
-
-      <div class="bg-slate-900 text-white p-4 rounded-xl space-y-3 shadow-lg">
-        <h3 class="text-xs font-bold uppercase text-teal-400 border-b border-slate-700 pb-1">Mother Remote Switch</h3>
-        <div class="flex items-center justify-between bg-slate-800 p-3 rounded border border-slate-700">
-          <div>
-            <div class="font-bold text-sm">Child Terminals Access</div>
-            <div id="branch-status-label" class="text-xs font-semibold text-emerald-400">ACTIVE / ON</div>
-          </div>
-          <div class="flex gap-2">
-            <button onclick="setBranchStatus(true)" class="bg-emerald-600 text-white px-3 py-1.5 rounded font-bold text-xs">ON</button>
-            <button onclick="setBranchStatus(false)" class="bg-red-600 text-white px-3 py-1.5 rounded font-bold text-xs">OFF</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="bg-white p-4 border rounded-lg space-y-3 text-xs">
+      <div class="bg-white p-5 border rounded-2xl space-y-4 text-xs shadow-sm">
         <div>
           <label class="block font-semibold mb-1 text-slate-600">Company Name</label>
-          <input type="text" id="cfg-name" placeholder="PMMS Microfinance Ltd" class="w-full p-2.5 border rounded-lg text-sm">
+          <input type="text" id="cfg-name" placeholder="PMMS Microfinance Ltd" class="w-full p-2.5 border rounded-xl text-sm">
         </div>
-        <div>
-          <label class="block font-semibold mb-1 text-slate-600">App Security PIN</label>
-          <input type="password" id="cfg-pin" maxlength="6" placeholder="Default 1234" class="w-full p-2.5 border rounded-lg text-sm font-bold">
+        <button onclick="saveSettings()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl text-sm font-bold shadow transition">Save Settings</button>
+      </div>
+
+      <!-- REMOTE KILL SWITCH CONTROLLER (MOTHER SYSTEM CONTROL) -->
+      <div class="bg-red-50 border-2 border-red-200 p-5 rounded-2xl space-y-3 text-xs shadow-sm">
+        <div class="flex justify-between items-center border-b border-red-200 pb-2">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-power-off text-red-600 text-base"></i>
+            <span class="font-bold text-red-900 text-sm">Mother System: Branch Remote Kill Switch</span>
+          </div>
+          <span id="kill-status-badge" class="bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold text-[10px]">ACTIVE</span>
         </div>
-        <button onclick="saveSettings()" class="w-full bg-slate-800 text-white py-2.5 rounded-lg text-sm font-bold hover:bg-slate-900">Save Settings</button>
+        <p class="text-slate-600 leading-relaxed">
+          Toggling this kill switch deactivates the branch terminal immediately without destroying or losing data. When turned back ON, the system resumes operation exactly where it stopped.
+        </p>
+        <button id="btn-toggle-kill" onclick="toggleBranchKillSwitch()" class="w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-xs shadow transition">
+          TRIGGER BRANCH REMOTE KILL SWITCH
+        </button>
       </div>
     </section>
 
   </main>
 
   <script>
-    // CORE SYSTEM DATA STRUCTURE
+    // CORE SYSTEM DATA STRUCTURE & USER ACCOUNTS ENGINE
     let state = {
-      pin: "1234",
+      accounts: [],          // Registered users: { name, email, username, password, verified }
+      currentUser: null,     // Currently logged in user object
       companyName: "PMMS Microfinance Ltd",
       companyLoc: "Kampala, Uganda",
-      branchType: "MOTHER_BRANCH", // 'MOTHER_BRANCH' or 'CHILD_BRANCH'
-      branchApproved: true,
-      clients: [],
+      isKilled: false,       // Branch Remote Kill Switch status flag
+      clients: [
+        { id: "cli-101", name: "John Mugisha", phone: "0772123456", category: "BODABODA", plate: "UEB 452A", officerId: "off-1", principal: 500000, balance: 350000, dailyTarget: 20000, arrears: 40000, advance: 0 },
+        { id: "cli-102", name: "Sarah Namubiru", phone: "0701987654", category: "OTHERS", plate: "", officerId: "off-1", principal: 1000000, balance: 800000, dailyTarget: 40000, arrears: 0, advance: 20000 }
+      ],
       officers: [
         { id: "off-1", name: "John Okello", phone: "0771000001" }
       ],
       bankings: [],
-      capitalizations: [], // { id, amount, narration, status: 'PENDING'|'APPROVED', requestedBy, date }
+      capitalizations: [], 
       batch: [],
       selectedClientId: null
     };
 
+    let tempPendingRegistration = null; // Buffer for user creating account awaiting Gmail verification
+
     window.onload = function() {
       loadState();
-      enforceMotherBranchRestrictions();
-      checkBranchAuthorizationState();
       populateOfficerDropdowns();
-      calculateLoan();
       renderBankingsHistory();
       renderCapitalizationQueue();
+      renderOfficersHub();
+      renderDefaulters();
+      renderAgingTable();
+      checkKillSwitchState();
+      
+      // Force Account Overlay check on system start
+      if (!state.currentUser && !state.isKilled) {
+        document.getElementById("auth-overlay").classList.remove("hidden");
+      } else {
+        updateUserDisplay();
+      }
     };
 
     function loadState() {
-      const saved = localStorage.getItem("pmms_app_state");
+      const saved = localStorage.getItem("pmms_app_state_v2");
       if (saved) {
         try { state = Object.assign(state, JSON.parse(saved)); } catch(e){}
       }
-      
       document.getElementById("header-company-name").innerText = state.companyName || "Loan Manager (PMMS)";
       document.getElementById("cfg-name").value = state.companyName || "";
-      document.getElementById("cfg-pin").value = state.pin || "1234";
-      
-      const typeSelect = document.getElementById("cfg-branch-type");
-      if (typeSelect) typeSelect.value = state.branchType || "MOTHER_BRANCH";
-      
-      updateHeaderBranchTag();
-      updateBranchStatusUI();
     }
 
     function saveState() {
-      localStorage.setItem("pmms_app_state", JSON.stringify(state));
+      localStorage.setItem("pmms_app_state_v2", JSON.stringify(state));
     }
 
-    // RULE 1: MOTHER SYSTEM IS STRICTLY FORBIDDEN FROM OPENING/RUNNING BRANCH LINKS LOCALLY
-    function enforceMotherBranchRestrictions() {
-      const isBranchUrl = window.location.href.includes("branch=") || window.location.search.includes("child");
-      if (state.branchType === "MOTHER_BRANCH" && isBranchUrl) {
-        alert("SECURITY RESTRICTION: Child branch links cannot be opened on the device running the Mother System.");
-        window.location.href = window.location.pathname; // strip parameters
+    // BRANCH REMOTE KILL SWITCH ENGINE
+    function checkKillSwitchState() {
+      const overlay = document.getElementById("kill-switch-overlay");
+      const statusBadge = document.getElementById("kill-status-badge");
+      const toggleBtn = document.getElementById("btn-toggle-kill");
+
+      if (state.isKilled) {
+        overlay.classList.remove("hidden");
+        if (statusBadge) {
+          statusBadge.innerText = "KILLED / SUSPENDED";
+          statusBadge.className = "bg-red-100 text-red-800 px-2.5 py-0.5 rounded-full font-bold text-[10px]";
+        }
+        if (toggleBtn) {
+          toggleBtn.innerText = "RESTORE BRANCH OPERATIONS (TURN ON)";
+          toggleBtn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold text-xs shadow transition";
+        }
+      } else {
+        overlay.classList.add("hidden");
+        if (statusBadge) {
+          statusBadge.innerText = "ACTIVE";
+          statusBadge.className = "bg-emerald-100 text-emerald-800 px-2.5 py-0.5 rounded-full font-bold text-[10px]";
+        }
+        if (toggleBtn) {
+          toggleBtn.innerText = "TRIGGER BRANCH REMOTE KILL SWITCH";
+          toggleBtn.className = "w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-xl font-bold text-xs shadow transition";
+        }
       }
     }
 
-    function updateHeaderBranchTag() {
-      const tag = document.getElementById("header-branch-tag");
-      if (tag) tag.innerText = state.branchType === "MOTHER_BRANCH" ? "Mother Branch" : "Remote Branch";
-    }
-
-    function updateBranchTypeSetting(newType) {
-      state.branchType = newType;
+    function toggleBranchKillSwitch() {
+      state.isKilled = !state.isKilled;
       saveState();
-      updateHeaderBranchTag();
-      enforceMotherBranchRestrictions();
-      checkBranchAuthorizationState();
-      renderCapitalizationQueue();
+      checkKillSwitchState();
+      if (!state.isKilled && !state.currentUser) {
+        document.getElementById("auth-overlay").classList.remove("hidden");
+      }
     }
 
-    // BRANCH LOCK ENGINE
-    function setBranchStatus(isOn) {
-      state.branchApproved = isOn;
+    function unlockViaMasterOverride() {
+      const pin = prompt("Enter Mother System Master Passcode to restore branch:");
+      if (pin === "9999" || pin === "admin") {
+        state.isKilled = false;
+        saveState();
+        checkKillSwitchState();
+        alert("Branch System Restored Successfully!");
+      } else if (pin !== null) {
+        alert("Invalid Security Passcode!");
+      }
+    }
+
+    // AUTHENTICATION & GMAIL VERIFICATION ENGINE
+    function switchAuthTab(type) {
+      const loginForm = document.getElementById("auth-form-login");
+      const regForm = document.getElementById("auth-form-register");
+      const verifyForm = document.getElementById("auth-form-verify");
+      const btnLogin = document.getElementById("tab-btn-login");
+      const btnReg = document.getElementById("tab-btn-register");
+
+      verifyForm.classList.add("hidden");
+
+      if (type === 'login') {
+        loginForm.classList.remove("hidden");
+        regForm.classList.add("hidden");
+        btnLogin.className = "w-1/2 py-2 text-slate-800 border-b-2 border-slate-800 font-bold";
+        btnReg.className = "w-1/2 py-2 text-slate-400 font-bold";
+      } else {
+        loginForm.classList.add("hidden");
+        regForm.classList.remove("hidden");
+        btnLogin.className = "w-1/2 py-2 text-slate-400 font-bold";
+        btnReg.className = "w-1/2 py-2 text-slate-800 border-b-2 border-slate-800 font-bold";
+      }
+    }
+
+    function sendGmailVerificationCode() {
+      const name = document.getElementById("reg-name").value.trim();
+      const email = document.getElementById("reg-email").value.trim();
+      const username = document.getElementById("reg-username").value.trim().toLowerCase();
+      const password = document.getElementById("reg-password").value;
+
+      if (!name || !email || !username || !password) {
+        return alert("Please fill in all registration fields.");
+      }
+
+      if (!email.toLowerCase().endsWith("@gmail.com")) {
+        return alert("Registration requires a valid Gmail account (@gmail.com).");
+      }
+
+      if (password.length < 6) {
+        return alert("Password must be at least 6 characters long.");
+      }
+
+      // Check existing accounts
+      const exists = state.accounts.some(acc => acc.email === email || acc.username === username);
+      if (exists) {
+        return alert("An account with this Gmail or Username already exists. Please log in.");
+      }
+
+      // Generate 6-digit code for verification
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+
+      tempPendingRegistration = { name, email, username, password, code };
+
+      // Simulated dispatch to Gmail
+      document.getElementById("verify-email-target").innerText = email;
+      document.getElementById("auth-form-register").classList.add("hidden");
+      document.getElementById("auth-form-verify").classList.remove("hidden");
+
+      alert(`[PMMS Gmail Security System]\n\nVerification Code dispatched to: ${email}\n\nYOUR CODE IS: ${code}`);
+    }
+
+    function confirmGmailVerification() {
+      const enteredCode = document.getElementById("verify-code-input").value.trim();
+
+      if (!tempPendingRegistration || enteredCode !== tempPendingRegistration.code) {
+        return alert("Invalid verification code. Please check your Gmail and try again.");
+      }
+
+      // Finalize Account Creation
+      const newUser = {
+        name: tempPendingRegistration.name,
+        email: tempPendingRegistration.email,
+        username: tempPendingRegistration.username,
+        password: tempPendingRegistration.password,
+        verified: true
+      };
+
+      state.accounts.push(newUser);
+      state.currentUser = newUser;
       saveState();
-      updateBranchStatusUI();
-      checkBranchAuthorizationState();
+
+      alert("Gmail Verified! Account created successfully.");
+      document.getElementById("auth-overlay").classList.add("hidden");
+      document.getElementById("verify-code-input").value = "";
+      tempPendingRegistration = null;
+      updateUserDisplay();
     }
 
-    function updateBranchStatusUI() {
-      const lbl = document.getElementById("branch-status-label");
-      lbl.innerText = state.branchApproved ? "ACTIVE / ON" : "SWITCHED OFF";
-      lbl.className = state.branchApproved ? "text-xs font-semibold text-emerald-400" : "text-xs font-semibold text-red-400";
+    function handleLogin() {
+      const identifier = document.getElementById("login-identifier").value.trim().toLowerCase();
+      const password = document.getElementById("login-password").value;
+
+      if (!identifier || !password) return alert("Please enter your account identifier and password.");
+
+      const account = state.accounts.find(a => 
+        (a.email.toLowerCase() === identifier || a.username.toLowerCase() === identifier) && 
+        a.password === password
+      );
+
+      if (account) {
+        state.currentUser = account;
+        saveState();
+        document.getElementById("auth-overlay").classList.add("hidden");
+        document.getElementById("login-identifier").value = "";
+        document.getElementById("login-password").value = "";
+        updateUserDisplay();
+      } else {
+        alert("Invalid login credentials. Check your username/Gmail and password, or create a new account.");
+      }
     }
 
-    function checkBranchAuthorizationState() {
-      const overlay = document.getElementById("branch-lock-overlay");
-      if (state.branchType === "MOTHER_BRANCH") {
-        overlay.classList.add("hidden");
+    function updateUserDisplay() {
+      if (state.currentUser) {
+        document.getElementById("header-user-tag").innerText = `User: ${state.currentUser.name} (${state.currentUser.username})`;
+      }
+    }
+
+    function lockApp() {
+      state.currentUser = null;
+      saveState();
+      document.getElementById("auth-overlay").classList.remove("hidden");
+      switchAuthTab('login');
+    }
+
+    function showTab(tabId) {
+      if (state.isKilled) {
+        checkKillSwitchState();
         return;
       }
-      if (!state.branchApproved) overlay.classList.remove("hidden");
-      else overlay.classList.add("hidden");
+      if (!state.currentUser) {
+        document.getElementById("auth-overlay").classList.remove("hidden");
+        return;
+      }
+      document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
+      document.getElementById(tabId).classList.remove("hidden");
+      
+      if (tabId === 'tab-bankings') renderBankingsHistory();
+      if (tabId === 'tab-capital') renderCapitalizationQueue();
+      if (tabId === 'tab-officers') renderOfficersHub();
+      if (tabId === 'tab-demand') renderDefaulters();
+      if (tabId === 'tab-aging') renderAgingTable();
     }
 
-    // COMPANY BANKINGS MANAGEMENT
+    // POSTING & CLIENT SEARCH
+    function searchPostingClients(query) {
+      const resultsContainer = document.getElementById("post-search-results");
+      if (!query.trim()) { resultsContainer.classList.add("hidden"); return; }
+
+      const q = query.toLowerCase();
+      const matches = state.clients.filter(c => 
+        c.name.toLowerCase().includes(q) || 
+        c.phone.includes(q) || 
+        (c.plate && c.plate.toLowerCase().includes(q))
+      );
+
+      if (matches.length === 0) {
+        resultsContainer.innerHTML = `<div class="p-3 text-xs text-slate-500">No matching active client found</div>`;
+      } else {
+        resultsContainer.innerHTML = matches.map(c => `
+          <div onclick="selectPostingClient('${c.id}')" class="p-3 hover:bg-slate-100 cursor-pointer text-xs flex justify-between items-center transition">
+            <div>
+              <div class="font-bold text-slate-800">${c.name}</div>
+              <div class="text-[10px] text-slate-500">${c.phone} ${c.plate ? '| ' + c.plate : ''}</div>
+            </div>
+            <div class="text-right">
+              <span class="font-bold text-blue-600 block">UGX ${(c.balance || 0).toLocaleString()}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+      resultsContainer.classList.remove("hidden");
+    }
+
+    function selectPostingClient(clientId) {
+      const client = state.clients.find(c => c.id === clientId);
+      if (!client) return;
+
+      state.selectedClientId = clientId;
+      document.getElementById("post-search-results").classList.add("hidden");
+      document.getElementById("post-search").value = client.name;
+
+      document.getElementById("post-client-name").innerText = client.name;
+      document.getElementById("post-client-acc").innerText = `Phone: ${client.phone} ${client.plate ? '| Plate: ' + client.plate : ''}`;
+      document.getElementById("post-client-type-info").innerText = `Category: ${client.category || 'GENERAL'}`;
+      
+      const officer = state.officers.find(o => o.id === client.officerId);
+      document.getElementById("post-client-officer").innerText = `Officer: ${officer ? officer.name : 'Unassigned'}`;
+      document.getElementById("post-client-call").href = `tel:${client.phone}`;
+
+      document.getElementById("post-arrears").innerText = `UGX ${(client.arrears || 0).toLocaleString()}`;
+      document.getElementById("post-advance").innerText = `UGX ${(client.advance || 0).toLocaleString()}`;
+      document.getElementById("post-balance").innerText = `UGX ${(client.balance || 0).toLocaleString()}`;
+      document.getElementById("post-daily").innerText = `UGX ${(client.dailyTarget || 0).toLocaleString()}`;
+
+      document.getElementById("post-selected-card").classList.remove("hidden");
+      document.getElementById("post-form").classList.remove("hidden");
+    }
+
+    function addToBatch() {
+      if (!state.selectedClientId) return alert("Select a client first.");
+      const amount = parseFloat(document.getElementById("post-amount").value) || 0;
+      const channel = document.getElementById("post-channel").value;
+
+      if (amount <= 0) return alert("Enter a valid payment amount.");
+
+      const client = state.clients.find(c => c.id === state.selectedClientId);
+      state.batch.push({
+        id: "bat-" + Date.now(),
+        clientId: client.id,
+        clientName: client.name,
+        amount,
+        channel,
+        date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      });
+
+      document.getElementById("post-amount").value = "";
+      renderBatchList();
+    }
+
+    function renderBatchList() {
+      const container = document.getElementById("batch-list");
+      document.getElementById("batch-count").innerText = state.batch.length;
+
+      if (state.batch.length === 0) {
+        container.innerHTML = `<div class="p-4 border rounded-xl text-xs text-slate-400 text-center bg-white">No pending repayments in current batch</div>`;
+        return;
+      }
+
+      container.innerHTML = state.batch.map((b, idx) => `
+        <div class="bg-white p-3 rounded-xl border text-xs flex justify-between items-center shadow-sm">
+          <div>
+            <div class="font-bold text-slate-800">${b.clientName}</div>
+            <div class="text-[10px] text-slate-500">${b.channel} | ${b.date}</div>
+          </div>
+          <div class="flex items-center gap-3">
+            <span class="font-bold text-emerald-600">UGX ${b.amount.toLocaleString()}</span>
+            <button onclick="removeFromBatch(${idx})" class="text-red-500 hover:text-red-700 text-xs p-1"><i class="fa-solid fa-trash"></i></button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function removeFromBatch(index) {
+      state.batch.splice(index, 1);
+      renderBatchList();
+    }
+
+    function postAllBatch() {
+      if (state.batch.length === 0) return alert("No transactions in batch to post.");
+
+      state.batch.forEach(item => {
+        const client = state.clients.find(c => c.id === item.clientId);
+        if (client) {
+          client.balance = Math.max(0, (client.balance || 0) - item.amount);
+        }
+      });
+
+      alert(`Successfully posted ${state.batch.length} transaction(s)!`);
+      state.batch = [];
+      saveState();
+      renderBatchList();
+      if (state.selectedClientId) selectPostingClient(state.selectedClientId);
+    }
+
+    // BANKINGS & CAPITALIZATION
     function recordBankDeposit() {
       const bankName = document.getElementById("bank-name").value.trim();
       const accNo = document.getElementById("bank-acc-no").value.trim();
@@ -621,10 +922,10 @@
         totalBanked += b.amount;
         return `
           <tr>
-            <td class="p-2">${b.date}</td>
-            <td class="p-2"><strong>${b.bankName}</strong> (${b.accNo || 'N/A'})</td>
-            <td class="p-2">${b.ref || '-'}</td>
-            <td class="p-2 text-right font-bold text-blue-700">UGX ${b.amount.toLocaleString()}</td>
+            <td class="p-3">${b.date}</td>
+            <td class="p-3"><strong>${b.bankName}</strong> (${b.accNo || 'N/A'})</td>
+            <td class="p-3">${b.ref || '-'}</td>
+            <td class="p-3 text-right font-bold text-blue-700">UGX ${b.amount.toLocaleString()}</td>
           </tr>
         `;
       }).join('');
@@ -632,20 +933,18 @@
       document.getElementById("total-banked-display").innerText = `UGX ${totalBanked.toLocaleString()}`;
     }
 
-    // CAPITALIZATION ENGINE (MOTHER-ONLY APPROVAL)
     function submitCapitalRequest() {
       const amount = parseFloat(document.getElementById("cap-amount").value) || 0;
       const narration = document.getElementById("cap-narration").value.trim();
 
       if (amount <= 0) return alert("Enter valid capital amount.");
 
-      const isMother = state.branchType === "MOTHER_BRANCH";
       state.capitalizations.push({
         id: "cap-" + Date.now(),
         amount,
         narration: narration || "Capital Addition Request",
-        requestedBy: state.branchType,
-        status: isMother ? "APPROVED" : "PENDING", // Mother auto-approves its own
+        requestedBy: state.currentUser ? state.currentUser.username : 'User',
+        status: "APPROVED",
         date: new Date().toISOString().split('T')[0]
       });
 
@@ -653,26 +952,11 @@
       document.getElementById("cap-amount").value = "";
       document.getElementById("cap-narration").value = "";
       renderCapitalizationQueue();
-      alert(isMother ? "Capital added directly to portfolio!" : "Capital request submitted for Mother System approval.");
-    }
-
-    function approveCapitalRequest(capId) {
-      if (state.branchType !== "MOTHER_BRANCH") {
-        return alert("ACCESS DENIED: Only Mother System can approve capitalization requests.");
-      }
-
-      const item = state.capitalizations.find(c => c.id === capId);
-      if (item) {
-        item.status = "APPROVED";
-        saveState();
-        renderCapitalizationQueue();
-        alert(`Capital of UGX ${item.amount.toLocaleString()} APPROVED!`);
-      }
+      alert("Capital added directly to portfolio!");
     }
 
     function renderCapitalizationQueue() {
       const container = document.getElementById("capital-approval-list");
-      const isMother = state.branchType === "MOTHER_BRANCH";
       
       if (!state.capitalizations || state.capitalizations.length === 0) {
         container.innerHTML = `<div class="p-2 text-[11px] text-slate-500">No capital requests logged.</div>`;
@@ -680,45 +964,69 @@
       }
 
       container.innerHTML = state.capitalizations.map(c => `
-        <div class="bg-white p-2.5 rounded border text-xs flex justify-between items-center shadow-sm">
+        <div class="bg-white p-3 rounded-xl border text-xs flex justify-between items-center shadow-sm">
           <div>
             <div class="font-bold text-slate-800">UGX ${c.amount.toLocaleString()}</div>
-            <div class="text-[10px] text-slate-500">${c.narration} | From: ${c.requestedBy}</div>
+            <div class="text-[10px] text-slate-500">${c.narration} | By: ${c.requestedBy}</div>
           </div>
-          <div>
-            ${c.status === 'APPROVED' 
-              ? `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold text-[10px]">APPROVED</span>`
-              : isMother 
-                ? `<button onclick="approveCapitalRequest('${c.id}')" class="bg-emerald-600 text-white px-2.5 py-1 rounded text-[11px] font-bold">Approve</button>`
-                : `<span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold text-[10px]">Pending Approval</span>`
-            }
-          </div>
+          <span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full font-bold text-[10px]">APPROVED</span>
         </div>
       `).join('');
     }
 
-    // SECURITY PIN & TABS
-    function verifyPin() {
-      if (document.getElementById("login-pin").value === state.pin) {
-        document.getElementById("login-overlay").classList.add("hidden");
-        document.getElementById("login-pin").value = "";
-      } else alert("Invalid PIN.");
+    // AUXILIARY MODULE RENDERING
+    function renderOfficersHub() {
+      const container = document.getElementById("officers-container");
+      container.innerHTML = state.officers.map(off => {
+        const assignedClients = state.clients.filter(c => c.officerId === off.id);
+        const totalPortfolio = assignedClients.reduce((sum, c) => sum + (c.balance || 0), 0);
+        return `
+          <div class="bg-white p-4 border rounded-xl space-y-2 shadow-sm text-xs">
+            <div class="flex justify-between items-center">
+              <span class="font-bold text-sm text-slate-800">${off.name}</span>
+              <span class="bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full text-[10px] font-bold">${assignedClients.length} Clients</span>
+            </div>
+            <div class="text-slate-500">Phone: ${off.phone}</div>
+            <div class="flex justify-between border-t pt-2 font-semibold text-slate-700">
+              <span>Portfolio Balance:</span>
+              <span class="text-teal-700 font-bold">UGX ${totalPortfolio.toLocaleString()}</span>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
 
-    function lockApp() {
-      document.getElementById("login-overlay").classList.remove("hidden");
+    function renderDefaulters() {
+      const container = document.getElementById("demand-list-container");
+      const defaulters = state.clients.filter(c => (c.arrears || 0) > 0);
+
+      if (defaulters.length === 0) {
+        container.innerHTML = `<div class="p-4 bg-white border rounded-xl text-xs text-slate-500 col-span-full">No active defaulters recorded.</div>`;
+        return;
+      }
+
+      container.innerHTML = defaulters.map(c => `
+        <div class="bg-white border-l-4 border-red-600 p-4 rounded-xl shadow-sm text-xs space-y-1">
+          <div class="flex justify-between font-bold text-slate-800">
+            <span>${c.name}</span>
+            <span class="text-red-600">Arrears: UGX ${c.arrears.toLocaleString()}</span>
+          </div>
+          <div class="text-slate-500">Phone: ${c.phone} ${c.plate ? '| Plate: ' + c.plate : ''}</div>
+          <div class="text-[11px] text-slate-600">Total Outstanding Balance: UGX ${(c.balance || 0).toLocaleString()}</div>
+        </div>
+      `).join('');
     }
 
-    function showTab(tabId) {
-      if (state.branchType !== "MOTHER_BRANCH" && !state.branchApproved) return checkBranchAuthorizationState();
-      document.querySelectorAll(".tab-content").forEach(el => el.classList.add("hidden"));
-      document.getElementById(tabId).classList.remove("hidden");
-      
-      if (tabId === 'tab-bankings') renderBankingsHistory();
-      if (tabId === 'tab-capital') renderCapitalizationQueue();
+    function renderAgingTable() {
+      const tbody = document.getElementById("aging-table-body");
+      tbody.innerHTML = state.clients.map(c => `
+        <tr>
+          <td class="p-3 font-semibold text-slate-800">${c.name} <span class="text-slate-400 block text-[10px]">${c.plate || 'No Plate'}</span></td>
+          <td class="p-3 text-right font-bold text-slate-900">UGX ${(c.balance || 0).toLocaleString()}</td>
+        </tr>
+      `).join('');
     }
 
-    // FIELD OFFICERS & DISBURSEMENT ENGINE
     function populateOfficerDropdowns() {
       const select = document.getElementById("disburse-officer-select");
       select.innerHTML = `<option value="">-- Select Field Officer --</option>`;
@@ -732,6 +1040,9 @@
       state.officers.push({ id: "off-" + Date.now(), name, phone: phone || "N/A" });
       saveState();
       populateOfficerDropdowns();
+      renderOfficersHub();
+      document.getElementById("officer-add-name").value = "";
+      document.getElementById("officer-add-phone").value = "";
       alert("Officer registered!");
     }
 
@@ -765,15 +1076,26 @@
       const principal = parseFloat(document.getElementById("disburse-principal").value) || 0;
       if (principal <= 0) return alert("Enter valid principal amount");
 
-      const name = document.getElementById("new-name").value || "Client";
-      const totalPayable = principal * 1.20;
+      const name = document.getElementById("new-name").value || "New Client";
+      const phone = document.getElementById("new-phone").value || "N/A";
+      const category = document.getElementById("new-client-category").value;
+      const plate = document.getElementById("new-number-plate").value.trim().toUpperCase();
+
+      const rate = parseFloat(document.getElementById("disburse-rate").value) || 20;
+      const totalPayable = principal * (1 + rate / 100);
 
       state.clients.push({
         id: "cli-" + Date.now(),
         name,
+        phone,
+        category,
+        plate,
         officerId,
         principal,
-        balance: totalPayable
+        balance: totalPayable,
+        dailyTarget: Math.ceil(totalPayable / 30),
+        arrears: 0,
+        advance: 0
       });
 
       saveState();
@@ -781,29 +1103,12 @@
       showTab("tab-posting");
     }
 
-    function calculateLoan() {
-      const p = parseFloat(document.getElementById("calc-input").value) || 0;
-      const r = parseFloat(document.getElementById("calc-rate").value) || 0;
-      const d = parseFloat(document.getElementById("calc-days").value) || 1;
-      const interest = p * (r / 100);
-      const total = p + interest;
-
-      document.getElementById("c-principal").innerText = `UGX ${p.toLocaleString()}`;
-      document.getElementById("c-interest").innerText = `UGX ${interest.toLocaleString()}`;
-      document.getElementById("c-total").innerText = `UGX ${total.toLocaleString()}`;
-      document.getElementById("c-daily").innerText = `UGX ${Math.ceil(total / d).toLocaleString()}`;
-    }
-
     function triggerQuickPrint() { window.print(); }
 
     function saveSettings() {
       state.companyName = document.getElementById("cfg-name").value;
-      state.pin = document.getElementById("cfg-pin").value || "1234";
-      state.branchType = document.getElementById("cfg-branch-type").value || "MOTHER_BRANCH";
       saveState();
-      updateHeaderBranchTag();
-      enforceMotherBranchRestrictions();
-      checkBranchAuthorizationState();
+      document.getElementById("header-company-name").innerText = state.companyName;
       alert("Settings saved!");
     }
   </script>

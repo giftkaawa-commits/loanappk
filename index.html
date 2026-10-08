@@ -42,16 +42,16 @@
       <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-3xl font-bold animate-pulse">
         <i class="fa-solid fa-power-off"></i>
       </div>
-      <h2 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight" id="kill-switch-title">BRANCH SYSTEM SUSPENDED</h2>
+      <h2 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight" id="kill-switch-title">BRANCH TERMINAL OFF</h2>
       <p class="text-xs md:text-sm text-slate-600 leading-relaxed" id="kill-switch-desc">
-        This terminal branch has been deactivated by HQ / Central Mother System. All data remains safe, encrypted, and preserved.
+        This branch terminal has been turned OFF by Mother System. All branch records and data remain safe and preserved.
       </p>
       <div class="bg-red-50 border border-red-200 p-3 rounded-xl text-xs text-red-800 font-medium">
-        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Contact Central Management to restore operations.
+        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Switch active branch or activate via Mother System in Settings.
       </div>
-      <div class="pt-2 border-t">
-        <button onclick="unlockViaMasterOverride()" class="text-[11px] text-slate-400 hover:text-slate-600 underline">
-          Master Security Override
+      <div class="pt-2 border-t flex justify-center gap-2">
+        <button onclick="unlockViaMasterOverride()" class="text-xs bg-slate-800 text-white px-3 py-1.5 rounded-lg font-bold">
+          Master HQ Unlock
         </button>
       </div>
     </div>
@@ -98,12 +98,14 @@
     <div class="flex justify-between items-center max-w-7xl mx-auto px-1 md:px-4">
       <div>
         <h1 class="text-base md:text-xl font-bold flex items-center gap-2">
-          <i class="fa-solid fa-building-columns text-teal-400"></i>
-          <span id="header-company-name">Loan Manager (PMMS)</span>
+          <i class="fa-solid fa-sitemap text-teal-400"></i>
+          <span id="header-company-name">PMMS Central Microfinance</span>
         </h1>
         <div class="flex items-center gap-2 text-[10px] md:text-xs text-slate-400">
           <span id="header-user-tag">User: Guest</span> | 
-          <span class="text-teal-300 font-bold">Active Branch: <select id="active-branch-selector" onchange="switchActiveBranch(this.value)" class="bg-slate-700 text-teal-200 border border-slate-600 rounded px-1.5 py-0.5 text-[11px] font-semibold focus:outline-none"></select></span>
+          <span class="text-teal-300 font-bold">Terminal Branch: 
+            <select id="active-branch-selector" onchange="switchActiveBranch(this.value)" class="bg-slate-700 text-teal-200 border border-slate-600 rounded px-1.5 py-0.5 text-[11px] font-semibold focus:outline-none"></select>
+          </span>
         </div>
       </div>
       <div class="flex items-center gap-2">
@@ -128,9 +130,9 @@
       <button onclick="showTab('tab-capital')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-emerald-400 transition"><i class="fa-solid fa-coins mr-1"></i>Capital</button>
       <button onclick="showTab('tab-statement')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Statements</button>
       <button onclick="showTab('tab-reports')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Reports</button>
-      <button onclick="showTab('tab-aging')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Aging</button>
+      <button onclick="showTab('tab-aging')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-amber-400 transition"><i class="fa-solid fa-clock-rotate-left mr-1"></i>Officer Aging</button>
       <button onclick="showTab('tab-demand')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-red-400 transition">Defaulters</button>
-      <button onclick="showTab('tab-settings')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Settings</button>
+      <button onclick="showTab('tab-settings')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-teal-300 transition"><i class="fa-solid fa-network-wired mr-1"></i>Mother System</button>
     </div>
   </nav>
 
@@ -347,7 +349,7 @@
       </div>
     </section>
 
-    <!-- TAB: EXPENSE TRACKING MODULE -->
+    <!-- TAB: EXPENSE TRACKING MODULE (#1) -->
     <section id="tab-expenses" hidden class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
         <h2 class="text-base md:text-lg font-bold text-slate-800"><i class="fa-solid fa-wallet text-rose-600"></i> Operational Expenses Tracker</h2>
@@ -485,14 +487,24 @@
       </div>
     </section>
 
-    <!-- TAB: AGING ANALYSIS -->
+    <!-- TAB 4: OFFICER AGING BREAKDOWN (#4) -->
     <section id="tab-aging" hidden class="tab-content space-y-4 hidden">
-      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b pb-2">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-3">
         <div>
-          <h2 class="text-lg font-bold text-slate-800">Officer Portfolio Aging Analysis</h2>
-          <p class="text-xs text-slate-500">Comprehensive breakdown of assigned loans per field officer portfolio.</p>
+          <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> Field Officer Portfolio Aging Breakdown
+          </h2>
+          <p class="text-xs text-slate-500">Every field officer must view their individual assigned clients list.</p>
         </div>
-        <button onclick="triggerQuickPrint()" class="bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow"><i class="fa-solid fa-print"></i> Print Matrix</button>
+        
+        <div class="flex items-center gap-2 w-full md:w-auto">
+          <select id="aging-officer-filter" onchange="renderOfficerAgingTables()" class="bg-white border-2 border-slate-700 text-xs font-bold p-2.5 rounded-xl text-slate-800 shadow-sm focus:outline-none w-full md:w-64">
+            <option value="ALL">-- ALL FIELD OFFICERS --</option>
+          </select>
+          <button onclick="triggerQuickPrint()" class="bg-slate-800 text-white text-xs px-3 py-2.5 rounded-xl font-bold shadow flex items-center gap-1">
+            <i class="fa-solid fa-print"></i> Print
+          </button>
+        </div>
       </div>
 
       <div id="officer-aging-sections" class="space-y-6"></div>
@@ -504,14 +516,79 @@
       <div id="demand-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
     </section>
 
-    <!-- TAB: SETUP & MULTI-BRANCH ENGINE -->
-    <section id="tab-settings" hidden class="tab-content space-y-6 hidden max-w-4xl mx-auto">
-      <h2 class="text-lg font-bold border-b pb-2">System Setup & Central Mother Control</h2>
+    <!-- TAB 5: MOTHER SYSTEM & MULTI-BRANCH ENGINE (#5) -->
+    <section id="tab-settings" hidden class="tab-content space-y-6 hidden max-w-5xl mx-auto">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+          <i class="fa-solid fa-network-wired text-teal-600"></i> Central Mother System & Multi-Branch Hub
+        </h2>
+        <span class="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-xs font-bold">100+ Branches Supported</span>
+      </div>
+
+      <!-- Aggregated HQ Dashboard -->
+      <div class="bg-slate-900 text-white p-5 rounded-2xl space-y-3 shadow-lg">
+        <div class="text-xs font-bold text-teal-400 uppercase tracking-wider border-b border-slate-700 pb-2">
+          <i class="fa-solid fa-globe mr-1"></i> Mother System Network Summary (All Branches Combined)
+        </div>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+          <div class="bg-slate-800 p-3 rounded-xl border border-slate-700">
+            <span class="text-slate-400 block text-[10px]">Total Created Branches</span>
+            <span id="hq-total-branches" class="text-lg font-bold text-teal-300">1</span>
+          </div>
+          <div class="bg-slate-800 p-3 rounded-xl border border-slate-700">
+            <span class="text-slate-400 block text-[10px]">Active Operating Terminals</span>
+            <span id="hq-active-branches" class="text-lg font-bold text-emerald-400">1</span>
+          </div>
+          <div class="bg-slate-800 p-3 rounded-xl border border-slate-700">
+            <span class="text-slate-400 block text-[10px]">Total Network Clients</span>
+            <span id="hq-total-clients" class="text-lg font-bold text-blue-400">0</span>
+          </div>
+          <div class="bg-slate-800 p-3 rounded-xl border border-slate-700">
+            <span class="text-slate-400 block text-[10px]">Total Network Outstanding</span>
+            <span id="hq-total-portfolio" class="text-lg font-bold text-amber-400">UGX 0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Branch Creator & Manager (#5) -->
+      <div class="bg-white border-2 border-slate-800 p-5 rounded-2xl space-y-4 text-xs shadow-md">
+        <div class="flex justify-between items-center border-b border-slate-200 pb-3">
+          <div>
+            <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+              <i class="fa-solid fa-plus-circle text-teal-600"></i> Create & Control Branch Operations
+            </h3>
+            <p class="text-slate-500 text-[11px]">Mother System can create up to 100+ branches. Turn branches ON/OFF at any time without losing data.</p>
+          </div>
+        </div>
+
+        <div class="bg-slate-50 p-4 rounded-xl border space-y-3">
+          <h4 class="font-bold text-slate-700">Create New Branch Terminal</h4>
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input type="text" id="mb-branch-name" placeholder="Branch Name (e.g. Jinja Branch)" class="p-2.5 border rounded-lg text-xs bg-white">
+            <input type="text" id="mb-branch-code" placeholder="Branch Code (e.g. JNJ-02)" class="p-2.5 border rounded-lg text-xs uppercase bg-white">
+            <button onclick="createNewBranch()" class="bg-teal-700 hover:bg-teal-800 text-white py-2.5 rounded-lg font-bold shadow transition">+ Create Branch</button>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto border rounded-xl">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-800 text-white text-[11px]">
+                <th class="p-3">Branch Code</th>
+                <th class="p-3">Branch Name</th>
+                <th class="p-3">Total Clients</th>
+                <th class="p-3">Operational Status</th>
+                <th class="p-3 text-right">Mother Control (Toggle ON/OFF)</th>
+              </tr>
+            </thead>
+            <tbody id="branch-network-table-body" class="divide-y text-slate-700"></tbody>
+          </table>
+        </div>
+      </div>
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Profile Config -->
         <div class="bg-white p-5 border rounded-2xl space-y-4 text-xs shadow-sm">
-          <h3 class="font-bold text-slate-800 border-b pb-2 text-sm"><i class="fa-solid fa-sliders text-teal-600"></i> Profile Settings</h3>
+          <h3 class="font-bold text-slate-800 border-b pb-2 text-sm"><i class="fa-solid fa-sliders text-teal-600"></i> System Configuration</h3>
           <div>
             <label class="block font-semibold mb-1 text-slate-600">Company Name</label>
             <input type="text" id="cfg-name" placeholder="PMMS Microfinance Ltd" class="w-full p-2.5 border rounded-xl text-sm">
@@ -519,10 +596,10 @@
           <button onclick="saveSettings()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl text-sm font-bold shadow transition">Save Profile</button>
         </div>
 
-        <!-- System Backup / Restore -->
+        <!-- Data Import/Export System (#3) -->
         <div class="bg-white p-5 border rounded-2xl space-y-3 text-xs shadow-sm">
-          <h3 class="font-bold text-slate-800 border-b pb-2 text-sm"><i class="fa-solid fa-database text-blue-600"></i> Data Management (Backup / Restore)</h3>
-          <p class="text-slate-500">Export state to JSON/CSV backup files or restore system state seamlessly.</p>
+          <h3 class="font-bold text-slate-800 border-b pb-2 text-sm"><i class="fa-solid fa-database text-blue-600"></i> Backup & Data Restore (#3)</h3>
+          <p class="text-slate-500">Export system backup state to JSON/CSV files or restore full database seamlessly.</p>
           <div class="grid grid-cols-2 gap-2 pt-2">
             <button onclick="exportSystemStateJSON()" class="bg-slate-800 text-white py-2.5 rounded-xl font-bold hover:bg-slate-900 shadow">
               <i class="fa-solid fa-download mr-1"></i> Export JSON
@@ -535,43 +612,6 @@
             <label class="block text-slate-600 font-semibold mb-1">Import JSON Backup</label>
             <input type="file" id="import-file-input" accept=".json" onchange="importSystemStateJSON(event)" class="w-full text-xs">
           </div>
-        </div>
-      </div>
-
-      <!-- MOTHER SYSTEM: MULTI-BRANCH NETWORK MANAGER -->
-      <div class="bg-white border-2 border-slate-800 p-5 rounded-2xl space-y-4 text-xs shadow-md">
-        <div class="flex justify-between items-center border-b border-slate-200 pb-3">
-          <div>
-            <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
-              <i class="fa-solid fa-sitemap text-teal-600"></i> Mother System: Multi-Branch Network Controller
-            </h3>
-            <p class="text-slate-500 text-[11px]">Create and manage up to 100+ branches. Toggle any branch status ON or OFF independently without losing branch data.</p>
-          </div>
-        </div>
-
-        <!-- Add Branch Form -->
-        <div class="bg-slate-50 p-4 rounded-xl border space-y-3">
-          <h4 class="font-bold text-slate-700">Create New Branch Terminal</h4>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <input type="text" id="mb-branch-name" placeholder="Branch Name (e.g. Jinja Branch)" class="p-2.5 border rounded-lg text-xs bg-white">
-            <input type="text" id="mb-branch-code" placeholder="Branch Code (e.g. JNJ-02)" class="p-2.5 border rounded-lg text-xs uppercase bg-white">
-            <button onclick="createNewBranch()" class="bg-teal-700 hover:bg-teal-800 text-white py-2.5 rounded-lg font-bold shadow transition">+ Create Branch</button>
-          </div>
-        </div>
-
-        <!-- Branches Network Table -->
-        <div class="overflow-x-auto border rounded-xl">
-          <table class="w-full text-left border-collapse">
-            <thead>
-              <tr class="bg-slate-800 text-white text-[11px]">
-                <th class="p-3">Branch Code</th>
-                <th class="p-3">Branch Name</th>
-                <th class="p-3">Status</th>
-                <th class="p-3 text-right">Action / Toggle Remote Kill Switch</th>
-              </tr>
-            </thead>
-            <tbody id="branch-network-table-body" class="divide-y text-slate-700"></tbody>
-          </table>
         </div>
       </div>
     </section>
@@ -593,16 +633,15 @@
       el.setAttribute('hidden', '');
     }
 
-    // STATE STRUCTURE WITH MULTI-BRANCH CAPABILITY
+    // MULTI-BRANCH STATE STRUCTURE
     let state = {
       accounts: [],
       currentUser: null,
-      companyName: "PMMS Microfinance Ltd",
+      companyName: "PMMS Central Microfinance",
       activeBranchId: "BR-HQ",
       branches: [
-        { id: "BR-HQ", code: "HQ-01", name: "Main Central Branch", isKilled: false }
+        { id: "BR-HQ", code: "HQ-01", name: "Main HQ Central Branch", isKilled: false }
       ],
-      // Branch specific data containers mapped by branchId
       branchData: {
         "BR-HQ": {
           clients: [
@@ -620,7 +659,6 @@
 
     let tempPendingRegistration = null;
 
-    // Helper functions for active branch scope access
     function getActiveBranch() {
       if (!state.branchData[state.activeBranchId]) {
         state.branchData[state.activeBranchId] = { clients: [], officers: [], bankings: [], expenses: [], capitalizations: [], batch: [] };
@@ -644,800 +682,4 @@
       renderOfficerAgingTables();
       renderBranchNetworkTable();
       updateDashboardReports();
-      checkKillSwitchState();
       
-      if (!state.currentUser && !getActiveBranchInfo().isKilled) {
-        showElement("auth-overlay");
-      } else {
-        updateUserDisplay();
-      }
-    };
-
-    function loadState() {
-      const saved = localStorage.getItem("pmms_app_state_v3");
-      if (saved) {
-        try { state = Object.assign(state, JSON.parse(saved)); } catch(e){}
-      }
-      document.getElementById("header-company-name").innerText = state.companyName || "Loan Manager (PMMS)";
-      document.getElementById("cfg-name").value = state.companyName || "";
-    }
-
-    function saveState() {
-      localStorage.setItem("pmms_app_state_v3", JSON.stringify(state));
-    }
-
-    // MULTI-BRANCH ENGINE & KILL SWITCH CONTROLLER
-    function checkKillSwitchState() {
-      const activeBranch = getActiveBranchInfo();
-      if (activeBranch.isKilled) {
-        document.getElementById("kill-switch-title").innerText = `BRANCH (${activeBranch.name}) SUSPENDED`;
-        document.getElementById("kill-switch-desc").innerText = `The operations of ${activeBranch.name} [${activeBranch.code}] have been temporarily disabled by HQ Central Mother System. All data remains preserved.`;
-        showElement("kill-switch-overlay");
-      } else {
-        hideElement("kill-switch-overlay");
-      }
-    }
-
-    function renderBranchSelector() {
-      const selector = document.getElementById("active-branch-selector");
-      selector.innerHTML = state.branches.map(b => `
-        <option value="${b.id}" ${b.id === state.activeBranchId ? 'selected' : ''}>${b.name} (${b.code}) ${b.isKilled ? '[OFF]' : ''}</option>
-      `).join('');
-    }
-
-    function switchActiveBranch(branchId) {
-      state.activeBranchId = branchId;
-      saveState();
-      checkKillSwitchState();
-      populateOfficerDropdowns();
-      renderBankingsHistory();
-      renderExpensesHistory();
-      renderCapitalizationQueue();
-      renderOfficersHub();
-      renderDefaulters();
-      renderOfficerAgingTables();
-      updateDashboardReports();
-    }
-
-    function createNewBranch() {
-      const name = document.getElementById("mb-branch-name").value.trim();
-      const code = document.getElementById("mb-branch-code").value.trim().toUpperCase();
-
-      if (!name || !code) return alert("Enter valid Branch Name and Branch Code.");
-
-      const newId = "BR-" + Date.now();
-      state.branches.push({ id: newId, code, name, isKilled: false });
-      state.branchData[newId] = { clients: [], officers: [], bankings: [], expenses: [], capitalizations: [], batch: [] };
-
-      saveState();
-      document.getElementById("mb-branch-name").value = "";
-      document.getElementById("mb-branch-code").value = "";
-      renderBranchSelector();
-      renderBranchNetworkTable();
-      alert(`Branch "${name}" created successfully! Mother system can now control its operation status.`);
-    }
-
-    function toggleBranchStatus(branchId) {
-      const branch = state.branches.find(b => b.id === branchId);
-      if (branch) {
-        branch.isKilled = !branch.isKilled;
-        saveState();
-        renderBranchSelector();
-        renderBranchNetworkTable();
-        checkKillSwitchState();
-      }
-    }
-
-    function renderBranchNetworkTable() {
-      const tbody = document.getElementById("branch-network-table-body");
-      tbody.innerHTML = state.branches.map(b => `
-        <tr>
-          <td class="p-3 font-bold text-slate-800">${b.code}</td>
-          <td class="p-3 font-semibold text-slate-800">${b.name}</td>
-          <td class="p-3">
-            <span class="${b.isKilled ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'} px-2.5 py-0.5 rounded-full font-bold text-[10px]">
-              ${b.isKilled ? 'SUSPENDED (OFF)' : 'ACTIVE (ON)'}
-            </span>
-          </td>
-          <td class="p-3 text-right">
-            <button onclick="toggleBranchStatus('${b.id}')" class="${b.isKilled ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-red-600 hover:bg-red-700'} text-white text-[11px] px-3 py-1.5 rounded-lg font-bold shadow transition">
-              ${b.isKilled ? 'ACTIVATE (TURN ON)' : 'SUSPEND (TURN OFF)'}
-            </button>
-          </td>
-        </tr>
-      `).join('');
-    }
-
-    function unlockViaMasterOverride() {
-      const pin = prompt("Enter Mother System Master Passcode:");
-      if (pin === "9999" || pin === "admin") {
-        const activeBranch = getActiveBranchInfo();
-        activeBranch.isKilled = false;
-        saveState();
-        checkKillSwitchState();
-        renderBranchNetworkTable();
-        alert("Branch Restored Successfully!");
-      } else if (pin !== null) {
-        alert("Invalid Security Passcode!");
-      }
-    }
-
-    // EXPENSE TRACKING MODULE
-    function recordExpense() {
-      const category = document.getElementById("exp-category").value;
-      const amount = parseFloat(document.getElementById("exp-amount").value) || 0;
-      const narration = document.getElementById("exp-narration").value.trim();
-
-      if (amount <= 0) return alert("Please enter valid expense amount.");
-
-      const activeBranchData = getActiveBranch();
-      activeBranchData.expenses.push({
-        id: "exp-" + Date.now(),
-        date: new Date().toISOString().split('T')[0],
-        category,
-        amount,
-        narration: narration || "General Branch Expense"
-      });
-
-      saveState();
-      document.getElementById("exp-amount").value = "";
-      document.getElementById("exp-narration").value = "";
-      renderExpensesHistory();
-      updateDashboardReports();
-      alert("Expense record saved!");
-    }
-
-    function renderExpensesHistory() {
-      const tbody = document.getElementById("expenses-history-body");
-      const activeBranchData = getActiveBranch();
-      let totalExpenses = 0;
-
-      tbody.innerHTML = (activeBranchData.expenses || []).map(e => {
-        totalExpenses += e.amount;
-        return `
-          <tr>
-            <td class="p-3">${e.date}</td>
-            <td class="p-3 font-semibold text-slate-800">${e.category}</td>
-            <td class="p-3 text-slate-600">${e.narration}</td>
-            <td class="p-3 text-right font-bold text-rose-600">UGX ${e.amount.toLocaleString()}</td>
-          </tr>
-        `;
-      }).join('');
-
-      document.getElementById("total-expenses-display").innerText = `UGX ${totalExpenses.toLocaleString()}`;
-    }
-
-    // OFFICER-SPECIFIC AGING MATRIX WITH DAYS SPENT WITHOUT PAYING
-    function renderOfficerAgingTables() {
-      const container = document.getElementById("officer-aging-sections");
-      const activeData = getActiveBranch();
-      const today = new Date();
-
-      if (!activeData.officers || activeData.officers.length === 0) {
-        container.innerHTML = `<div class="p-4 bg-white border rounded-xl text-xs text-slate-500">No registered field officers found in active branch.</div>`;
-        return;
-      }
-
-      container.innerHTML = activeData.officers.map(off => {
-        const assignedClients = activeData.clients.filter(c => c.officerId === off.id);
-
-        const rowsMarkup = assignedClients.map(c => {
-          // Calculate days spent without paying
-          let daysWithoutPaying = 0;
-          if (c.lastPaymentDate) {
-            const diffTime = Math.abs(today - new Date(c.lastPaymentDate));
-            daysWithoutPaying = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-          } else if (c.dateDisbursed) {
-            const diffTime = Math.abs(today - new Date(c.dateDisbursed));
-            daysWithoutPaying = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-          }
-
-          return `
-            <tr class="hover:bg-slate-50 transition">
-              <td class="p-3 font-bold text-slate-800">${c.name}</td>
-              <td class="p-3 text-slate-600">${c.phone}</td>
-              <td class="p-3"><strong>${c.guarantor || 'N/A'}</strong> <span class="block text-[10px] text-slate-500">${c.guarantorPhone || ''}</span></td>
-              <td class="p-3 text-slate-500">${c.dateDisbursed || '-'}</td>
-              <td class="p-3 font-bold text-blue-700">UGX ${(c.balance || 0).toLocaleString()}</td>
-              <td class="p-3 font-bold text-red-600">UGX ${(c.arrears || 0).toLocaleString()}</td>
-              <td class="p-3 text-slate-500">${c.deadlineDate || '-'}</td>
-              <td class="p-3 text-center font-bold ${daysWithoutPaying > 7 ? 'text-red-600 bg-red-50' : 'text-slate-700'}">
-                ${daysWithoutPaying} Days
-              </td>
-            </tr>
-          `;
-        }).join('');
-
-        return `
-          <div class="bg-white border rounded-xl overflow-hidden shadow-sm space-y-2">
-            <div class="bg-slate-800 text-white p-3.5 flex justify-between items-center text-xs">
-              <span class="font-bold text-sm"><i class="fa-solid fa-user-tie text-teal-400 mr-2"></i>Officer Portfolio: ${off.name} (${off.phone})</span>
-              <span class="bg-slate-700 text-teal-300 px-2.5 py-1 rounded-lg font-bold">${assignedClients.length} Active Loans</span>
-            </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr class="bg-slate-100 text-slate-700 text-[11px] font-bold border-b">
-                    <th class="p-3">Client Name</th>
-                    <th class="p-3">Contact</th>
-                    <th class="p-3">Guarantor & Phone</th>
-                    <th class="p-3">Loan Date</th>
-                    <th class="p-3">Loan Balance</th>
-                    <th class="p-3">Arrears</th>
-                    <th class="p-3">Deadline</th>
-                    <th class="p-3 text-center">Inactivity (Days)</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y text-slate-700">
-                  ${rowsMarkup.length ? rowsMarkup : '<tr><td colspan="8" class="p-3 text-slate-400 text-center">No active loans assigned to this officer.</td></tr>'}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    // AUTOMATED PDF RECEIPT GENERATOR USING JSPDF
-    function generatePDFReceipt(client, amount, channel) {
-      if (!window.jspdf) return alert("PDF generator library loading. Try again.");
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-
-      doc.setFontSize(16);
-      doc.text(state.companyName, 20, 20);
-      doc.setFontSize(10);
-      doc.text(`Official Repayment Receipt - ${getActiveBranchInfo().name}`, 20, 27);
-      doc.text(`Date: ${new Date().toLocaleString()}`, 20, 33);
-      doc.line(20, 36, 190, 36);
-
-      doc.autoTable({
-        startY: 40,
-        head: [['Field', 'Details']],
-        body: [
-          ['Client Name', client.name],
-          ['Phone Contact', client.phone],
-          ['Category / Plate', `${client.category || 'GENERAL'} ${client.plate ? '| ' + client.plate : ''}`],
-          ['Payment Channel', channel],
-          ['Amount Paid', `UGX ${amount.toLocaleString()}`],
-          ['Remaining Balance', `UGX ${(client.balance || 0).toLocaleString()}`],
-          ['Current Arrears', `UGX ${(client.arrears || 0).toLocaleString()}`]
-        ]
-      });
-
-      doc.text("Thank you for your timely payment!", 20, doc.lastAutoTable.finalY + 15);
-      doc.save(`Receipt_${client.name.replace(/\s+/g, '_')}_${Date.now()}.pdf`);
-    }
-
-    // DATA BACKUP AND EXPORT SYSTEM
-    function exportSystemStateJSON() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", `PMMS_Backup_${new Date().toISOString().split('T')[0]}.json`);
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-    }
-
-    function exportClientsCSV() {
-      const activeData = getActiveBranch();
-      let csvContent = "data:text/csv;charset=utf-8,Name,Phone,Category,Plate,Guarantor,GuarantorPhone,Balance,Arrears\n";
-
-      activeData.clients.forEach(c => {
-        csvContent += `"${c.name}","${c.phone}","${c.category || ''}","${c.plate || ''}","${c.guarantor || ''}","${c.guarantorPhone || ''}",${c.balance || 0},${c.arrears || 0}\n`;
-      });
-
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `Clients_Export_${new Date().toISOString().split('T')[0]}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    }
-
-    function importSystemStateJSON(event) {
-      const file = event.target.files[0];
-      if (!file) return;
-
-      const reader = new FileReader();
-      reader.onload = function(e) {
-        try {
-          const importedState = JSON.parse(e.target.result);
-          if (importedState && importedState.branches) {
-            state = importedState;
-            saveState();
-            alert("System backup state imported successfully!");
-            location.reload();
-          } else {
-            alert("Invalid system backup JSON format.");
-          }
-        } catch (err) {
-          alert("Error parsing backup JSON file.");
-        }
-      };
-      reader.readAsText(file);
-    }
-
-    // AUTHENTICATION
-    function switchAuthTab(type) {
-      const btnLogin = document.getElementById("tab-btn-login");
-      const btnReg = document.getElementById("tab-btn-register");
-      hideElement("auth-form-verify");
-
-      if (type === 'login') {
-        showElement("auth-form-login");
-        hideElement("auth-form-register");
-        btnLogin.className = "w-1/2 py-2 text-slate-800 border-b-2 border-slate-800 font-bold";
-        btnReg.className = "w-1/2 py-2 text-slate-400 font-bold";
-      } else {
-        hideElement("auth-form-login");
-        showElement("auth-form-register");
-        btnLogin.className = "w-1/2 py-2 text-slate-400 font-bold";
-        btnReg.className = "w-1/2 py-2 text-slate-800 border-b-2 border-slate-800 font-bold";
-      }
-    }
-
-    function sendGmailVerificationCode() {
-      const name = document.getElementById("reg-name").value.trim();
-      const email = document.getElementById("reg-email").value.trim();
-      const username = document.getElementById("reg-username").value.trim().toLowerCase();
-      const password = document.getElementById("reg-password").value;
-
-      if (!name || !email || !username || !password) return alert("Fill in all registration fields.");
-      if (!email.toLowerCase().endsWith("@gmail.com")) return alert("Valid Gmail required (@gmail.com).");
-
-      const code = Math.floor(100000 + Math.random() * 900000).toString();
-      tempPendingRegistration = { name, email, username, password, code };
-
-      document.getElementById("verify-email-target").innerText = email;
-      hideElement("auth-form-register");
-      showElement("auth-form-verify");
-      alert(`[PMMS Security System]\n\nVerification Code sent to: ${email}\n\nYOUR CODE IS: ${code}`);
-    }
-
-    function confirmGmailVerification() {
-      const enteredCode = document.getElementById("verify-code-input").value.trim();
-      if (!tempPendingRegistration || enteredCode !== tempPendingRegistration.code) {
-        return alert("Invalid verification code.");
-      }
-
-      const newUser = { ...tempPendingRegistration, verified: true };
-      state.accounts.push(newUser);
-      state.currentUser = newUser;
-      saveState();
-
-      alert("Gmail Verified! Account created successfully.");
-      hideElement("auth-overlay");
-      updateUserDisplay();
-    }
-
-    function handleLogin() {
-      const identifier = document.getElementById("login-identifier").value.trim().toLowerCase();
-      const password = document.getElementById("login-password").value;
-
-      const account = state.accounts.find(a => 
-        (a.email.toLowerCase() === identifier || a.username.toLowerCase() === identifier) && 
-        a.password === password
-      );
-
-      if (account) {
-        state.currentUser = account;
-        saveState();
-        hideElement("auth-overlay");
-        updateUserDisplay();
-      } else {
-        alert("Invalid login credentials.");
-      }
-    }
-
-    function updateUserDisplay() {
-      if (state.currentUser) {
-        document.getElementById("header-user-tag").innerText = `User: ${state.currentUser.name} (${state.currentUser.username})`;
-      }
-    }
-
-    function lockApp() {
-      state.currentUser = null;
-      saveState();
-      showElement("auth-overlay");
-      switchAuthTab('login');
-    }
-
-    function showTab(tabId) {
-      if (getActiveBranchInfo().isKilled) {
-        checkKillSwitchState();
-        return;
-      }
-      if (!state.currentUser) {
-        showElement("auth-overlay");
-        return;
-      }
-      document.querySelectorAll(".tab-content").forEach(el => hideElement(el));
-      showElement(tabId);
-      
-      if (tabId === 'tab-bankings') renderBankingsHistory();
-      if (tabId === 'tab-expenses') renderExpensesHistory();
-      if (tabId === 'tab-capital') renderCapitalizationQueue();
-      if (tabId === 'tab-officers') renderOfficersHub();
-      if (tabId === 'tab-demand') renderDefaulters();
-      if (tabId === 'tab-aging') renderOfficerAgingTables();
-      if (tabId === 'tab-reports') updateDashboardReports();
-    }
-
-    // SEARCH & POSTING
-    function searchPostingClients(query) {
-      const resultsContainer = document.getElementById("post-search-results");
-      if (!query.trim()) { hideElement(resultsContainer); return; }
-
-      const q = query.toLowerCase();
-      const activeData = getActiveBranch();
-      const matches = activeData.clients.filter(c => 
-        c.name.toLowerCase().includes(q) || 
-        c.phone.includes(q) || 
-        (c.plate && c.plate.toLowerCase().includes(q))
-      );
-
-      if (matches.length === 0) {
-        resultsContainer.innerHTML = `<div class="p-3 text-xs text-slate-500">No matching active client found</div>`;
-      } else {
-        resultsContainer.innerHTML = matches.map(c => `
-          <div onclick="selectPostingClient('${c.id}')" class="p-3 hover:bg-slate-100 cursor-pointer text-xs flex justify-between items-center">
-            <div>
-              <div class="font-bold text-slate-800">${c.name}</div>
-              <div class="text-[10px] text-slate-500">${c.phone} ${c.plate ? '| ' + c.plate : ''}</div>
-            </div>
-            <span class="font-bold text-blue-600">UGX ${(c.balance || 0).toLocaleString()}</span>
-          </div>
-        `).join('');
-      }
-      showElement(resultsContainer);
-    }
-
-    function selectPostingClient(clientId) {
-      const activeData = getActiveBranch();
-      const client = activeData.clients.find(c => c.id === clientId);
-      if (!client) return;
-
-      state.selectedClientId = clientId;
-      hideElement("post-search-results");
-      document.getElementById("post-search").value = client.name;
-
-      document.getElementById("post-client-name").innerText = client.name;
-      document.getElementById("post-client-acc").innerText = `Phone: ${client.phone} ${client.plate ? '| Plate: ' + client.plate : ''}`;
-      document.getElementById("post-client-type-info").innerText = `Category: ${client.category || 'GENERAL'}`;
-      
-      const officer = activeData.officers.find(o => o.id === client.officerId);
-      document.getElementById("post-client-officer").innerText = `Officer: ${officer ? officer.name : 'Unassigned'}`;
-      document.getElementById("post-client-call").href = `tel:${client.phone}`;
-
-      document.getElementById("post-arrears").innerText = `UGX ${(client.arrears || 0).toLocaleString()}`;
-      document.getElementById("post-advance").innerText = `UGX ${(client.advance || 0).toLocaleString()}`;
-      document.getElementById("post-balance").innerText = `UGX ${(client.balance || 0).toLocaleString()}`;
-      document.getElementById("post-daily").innerText = `UGX ${(client.dailyTarget || 0).toLocaleString()}`;
-
-      showElement("post-selected-card");
-      showElement("post-form");
-    }
-
-    function addToBatch() {
-      if (!state.selectedClientId) return alert("Select a client first.");
-      const amount = parseFloat(document.getElementById("post-amount").value) || 0;
-      const channel = document.getElementById("post-channel").value;
-
-      if (amount <= 0) return alert("Enter valid payment amount.");
-
-      const activeData = getActiveBranch();
-      const client = activeData.clients.find(c => c.id === state.selectedClientId);
-      activeData.batch.push({
-        id: "bat-" + Date.now(),
-        clientId: client.id,
-        clientName: client.name,
-        amount,
-        channel,
-        date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-      });
-
-      document.getElementById("post-amount").value = "";
-      renderBatchList();
-    }
-
-    function renderBatchList() {
-      const activeData = getActiveBranch();
-      const container = document.getElementById("batch-list");
-      document.getElementById("batch-count").innerText = activeData.batch.length;
-
-      if (activeData.batch.length === 0) {
-        container.innerHTML = `<div class="p-4 border rounded-xl text-xs text-slate-400 text-center bg-white">No pending repayments in current batch</div>`;
-        return;
-      }
-
-      container.innerHTML = activeData.batch.map((b, idx) => `
-        <div class="bg-white p-3 rounded-xl border text-xs flex justify-between items-center shadow-sm">
-          <div>
-            <div class="font-bold text-slate-800">${b.clientName}</div>
-            <div class="text-[10px] text-slate-500">${b.channel} | ${b.date}</div>
-          </div>
-          <div class="flex items-center gap-3">
-            <span class="font-bold text-emerald-600">UGX ${b.amount.toLocaleString()}</span>
-            <button onclick="removeFromBatch(${idx})" class="text-red-500 hover:text-red-700 text-xs p-1"><i class="fa-solid fa-trash"></i></button>
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function removeFromBatch(index) {
-      getActiveBranch().batch.splice(index, 1);
-      renderBatchList();
-    }
-
-    function postAllBatch() {
-      const activeData = getActiveBranch();
-      if (activeData.batch.length === 0) return alert("No transactions in batch to post.");
-
-      const autoPDF = document.getElementById("toggle-print-receipt").checked;
-
-      activeData.batch.forEach(item => {
-        const client = activeData.clients.find(c => c.id === item.clientId);
-        if (client) {
-          client.balance = Math.max(0, (client.balance || 0) - item.amount);
-          client.lastPaymentDate = new Date().toISOString().split('T')[0];
-          if (autoPDF) generatePDFReceipt(client, item.amount, item.channel);
-        }
-      });
-
-      alert(`Successfully posted ${activeData.batch.length} transaction(s)!`);
-      activeData.batch = [];
-      saveState();
-      renderBatchList();
-      if (state.selectedClientId) selectPostingClient(state.selectedClientId);
-    }
-
-    // BANKINGS & CAPITAL
-    function recordBankDeposit() {
-      const bankName = document.getElementById("bank-name").value.trim();
-      const accNo = document.getElementById("bank-acc-no").value.trim();
-      const amount = parseFloat(document.getElementById("bank-amount").value) || 0;
-      const ref = document.getElementById("bank-ref").value.trim();
-
-      if (!bankName || amount <= 0) return alert("Please specify Bank Name and Deposit Amount.");
-
-      getActiveBranch().bankings.push({
-        id: "bnk-" + Date.now(),
-        date: new Date().toISOString().split('T')[0],
-        bankName, accNo, amount, ref
-      });
-
-      saveState();
-      document.getElementById("bank-name").value = "";
-      document.getElementById("bank-acc-no").value = "";
-      document.getElementById("bank-amount").value = "";
-      document.getElementById("bank-ref").value = "";
-      renderBankingsHistory();
-      alert("Banking record added!");
-    }
-
-    function renderBankingsHistory() {
-      const tbody = document.getElementById("bankings-history-body");
-      let totalBanked = 0;
-      
-      tbody.innerHTML = (getActiveBranch().bankings || []).map(b => {
-        totalBanked += b.amount;
-        return `
-          <tr>
-            <td class="p-3">${b.date}</td>
-            <td class="p-3"><strong>${b.bankName}</strong> (${b.accNo || 'N/A'})</td>
-            <td class="p-3">${b.ref || '-'}</td>
-            <td class="p-3 text-right font-bold text-blue-700">UGX ${b.amount.toLocaleString()}</td>
-          </tr>
-        `;
-      }).join('');
-
-      document.getElementById("total-banked-display").innerText = `UGX ${totalBanked.toLocaleString()}`;
-    }
-
-    function submitCapitalRequest() {
-      const amount = parseFloat(document.getElementById("cap-amount").value) || 0;
-      const narration = document.getElementById("cap-narration").value.trim();
-
-      if (amount <= 0) return alert("Enter valid capital amount.");
-
-      getActiveBranch().capitalizations.push({
-        id: "cap-" + Date.now(),
-        amount,
-        narration: narration || "Capital Addition",
-        requestedBy: state.currentUser ? state.currentUser.username : 'User',
-        status: "APPROVED",
-        date: new Date().toISOString().split('T')[0]
-      });
-
-      saveState();
-      document.getElementById("cap-amount").value = "";
-      document.getElementById("cap-narration").value = "";
-      renderCapitalizationQueue();
-      updateDashboardReports();
-      alert("Capital added directly!");
-    }
-
-    function renderCapitalizationQueue() {
-      const container = document.getElementById("capital-approval-list");
-      const list = getActiveBranch().capitalizations;
-      
-      if (!list || list.length === 0) {
-        container.innerHTML = `<div class="p-2 text-[11px] text-slate-500">No capital entries.</div>`;
-        return;
-      }
-
-      container.innerHTML = list.map(c => `
-        <div class="bg-white p-3 rounded-xl border text-xs flex justify-between items-center shadow-sm">
-          <div>
-            <div class="font-bold text-slate-800">UGX ${c.amount.toLocaleString()}</div>
-            <div class="text-[10px] text-slate-500">${c.narration} | By: ${c.requestedBy}</div>
-          </div>
-          <span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full font-bold text-[10px]">APPROVED</span>
-        </div>
-      `).join('');
-    }
-
-    function updateDashboardReports() {
-      const activeData = getActiveBranch();
-      const totalClients = activeData.clients.length;
-      const totalCap = (activeData.capitalizations || []).reduce((s, c) => s + c.amount, 0);
-      const totalPort = (activeData.clients || []).reduce((s, c) => s + (c.balance || 0), 0);
-      const totalExp = (activeData.expenses || []).reduce((s, e) => s + e.amount, 0);
-
-      document.getElementById("rep-active-clients").innerText = totalClients;
-      document.getElementById("rep-total-capital").innerText = `UGX ${totalCap.toLocaleString()}`;
-      document.getElementById("rep-total-portfolio").innerText = `UGX ${totalPort.toLocaleString()}`;
-      document.getElementById("rep-total-expenses").innerText = `UGX ${totalExp.toLocaleString()}`;
-    }
-
-    function renderOfficersHub() {
-      const activeData = getActiveBranch();
-      const container = document.getElementById("officers-container");
-
-      container.innerHTML = activeData.officers.map(off => {
-        const assignedClients = activeData.clients.filter(c => c.officerId === off.id);
-        const totalPortfolio = assignedClients.reduce((sum, c) => sum + (c.balance || 0), 0);
-        return `
-          <div class="bg-white p-4 border rounded-xl space-y-2 shadow-sm text-xs">
-            <div class="flex justify-between items-center">
-              <span class="font-bold text-sm text-slate-800">${off.name}</span>
-              <span class="bg-teal-100 text-teal-800 px-2 py-0.5 rounded-full text-[10px] font-bold">${assignedClients.length} Clients</span>
-            </div>
-            <div class="text-slate-500">Phone: ${off.phone}</div>
-            <div class="flex justify-between border-t pt-2 font-semibold text-slate-700">
-              <span>Portfolio Balance:</span>
-              <span class="text-teal-700 font-bold">UGX ${totalPortfolio.toLocaleString()}</span>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function renderDefaulters() {
-      const container = document.getElementById("demand-list-container");
-      const defaulters = getActiveBranch().clients.filter(c => (c.arrears || 0) > 0);
-
-      if (defaulters.length === 0) {
-        container.innerHTML = `<div class="p-4 bg-white border rounded-xl text-xs text-slate-500 col-span-full">No active defaulters recorded.</div>`;
-        return;
-      }
-
-      container.innerHTML = defaulters.map(c => `
-        <div class="bg-white border-l-4 border-red-600 p-4 rounded-xl shadow-sm text-xs space-y-1">
-          <div class="flex justify-between font-bold text-slate-800">
-            <span>${c.name}</span>
-            <span class="text-red-600">Arrears: UGX ${c.arrears.toLocaleString()}</span>
-          </div>
-          <div class="text-slate-500">Phone: ${c.phone} | Guarantor: ${c.guarantor || 'N/A'} (${c.guarantorPhone || 'N/A'})</div>
-          <div class="text-[11px] text-slate-600">Total Balance: UGX ${(c.balance || 0).toLocaleString()}</div>
-        </div>
-      `).join('');
-    }
-
-    function populateOfficerDropdowns() {
-      const select = document.getElementById("disburse-officer-select");
-      select.innerHTML = `<option value="">-- Select Field Officer --</option>`;
-      getActiveBranch().officers.forEach(off => { select.innerHTML += `<option value="${off.id}">${off.name}</option>`; });
-    }
-
-    function registerFieldOfficer() {
-      const name = document.getElementById("officer-add-name").value.trim();
-      const phone = document.getElementById("officer-add-phone").value.trim();
-      if (!name) return alert("Enter Officer Name");
-
-      getActiveBranch().officers.push({ id: "off-" + Date.now(), name, phone: phone || "N/A" });
-      saveState();
-      populateOfficerDropdowns();
-      renderOfficersHub();
-      renderOfficerAgingTables();
-      document.getElementById("officer-add-name").value = "";
-      document.getElementById("officer-add-phone").value = "";
-      alert("Officer registered!");
-    }
-
-    function toggleClientMode(isNew) {
-      if (isNew) {
-        showElement("new-client-fields");
-        hideElement("existing-client-fields");
-      } else {
-        hideElement("new-client-fields");
-        showElement("existing-client-fields");
-      }
-    }
-
-    function toggleBodaPlateInput(type) {
-      const cat = document.getElementById("new-client-category").value;
-      if (cat === 'BODABODA') showElement("new-plate-container");
-      else hideElement("new-plate-container");
-    }
-
-    function liveCalculateDisbursement() {
-      const p = parseFloat(document.getElementById("disburse-principal").value) || 0;
-      const r = parseFloat(document.getElementById("disburse-rate").value) || 0;
-      const d = parseFloat(document.getElementById("disburse-days").value) || 1;
-      const interest = p * (r / 100);
-      const total = p + interest;
-
-      document.getElementById("dis-base").innerText = `UGX ${p.toLocaleString()}`;
-      document.getElementById("dis-interest").innerText = `UGX ${interest.toLocaleString()}`;
-      document.getElementById("dis-total").innerText = `UGX ${total.toLocaleString()}`;
-      document.getElementById("dis-daily").innerText = `UGX ${Math.ceil(total / d).toLocaleString()}`;
-    }
-
-    function processDisbursement() {
-      const officerId = document.getElementById("disburse-officer-select").value;
-      if (!officerId) return alert("Please select a Field Officer!");
-
-      const principal = parseFloat(document.getElementById("disburse-principal").value) || 0;
-      if (principal <= 0) return alert("Enter valid principal amount");
-
-      const name = document.getElementById("new-name").value.trim();
-      const phone = document.getElementById("new-phone").value.trim();
-      const guarantor = document.getElementById("new-guarantor").value.trim();
-      const guarantorPhone = document.getElementById("new-guarantor-phone").value.trim();
-
-      if (!name || !phone || !guarantor || !guarantorPhone) {
-        return alert("Please fill in Client Name, Client Phone, Guarantor Name, and Guarantor Phone.");
-      }
-
-      const category = document.getElementById("new-client-category").value;
-      const plate = document.getElementById("new-number-plate").value.trim().toUpperCase();
-      const rate = parseFloat(document.getElementById("disburse-rate").value) || 20;
-      const tenureDays = parseInt(document.getElementById("disburse-days").value) || 30;
-      const totalPayable = principal * (1 + rate / 100);
-
-      const today = new Date();
-      const deadline = new Date();
-      deadline.setDate(today.getDate() + tenureDays);
-
-      getActiveBranch().clients.push({
-        id: "cli-" + Date.now(),
-        name, phone, guarantor, guarantorPhone,
-        category, plate, officerId, principal,
-        balance: totalPayable,
-        dailyTarget: Math.ceil(totalPayable / tenureDays),
-        arrears: 0, advance: 0,
-        dateDisbursed: today.toISOString().split('T')[0],
-        deadlineDate: deadline.toISOString().split('T')[0],
-        lastPaymentDate: today.toISOString().split('T')[0]
-      });
-
-      saveState();
-      alert("Loan Disbursement Successful!");
-      showTab("tab-posting");
-    }
-
-    function triggerQuickPrint() { window.print(); }
-
-    function saveSettings() {
-      state.companyName = document.getElementById("cfg-name").value;
-      saveState();
-      document.getElementById("header-company-name").innerText = state.companyName;
-      alert("Settings saved!");
-    }
-  </script>
-</body>
-</html>

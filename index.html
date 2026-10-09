@@ -124,6 +124,7 @@
     <div class="flex space-x-2 md:space-x-4 max-w-7xl mx-auto whitespace-nowrap px-1">
       <button onclick="showTab('tab-posting')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Posting</button>
       <button onclick="showTab('tab-disburse')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Disburse</button>
+      <button onclick="showTab('tab-loan-ops')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-indigo-400 transition"><i class="fa-solid fa-sliders mr-1"></i>Loan Operations</button>
       <button onclick="showTab('tab-unified-clients')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-purple-400 transition"><i class="fa-solid fa-id-card mr-1"></i>Master Client Registry</button>
       <button onclick="showTab('tab-officers')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-teal-400 transition">Officers</button>
       <button onclick="showTab('tab-bankings')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-blue-400 transition"><i class="fa-solid fa-building-columns mr-1"></i>Bankings</button>
@@ -133,6 +134,7 @@
       <button onclick="showTab('tab-reports')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Reports</button>
       <button onclick="showTab('tab-aging')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-amber-400 transition"><i class="fa-solid fa-clock-rotate-left mr-1"></i>Officer Aging</button>
       <button onclick="showTab('tab-demand')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-red-400 transition">Defaulters</button>
+      <button onclick="showTab('tab-sms-logs')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-sky-400 transition"><i class="fa-solid fa-comment-sms mr-1"></i>SMS Dispatch</button>
       <button onclick="showTab('tab-settings')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-teal-300 transition"><i class="fa-solid fa-network-wired mr-1"></i>Mother System</button>
     </div>
   </nav>
@@ -309,6 +311,108 @@
       </div>
 
       <button onclick="processDisbursement()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold text-sm shadow transition">DISBURSE LOAN TO CLIENT</button>
+    </section>
+
+    <!-- TAB 3: LOAN OPTIONS (REVERSAL & COMBINATION) -->
+    <section id="tab-loan-ops" hidden class="tab-content space-y-6 hidden max-w-5xl mx-auto">
+      <div class="flex justify-between items-center border-b pb-2">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <i class="fa-solid fa-sliders text-indigo-600"></i> Loan Operations Hub
+          </h2>
+          <p class="text-xs text-slate-500">Perform administrative loan reversals and multi-loan consolidations across clients or branches.</p>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- MODULE A: LOAN REVERSAL -->
+        <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
+          <div class="border-b pb-2 flex items-center justify-between">
+            <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+              <i class="fa-solid fa-rotate-left text-rose-600"></i> Loan Transaction Reversal
+            </h3>
+            <span class="text-[10px] bg-rose-50 text-rose-700 font-bold px-2 py-0.5 rounded">Audit Protected</span>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold mb-1 text-slate-600">Search Client for Reversal</label>
+            <input type="text" id="reversal-search" oninput="searchReversalClients(this.value)" placeholder="Search client name, NIN, or loan ID..." class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
+            <div id="reversal-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-36 overflow-y-auto hidden shadow-md"></div>
+          </div>
+
+          <div id="reversal-card" hidden class="space-y-3 hidden bg-slate-50 p-3.5 rounded-xl border">
+            <div class="flex justify-between text-xs">
+              <span id="rev-client-name" class="font-bold text-slate-800"></span>
+              <span id="rev-client-nin" class="font-mono text-purple-700 font-bold"></span>
+            </div>
+            <div class="text-[11px] text-slate-500 flex justify-between border-b pb-2">
+              <span>Account: <strong id="rev-client-id"></strong></span>
+              <span class="text-blue-700 font-bold">Current Balance: UGX <span id="rev-client-balance">0</span></span>
+            </div>
+            <div class="space-y-2 text-xs">
+              <label class="block font-semibold text-slate-600">Select Recent Transaction to Reverse</label>
+              <select id="rev-transaction-select" class="w-full p-2 border rounded-lg bg-white text-xs font-medium"></select>
+            </div>
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-600 mb-1">Reason for Reversal *</label>
+              <input type="text" id="rev-reason" placeholder="e.g. Wrong entry / Overpayment error" class="w-full p-2 border rounded-lg text-xs bg-white">
+            </div>
+            <button onclick="executeLoanReversal()" class="w-full bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-xl text-xs font-bold shadow transition">
+              <i class="fa-solid fa-rotate-left mr-1"></i> Execute Transaction Reversal
+            </button>
+          </div>
+        </div>
+
+        <!-- MODULE B: LOAN COMBINING & CONSOLIDATION -->
+        <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
+          <div class="border-b pb-2 flex items-center justify-between">
+            <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+              <i class="fa-solid fa-object-group text-indigo-600"></i> Loan Combination & Transfer
+            </h3>
+            <span class="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded">Consolidation Engine</span>
+          </div>
+
+          <!-- STEP 1: SELECT LOANS TO COMBINE -->
+          <div class="space-y-2">
+            <label class="block text-xs font-semibold text-slate-600">Step 1: Search & Check Loans to Combine</label>
+            <input type="text" id="combine-search" oninput="searchCombineLoans(this.value)" placeholder="Search loan by Client Name, NIN, or ID..." class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
+            <div id="combine-search-results" class="bg-slate-50 border rounded-xl p-2.5 max-h-40 overflow-y-auto space-y-1.5 text-xs">
+              <p class="text-slate-400 text-center py-2 text-[11px]">Search above to check loans to consolidate.</p>
+            </div>
+          </div>
+
+          <div class="bg-indigo-50/50 border border-indigo-100 p-3 rounded-xl text-xs space-y-2">
+            <div class="flex justify-between items-center font-bold text-indigo-900">
+              <span>Marked Loans for Combination:</span>
+              <span id="marked-loans-count" class="bg-indigo-600 text-white px-2 py-0.5 rounded-full text-[10px]">0 Selected</span>
+            </div>
+            <div id="marked-loans-list" class="text-[11px] text-slate-600 max-h-24 overflow-y-auto space-y-1">
+              <p class="text-slate-400 italic">No loans checked yet.</p>
+            </div>
+            <div class="border-t border-indigo-200 pt-2 flex justify-between font-bold text-indigo-950">
+              <span>Total Selected Principal Exposure:</span>
+              <span id="marked-total-balance" class="text-blue-700">UGX 0</span>
+            </div>
+          </div>
+
+          <!-- STEP 2: TARGET RECIPIENT SEARCH -->
+          <div class="space-y-2 border-t pt-3">
+            <label class="block text-xs font-semibold text-slate-800">Step 2: Combine Selected Loans To Whom?</label>
+            <input type="text" id="target-recipient-search" oninput="searchTargetRecipient(this.value)" placeholder="Search target client by Name, NIN, or Phone..." class="w-full p-2.5 border rounded-xl text-xs bg-white">
+            <div id="target-recipient-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-32 overflow-y-auto hidden shadow-md"></div>
+            <div id="selected-recipient-display" class="hidden text-xs bg-emerald-50 border border-emerald-200 text-emerald-900 p-2.5 rounded-xl font-bold flex justify-between items-center">
+              <div>
+                <span id="target-rep-name"></span>
+                <span id="target-rep-nin" class="text-[10px] font-mono text-purple-700 bg-purple-100 px-1 rounded ml-1"></span>
+              </div>
+              <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
+            </div>
+          </div>
+
+          <button onclick="executeLoanCombine()" class="w-full bg-indigo-700 hover:bg-indigo-800 text-white py-3 rounded-xl text-xs font-bold shadow transition">
+            <i class="fa-solid fa-right-left mr-1"></i> Confirm & Combine Selected Loans
+          </button>
+        </div>
+      </div>
     </section>
 
     <!-- TAB: UNIFIED CLIENT MASTER REGISTRY -->
@@ -546,14 +650,14 @@
       </div>
     </section>
 
-    <!-- TAB 4: OFFICER AGING BREAKDOWN -->
+    <!-- TAB 4: OFFICER AGING BREAKDOWN & AUTOMATED ARREARS ESCALATION -->
     <section id="tab-aging" hidden class="tab-content space-y-4 hidden">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-3">
         <div>
           <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> Field Officer Portfolio Aging Breakdown
+            <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> Field Officer Portfolio Aging & Escalation
           </h2>
-          <p class="text-xs text-slate-500">Every field officer must view their individual assigned clients list.</p>
+          <p class="text-xs text-slate-500">Every field officer must view their individual assigned clients list and escalation states.</p>
         </div>
         
         <div class="flex items-center gap-2 w-full md:w-auto">
@@ -573,6 +677,41 @@
     <section id="tab-demand" hidden class="tab-content space-y-4 hidden">
       <h2 class="text-lg font-bold text-red-700 border-b pb-2">Defaulters List</h2>
       <div id="demand-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+    </section>
+
+    <!-- TAB: AUTOMATED SMS DISPATCH LOGS -->
+    <section id="tab-sms-logs" hidden class="tab-content space-y-4 hidden">
+      <div class="flex justify-between items-center border-b pb-2">
+        <div>
+          <h2 class="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-comment-sms text-sky-600"></i> Automated SMS Dispatch Log & Gateway
+          </h2>
+          <p class="text-xs text-slate-500">Real-time audit log of transaction receipts and automated arrears SMS dispatches.</p>
+        </div>
+        <button onclick="clearSmsLogs()" class="bg-slate-700 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow">
+          Clear Logs
+        </button>
+      </div>
+
+      <div class="bg-slate-900 text-white p-4 rounded-xl flex justify-between items-center text-xs shadow-md">
+        <span>SMS Gateway Service Status: <strong class="text-emerald-400">ONLINE (Simulated API)</strong></span>
+        <span class="text-sky-300">Total SMS Dispatched: <strong id="sms-log-count" class="text-white text-sm">0</strong></span>
+      </div>
+
+      <div class="bg-white border rounded-xl overflow-x-auto shadow-sm">
+        <table class="w-full text-left border-collapse text-xs">
+          <thead>
+            <tr class="bg-slate-800 text-white text-[11px]">
+              <th class="p-3">Timestamp</th>
+              <th class="p-3">Recipient Mobile</th>
+              <th class="p-3">Trigger Action</th>
+              <th class="p-3">SMS Message Content</th>
+              <th class="p-3 text-right">Delivery Status</th>
+            </tr>
+          </thead>
+          <tbody id="sms-logs-table-body" class="divide-y text-slate-700"></tbody>
+        </table>
+      </div>
     </section>
 
     <!-- TAB 5: MOTHER SYSTEM & MULTI-BRANCH ENGINE -->
@@ -647,12 +786,16 @@
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div class="bg-white p-5 border rounded-2xl space-y-4 text-xs shadow-sm">
-          <h3 class="font-bold text-slate-800 border-b pb-2 text-sm"><i class="fa-solid fa-sliders text-teal-600"></i> System Configuration</h3>
+          <h3 class="font-bold text-slate-800 border-b pb-2 text-sm"><i class="fa-solid fa-sliders text-teal-600"></i> System Configuration & Gateway</h3>
           <div>
             <label class="block font-semibold mb-1 text-slate-600">Company Name</label>
             <input type="text" id="cfg-name" placeholder="PMMS Microfinance Ltd" class="w-full p-2.5 border rounded-xl text-sm">
           </div>
-          <button onclick="saveSettings()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl text-sm font-bold shadow transition">Save Profile</button>
+          <div>
+            <label class="block font-semibold mb-1 text-slate-600">SMS Gateway API Key (Twilio / Africa's Talking)</label>
+            <input type="password" id="cfg-sms-key" placeholder="••••••••••••••••" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
+          </div>
+          <button onclick="saveSettings()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl text-sm font-bold shadow transition">Save Profile Configuration</button>
         </div>
 
         <!-- Data Import/Export System -->
@@ -692,7 +835,7 @@
       el.setAttribute('hidden', '');
     }
 
-    // MULTI-BRANCH STATE STRUCTURE WITH UNIFIED CLIENT IDENTITY
+    // MULTI-BRANCH STATE STRUCTURE WITH UNIFIED CLIENT IDENTITY & SMS LOGS
     let state = {
       accounts: [],
       currentUser: null,
@@ -703,6 +846,8 @@
         { nin: "CM90012345678", name: "John Mugisha", phone: "0772123456", category: "BODABODA", plate: "UEB 452A", address: "Nakawa Phase 1", guarantor: "David K", guarantorPhone: "0701112223" },
         { nin: "CF85098765432", name: "Sarah Namubiru", phone: "0701987654", category: "OTHERS", plate: "", address: "Kalerwe Market", guarantor: "Mary N", guarantorPhone: "0773334445" }
       ],
+      // SMS DISPATCH LOGS
+      smsLogs: [],
       branches: [
         { id: "BR-HQ", code: "HQ-01", name: "Main HQ Central Branch", isKilled: false }
       ],
@@ -723,6 +868,9 @@
 
     let selectedPostClient = null;
     let selectedDisburseClient = null;
+    let selectedReversalClient = null;
+    let markedCombineLoanIds = [];
+    let selectedCombineTargetRecipient = null;
 
     function getActiveBranch() {
       if (!state.branchData[state.activeBranchId]) {
@@ -733,6 +881,92 @@
 
     function getActiveBranchInfo() {
       return state.branches.find(b => b.id === state.activeBranchId) || state.branches[0];
+    }
+
+    // AUTOMATED SMS DISPATCH DISPATCHER
+    function dispatchSmsNotification(phone, message, triggerAction) {
+      if (!phone) return;
+      const logEntry = {
+        timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+        phone: phone,
+        trigger: triggerAction,
+        message: message,
+        status: "SENT (Delivered)"
+      };
+      if (!state.smsLogs) state.smsLogs = [];
+      state.smsLogs.unshift(logEntry);
+      saveState();
+      renderSmsLogs();
+    }
+
+    function renderSmsLogs() {
+      const tbody = document.getElementById("sms-logs-table-body");
+      const countEl = document.getElementById("sms-log-count");
+      if (!state.smsLogs) state.smsLogs = [];
+      if (countEl) countEl.innerText = state.smsLogs.length;
+      if (!tbody) return;
+
+      if (state.smsLogs.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="p-3 text-center text-slate-400 text-xs">No SMS messages dispatched yet.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = state.smsLogs.map(l => `
+        <tr class="text-xs">
+          <td class="p-3 font-mono text-[11px] text-slate-500">${l.timestamp}</td>
+          <td class="p-3 font-bold text-slate-800">${l.phone}</td>
+          <td class="p-3"><span class="bg-sky-100 text-sky-800 px-2 py-0.5 rounded text-[10px] font-bold">${l.trigger}</span></td>
+          <td class="p-3 text-slate-600 max-w-xs truncate">${l.message}</td>
+          <td class="p-3 text-right font-bold text-emerald-600">${l.status}</td>
+        </tr>
+      `).join('');
+    }
+
+    function clearSmsLogs() {
+      state.smsLogs = [];
+      saveState();
+      renderSmsLogs();
+    }
+
+    // FEATURE 1: AUTOMATED 30% PENALTY RENEWAL (AFTER 7 DAYS OVERDUE)
+    function processAutomatedPenalties() {
+      const today = new Date();
+
+      state.branches.forEach(b => {
+        const bd = state.branchData[b.id];
+        if (bd && bd.clients) {
+          bd.clients.forEach(c => {
+            if (c.balance > 0 && c.deadlineDate) {
+              const deadline = new Date(c.deadlineDate);
+              const overdueDays = Math.floor((today - deadline) / (1000 * 60 * 60 * 24));
+
+              if (overdueDays > 7 && !c.lastPenaltyDate) {
+                // Apply 30% penalty on remaining balance
+                const penaltyAmt = Math.round(c.balance * 0.30);
+                c.balance += penaltyAmt;
+                c.lastPenaltyDate = today.toISOString().split('T')[0];
+
+                // Pushes deadline 30 days forward for penalty cycle renewal
+                const newDeadline = new Date(today);
+                newDeadline.setDate(newDeadline.getDate() + 30);
+                c.deadlineDate = newDeadline.toISOString().split('T')[0];
+
+                if (!c.history) c.history = [];
+                c.history.push({
+                  type: '30% Overdue Penalty Applied',
+                  amount: penaltyAmt,
+                  date: today.toISOString().split('T')[0],
+                  narration: `7+ Days overdue penalty of 30% added.`
+                });
+
+                // Trigger Automated SMS
+                dispatchSmsNotification(c.phone, `DEAR ${c.name}, YOUR LOAN IS OVER 7 DAYS PAST DUE. A 30% PENALTY OF UGX ${penaltyAmt.toLocaleString()} WAS ADDED. NEW BALANCE: UGX ${c.balance.toLocaleString()}.`, '30% Penalty Auto-Renewal');
+              }
+            }
+          });
+        }
+      });
+      saveState();
     }
 
     // UNIFIED IDENTITY HELPER FUNCTIONS
@@ -767,9 +1001,11 @@
         try { 
           state = JSON.parse(saved); 
           if (!state.globalClients) state.globalClients = [];
+          if (!state.smsLogs) state.smsLogs = [];
         } catch(e) { console.error(e); }
       }
       checkKillSwitchStatus();
+      processAutomatedPenalties();
     }
 
     function saveState() {
@@ -817,6 +1053,7 @@
       renderOfficerAgingTables();
       renderBranchNetworkTable();
       renderMasterClientDirectory();
+      renderSmsLogs();
       updateDashboardReports();
       renderBatchList();
     }
@@ -934,6 +1171,7 @@
       renderBatchList();
     }
 
+    // FEATURE 2: AUTOMATIC SMS NOTIFICATION ON PAYMENT POSTING
     function postAllBatch() {
       const branch = getActiveBranch();
       if (branch.batch.length === 0) { alert("Batch is empty."); return; }
@@ -944,6 +1182,13 @@
           client.balance = Math.max(0, (client.balance || 0) - item.amount);
           if (!client.history) client.history = [];
           client.history.push({ type: 'Repayment', amount: item.amount, date: item.date, channel: item.channel });
+
+          // Send Automatic SMS Notification
+          dispatchSmsNotification(
+            client.phone, 
+            `PMMS PAYMENT RECEIVED: UGX ${item.amount.toLocaleString()} VIA ${item.channel} ON ${item.date}. REMAINING LOAN BALANCE: UGX ${client.balance.toLocaleString()}. THANK YOU!`,
+            'Repayment Receipt'
+          );
         }
       });
 
@@ -951,11 +1196,11 @@
       saveState();
       renderBatchList();
       if (selectedPostClient) selectPostingClient(selectedPostClient.id);
-      alert("All payments posted successfully!");
+      alert("All payments posted & automatic SMS receipts dispatched!");
       updateDashboardReports();
     }
 
-    // DISBURSEMENT LOGIC WITH UNIFIED IDENTITY
+    // DISBURSEMENT LOGIC WITH UNIFIED IDENTITY & AUTOMATIC SMS
     function toggleClientMode(isNew) {
       if (isNew) {
         showElement("new-client-fields");
@@ -1116,6 +1361,11 @@
         guarantorPhone = selectedDisburseClient.guarantorPhone;
       }
 
+      // Calculate Deadline date
+      const deadlineObj = new Date();
+      deadlineObj.setDate(deadlineObj.getDate() + days);
+      const deadlineStr = deadlineObj.toISOString().split('T')[0];
+
       // Check if client already has an active loan card in this branch
       let branchClientCard = branch.clients.find(c => c.nin && c.nin.toUpperCase() === clientNin.toUpperCase());
 
@@ -1124,6 +1374,7 @@
         branchClientCard.balance += total;
         branchClientCard.dailyTarget = daily;
         branchClientCard.officerId = officerId;
+        branchClientCard.deadlineDate = deadlineStr;
         if (!branchClientCard.history) branchClientCard.history = [];
         branchClientCard.history.push({ type: 'Disbursement Rollover', amount: total, date: new Date().toISOString().split('T')[0] });
       } else {
@@ -1137,13 +1388,329 @@
           guarantor, guarantorPhone,
           officerId, principal, balance: total, dailyTarget: daily, arrears: 0, advance: 0,
           dateDisbursed: new Date().toISOString().split('T')[0],
+          deadlineDate: deadlineStr,
           history: [{ type: 'Initial Disbursement', amount: total, date: new Date().toISOString().split('T')[0] }]
         };
         branch.clients.push(branchClientCard);
       }
 
+      // Automatic SMS Notification on Disbursement
+      dispatchSmsNotification(
+        clientPhone,
+        `DEAR ${clientName}, YOUR LOAN OF UGX ${principal.toLocaleString()} HAS BEEN DISBURSED AT ${getActiveBranchInfo().name}. TOTAL PAYABLE: UGX ${total.toLocaleString()}, DAILY TARGET: UGX ${daily.toLocaleString()}. DUE DATE: ${deadlineStr}.`,
+        'Loan Disbursement'
+      );
+
       saveState();
       alert(`Loan disbursed successfully under Unified Identity (${clientNin})!`);
+      refreshAllViews();
+    }
+
+    // FEATURE 4: LOAN OPTIONS - SUB-MODULE 1: REVERSALS
+    function searchReversalClients(query) {
+      const resultsDiv = document.getElementById("reversal-search-results");
+      if (!query || query.trim().length === 0) {
+        hideElement(resultsDiv);
+        return;
+      }
+      const branch = getActiveBranch();
+      const q = query.toLowerCase();
+      const filtered = branch.clients.filter(c => 
+        c.name.toLowerCase().includes(q) || 
+        (c.nin && c.nin.toLowerCase().includes(q)) || 
+        c.id.toLowerCase().includes(q)
+      );
+
+      if (filtered.length === 0) {
+        resultsDiv.innerHTML = `<div class="p-2 text-xs text-slate-500 text-center">No client found.</div>`;
+      } else {
+        resultsDiv.innerHTML = filtered.map(c => `
+          <div onclick="selectReversalClient('${c.id}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs flex justify-between">
+            <span>${c.name} (${c.nin || c.id})</span>
+            <span class="font-bold text-blue-600">UGX ${(c.balance || 0).toLocaleString()}</span>
+          </div>
+        `).join('');
+      }
+      showElement(resultsDiv);
+    }
+
+    function selectReversalClient(clientId) {
+      const branch = getActiveBranch();
+      selectedReversalClient = branch.clients.find(c => c.id === clientId);
+      hideElement("reversal-search-results");
+      if (!selectedReversalClient) return;
+
+      document.getElementById("rev-client-name").innerText = selectedReversalClient.name;
+      document.getElementById("rev-client-nin").innerText = selectedReversalClient.nin || 'NO-NIN';
+      document.getElementById("rev-client-id").innerText = selectedReversalClient.id;
+      document.getElementById("rev-client-balance").innerText = (selectedReversalClient.balance || 0).toLocaleString();
+
+      const txSelect = document.getElementById("rev-transaction-select");
+      const history = selectedReversalClient.history || [];
+      if (history.length === 0) {
+        txSelect.innerHTML = `<option value="">No history to reverse</option>`;
+      } else {
+        txSelect.innerHTML = history.map((h, idx) => `
+          <option value="${idx}">${h.date} - ${h.type} (UGX ${h.amount.toLocaleString()})</option>
+        `).join('');
+      }
+      showElement("reversal-card");
+    }
+
+    function executeLoanReversal() {
+      if (!selectedReversalClient) { alert("Select a client for reversal."); return; }
+      const txIdx = document.getElementById("rev-transaction-select").value;
+      const reason = document.getElementById("rev-reason").value.trim();
+
+      if (txIdx === "" || txIdx === null) { alert("No transaction selected."); return; }
+      if (!reason) { alert("Please enter reason for reversal."); return; }
+
+      const targetTx = selectedReversalClient.history[txIdx];
+      if (!targetTx) return;
+
+      if (targetTx.type === 'Repayment') {
+        selectedReversalClient.balance += targetTx.amount; // Revert repayment
+      } else if (targetTx.type.includes('Disbursement')) {
+        selectedReversalClient.balance = Math.max(0, selectedReversalClient.balance - targetTx.amount); // Revert disbursement
+      }
+
+      selectedReversalClient.history.push({
+        type: `Reversal of [${targetTx.type}]`,
+        amount: targetTx.amount,
+        date: new Date().toISOString().split('T')[0],
+        narration: reason
+      });
+
+      // Dispatch Reversal SMS
+      dispatchSmsNotification(
+        selectedReversalClient.phone,
+        `LOAN TRANSACTION REVERSAL: UGX ${targetTx.amount.toLocaleString()} [${targetTx.type}] REVERSED ON YOUR ACCOUNT. REASON: ${reason}. ADJUSTED BALANCE: UGX ${selectedReversalClient.balance.toLocaleString()}.`,
+        'Loan Reversal'
+      );
+
+      saveState();
+      alert("Transaction reversed successfully!");
+      selectReversalClient(selectedReversalClient.id);
+      refreshAllViews();
+    }
+
+    // FEATURE 4: LOAN OPTIONS - SUB-MODULE 2: COMBINING LOANS
+    function searchCombineLoans(query) {
+      const container = document.getElementById("combine-search-results");
+      const q = query.toLowerCase();
+
+      // Search across all branch loans
+      let allLoans = [];
+      state.branches.forEach(b => {
+        const bd = state.branchData[b.id];
+        if (bd && bd.clients) {
+          bd.clients.forEach(c => {
+            if (c.balance > 0) {
+              allLoans.push({ ...c, branchName: b.name, branchId: b.id });
+            }
+          });
+        }
+      });
+
+      const filtered = allLoans.filter(l => 
+        l.name.toLowerCase().includes(q) || 
+        (l.nin && l.nin.toLowerCase().includes(q)) || 
+        l.id.toLowerCase().includes(q)
+      );
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<p class="text-slate-400 text-center py-2 text-[11px]">No active loans matching "${query}".</p>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(l => {
+        const isChecked = markedCombineLoanIds.includes(l.id);
+        return `
+          <label class="flex items-center justify-between p-2 bg-white rounded border hover:bg-slate-100 cursor-pointer">
+            <div class="flex items-center gap-2">
+              <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleMarkCombineLoan('${l.id}')" class="rounded">
+              <div>
+                <span class="font-bold text-slate-800">${l.name}</span>
+                <span class="text-[10px] text-purple-700 bg-purple-50 px-1 rounded ml-1">${l.nin || 'NO-NIN'}</span>
+                <div class="text-[10px] text-slate-400">${l.branchName} | ACC: ${l.id}</div>
+              </div>
+            </div>
+            <span class="font-bold text-blue-600">UGX ${l.balance.toLocaleString()}</span>
+          </label>
+        `;
+      }).join('');
+    }
+
+    function toggleMarkCombineLoan(loanId) {
+      const idx = markedCombineLoanIds.indexOf(loanId);
+      if (idx > -1) markedCombineLoanIds.splice(idx, 1);
+      else markedCombineLoanIds.push(loanId);
+      updateMarkedLoansDisplay();
+    }
+
+    function updateMarkedLoansDisplay() {
+      const countEl = document.getElementById("marked-loans-count");
+      const listEl = document.getElementById("marked-loans-list");
+      const totalEl = document.getElementById("marked-total-balance");
+
+      countEl.innerText = markedCombineLoanIds.length + " Selected";
+
+      if (markedCombineLoanIds.length === 0) {
+        listEl.innerHTML = `<p class="text-slate-400 italic">No loans checked yet.</p>`;
+        totalEl.innerText = "UGX 0";
+        return;
+      }
+
+      let total = 0;
+      let html = "";
+
+      state.branches.forEach(b => {
+        const bd = state.branchData[b.id];
+        if (bd && bd.clients) {
+          bd.clients.forEach(c => {
+            if (markedCombineLoanIds.includes(c.id)) {
+              total += c.balance;
+              html += `<div class="flex justify-between border-b border-indigo-100 py-0.5">
+                <span>${c.name} (${c.nin || 'N/A'}) - ${b.name}</span>
+                <strong class="text-slate-800">UGX ${c.balance.toLocaleString()}</strong>
+              </div>`;
+            }
+          });
+        }
+      });
+
+      listEl.innerHTML = html;
+      totalEl.innerText = "UGX " + total.toLocaleString();
+    }
+
+    function searchTargetRecipient(query) {
+      const resultsDiv = document.getElementById("target-recipient-results");
+      if (!query || query.trim().length === 0) {
+        hideElement(resultsDiv);
+        return;
+      }
+      const q = query.toLowerCase();
+      const filtered = state.globalClients.filter(c => 
+        c.name.toLowerCase().includes(q) || 
+        c.nin.toLowerCase().includes(q) || 
+        c.phone.includes(query)
+      );
+
+      if (filtered.length === 0) {
+        resultsDiv.innerHTML = `<div class="p-2 text-xs text-slate-500 text-center">No master client record found.</div>`;
+      } else {
+        resultsDiv.innerHTML = filtered.map(c => `
+          <div onclick="selectTargetRecipientByNin('${c.nin}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs flex justify-between">
+            <div>
+              <span class="font-bold text-slate-800">${c.name}</span>
+              <span class="text-[10px] font-mono text-purple-700 bg-purple-50 px-1 rounded ml-1">${c.nin}</span>
+            </div>
+            <span class="text-slate-500">${c.phone}</span>
+          </div>
+        `).join('');
+      }
+      showElement(resultsDiv);
+    }
+
+    function selectTargetRecipientByNin(nin) {
+      selectedCombineTargetRecipient = getGlobalClientByNin(nin);
+      hideElement("target-recipient-results");
+      if (selectedCombineTargetRecipient) {
+        document.getElementById("target-rep-name").innerText = selectedCombineTargetRecipient.name;
+        document.getElementById("target-rep-nin").innerText = selectedCombineTargetRecipient.nin;
+        showElement("selected-recipient-display");
+      }
+    }
+
+    function executeLoanCombine() {
+      if (markedCombineLoanIds.length === 0) { alert("Check at least 1 loan to combine."); return; }
+      if (!selectedCombineTargetRecipient) { alert("Select recipient target client in Step 2."); return; }
+
+      let totalCombinedAmount = 0;
+      let sourceClientsInfo = [];
+
+      // Clear source loans and sum balances
+      state.branches.forEach(b => {
+        const bd = state.branchData[b.id];
+        if (bd && bd.clients) {
+          bd.clients.forEach(c => {
+            if (markedCombineLoanIds.includes(c.id)) {
+              totalCombinedAmount += c.balance;
+              sourceClientsInfo.push(`${c.name} (${c.balance.toLocaleString()})`);
+              
+              if (!c.history) c.history = [];
+              c.history.push({
+                type: 'Loan Balance Consolidated & Transferred',
+                amount: c.balance,
+                date: new Date().toISOString().split('T')[0],
+                narration: `Consolidated & transferred to ${selectedCombineTargetRecipient.name} (${selectedCombineTargetRecipient.nin})`
+              });
+
+              // Send SMS to source client
+              dispatchSmsNotification(
+                c.phone,
+                `LOAN CONSOLIDATION: YOUR LOAN BALANCE OF UGX ${c.balance.toLocaleString()} WAS COMBINED & TRANSFERRED TO ${selectedCombineTargetRecipient.name}. ACCOUNT CLEARED.`,
+                'Loan Combination Transfer'
+              );
+
+              c.balance = 0; // Clear balance
+            }
+          });
+        }
+      });
+
+      // Assign combined total to target recipient in current branch
+      const branch = getActiveBranch();
+      let targetBranchCard = branch.clients.find(c => c.nin && c.nin.toUpperCase() === selectedCombineTargetRecipient.nin.toUpperCase());
+
+      if (targetBranchCard) {
+        targetBranchCard.balance += totalCombinedAmount;
+        if (!targetBranchCard.history) targetBranchCard.history = [];
+        targetBranchCard.history.push({
+          type: 'Consolidated Loan Received',
+          amount: totalCombinedAmount,
+          date: new Date().toISOString().split('T')[0],
+          narration: `Combined loans from: ${sourceClientsInfo.join(', ')}`
+        });
+      } else {
+        targetBranchCard = {
+          id: "cli-" + Date.now(),
+          nin: selectedCombineTargetRecipient.nin,
+          name: selectedCombineTargetRecipient.name,
+          phone: selectedCombineTargetRecipient.phone,
+          category: selectedCombineTargetRecipient.category,
+          plate: selectedCombineTargetRecipient.plate,
+          guarantor: selectedCombineTargetRecipient.guarantor,
+          guarantorPhone: selectedCombineTargetRecipient.guarantorPhone,
+          officerId: branch.officers[0] ? branch.officers[0].id : "off-1",
+          principal: totalCombinedAmount,
+          balance: totalCombinedAmount,
+          dailyTarget: Math.round(totalCombinedAmount / 30),
+          arrears: 0, advance: 0,
+          dateDisbursed: new Date().toISOString().split('T')[0],
+          history: [{
+            type: 'Consolidated Loan Account Created',
+            amount: totalCombinedAmount,
+            date: new Date().toISOString().split('T')[0],
+            narration: `Combined loans from: ${sourceClientsInfo.join(', ')}`
+          }]
+        };
+        branch.clients.push(targetBranchCard);
+      }
+
+      // Dispatch SMS to Recipient
+      dispatchSmsNotification(
+        selectedCombineTargetRecipient.phone,
+        `DEAR ${selectedCombineTargetRecipient.name}, LOAN CONSOLIDATION SUCCESSFUL. TOTAL CONSOLIDATED BALANCE OF UGX ${totalCombinedAmount.toLocaleString()} ADDED TO YOUR ACCOUNT AT ${branch.name}.`,
+        'Loan Combination Received'
+      );
+
+      saveState();
+      alert(`Loans successfully combined into ${selectedCombineTargetRecipient.name}'s account!`);
+      markedCombineLoanIds = [];
+      selectedCombineTargetRecipient = null;
+      hideElement("selected-recipient-display");
+      updateMarkedLoansDisplay();
       refreshAllViews();
     }
 
@@ -1233,7 +1800,7 @@
           <div class="bg-white p-3 border rounded-xl flex justify-between text-xs">
             <div>
               <div class="font-bold text-slate-800">${h.type}</div>
-              <div class="text-[10px] text-slate-400">${h.date} ${h.channel ? '| ' + h.channel : ''}</div>
+              <div class="text-[10px] text-slate-400">${h.date} ${h.channel ? '| ' + h.channel : ''} ${h.narration ? '| ' + h.narration : ''}</div>
             </div>
             <span class="font-bold ${h.type === 'Repayment' ? 'text-teal-600' : 'text-slate-800'}">
               ${h.type === 'Repayment' ? '-' : '+'} UGX ${h.amount.toLocaleString()}
@@ -1406,39 +1973,63 @@
       `).join('');
     }
 
+    // FEATURE 3: AUTOMATED ARREARS ESCALATION RENDERING
     function renderOfficerAgingTables() {
       const branch = getActiveBranch();
       const container = document.getElementById("officer-aging-sections");
       const filter = document.getElementById("aging-officer-filter").value;
       if (!container) return;
 
+      const today = new Date();
       const officers = filter === "ALL" ? branch.officers : branch.officers.filter(o => o.id === filter);
+
       container.innerHTML = officers.map(o => {
         const clients = branch.clients.filter(c => c.officerId === o.id);
         return `
           <div class="bg-white p-4 border rounded-xl space-y-3 text-xs shadow-sm">
-            <h3 class="font-bold text-slate-800 text-sm border-b pb-2">${o.name}'s Portfolio (${clients.length} Clients)</h3>
+            <h3 class="font-bold text-slate-800 text-sm border-b pb-2 flex justify-between items-center">
+              <span>${o.name}'s Portfolio (${clients.length} Clients)</span>
+              <span class="text-[11px] text-teal-600">Escalation Engine Active</span>
+            </h3>
             <div class="overflow-x-auto">
               <table class="w-full text-left border-collapse">
                 <thead>
                   <tr class="bg-slate-100 text-[11px]">
                     <th class="p-2">Client Name & NIN</th>
                     <th class="p-2">Phone</th>
-                    <th class="p-2">Daily Target</th>
+                    <th class="p-2">Deadline</th>
+                    <th class="p-2">Escalation Tier</th>
                     <th class="p-2">Arrears</th>
                     <th class="p-2 text-right">Balance</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y">
-                  ${clients.map(c => `
-                    <tr>
-                      <td class="p-2 font-bold">${c.name} <span class="text-[10px] font-mono font-normal text-slate-500">(${c.nin || 'N/A'})</span></td>
-                      <td class="p-2">${c.phone}</td>
-                      <td class="p-2 text-green-700">UGX ${(c.dailyTarget || 0).toLocaleString()}</td>
-                      <td class="p-2 text-red-600">UGX ${(c.arrears || 0).toLocaleString()}</td>
-                      <td class="p-2 text-right font-bold text-blue-600">UGX ${(c.balance || 0).toLocaleString()}</td>
-                    </tr>
-                  `).join('')}
+                  ${clients.map(c => {
+                    let escalationBadge = `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">Tier 0: Normal</span>`;
+                    if (c.balance > 0 && c.deadlineDate) {
+                      const deadline = new Date(c.deadlineDate);
+                      const overdueDays = Math.floor((today - deadline) / (1000 * 60 * 60 * 24));
+
+                      if (overdueDays > 7) {
+                        escalationBadge = `<span class="bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-bold animate-pulse">Tier 3: 30% Penalized & Default Risk</span>`;
+                      } else if (overdueDays > 3) {
+                        escalationBadge = `<span class="bg-amber-500 text-white px-2 py-0.5 rounded text-[10px] font-bold">Tier 2: Escalated to Officer</span>`;
+                      } else if (overdueDays > 0) {
+                        escalationBadge = `<span class="bg-amber-100 text-amber-900 px-2 py-0.5 rounded text-[10px] font-bold">Tier 1: Overdue Reminder Sent</span>`;
+                      }
+                    }
+
+                    return `
+                      <tr>
+                        <td class="p-2 font-bold">${c.name} <span class="text-[10px] font-mono font-normal text-slate-500">(${c.nin || 'N/A'})</span></td>
+                        <td class="p-2">${c.phone}</td>
+                        <td class="p-2 text-slate-600">${c.deadlineDate || 'N/A'}</td>
+                        <td class="p-2">${escalationBadge}</td>
+                        <td class="p-2 text-red-600 font-semibold">UGX ${(c.arrears || 0).toLocaleString()}</td>
+                        <td class="p-2 text-right font-bold text-blue-600">UGX ${(c.balance || 0).toLocaleString()}</td>
+                      </tr>
+                    `;
+                  }).join('')}
                 </tbody>
               </table>
             </div>

@@ -13,16 +13,6 @@
       background-color: rgba(15, 23, 42, 0.95); z-index: 9999;
       display: flex; align-items: center; justify-content: center; padding: 1rem;
     }
-  </style>
-
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- PDF Generation Libraries -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
-  <!-- Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <style>
     @media print {
       body * { visibility: hidden; }
       #printable-area, #printable-area * { visibility: visible; }
@@ -33,22 +23,26 @@
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- PDF & Thermal Printing Libraries -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+  <!-- Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen pb-28 md:pb-12">
 
   <!-- BRANCH REMOTE KILL SWITCH OVERLAY -->
-  <div id="kill-switch-overlay" hidden class="fixed inset-0 bg-red-950/95 z-[100] flex items-center justify-center p-4 hidden fallback-overlay">
+  <div id="kill-switch-overlay" hidden class="fixed inset-0 bg-red-950/95 z-[100] flex items-center justify-center p-4 fallback-overlay">
     <div class="bg-white rounded-2xl p-6 md:p-8 w-full max-w-md text-center space-y-4 shadow-2xl border-4 border-red-600">
       <div class="w-16 h-16 bg-red-100 text-red-600 rounded-full flex items-center justify-center mx-auto text-3xl font-bold animate-pulse">
         <i class="fa-solid fa-power-off"></i>
       </div>
-      <h2 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight" id="kill-switch-title">BRANCH TERMINAL OFF</h2>
-      <p class="text-xs md:text-sm text-slate-600 leading-relaxed" id="kill-switch-desc">
+      <h2 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight">BRANCH TERMINAL OFF</h2>
+      <p class="text-xs md:text-sm text-slate-600 leading-relaxed">
         This branch terminal has been turned OFF by Mother System. All branch records and data remain safe and preserved.
       </p>
-      <div class="bg-red-50 border border-red-200 p-3 rounded-xl text-xs text-red-800 font-medium">
-        <i class="fa-solid fa-triangle-exclamation mr-1"></i> Switch active branch or activate via Mother System in Settings.
-      </div>
       <div class="pt-2 border-t flex justify-center gap-2">
         <button onclick="unlockViaMasterOverride()" class="text-xs bg-slate-800 text-white px-3 py-1.5 rounded-lg font-bold">
           Master HQ Unlock
@@ -57,38 +51,43 @@
     </div>
   </div>
 
-  <!-- ACCOUNT AUTHENTICATION OVERLAY -->
-  <div id="auth-overlay" hidden class="fixed inset-0 bg-slate-900/95 z-50 flex items-center justify-center p-4 hidden fallback-overlay">
+  <!-- STRICT AUTHENTICATION OVERLAY (Rule 10) -->
+  <div id="auth-overlay" class="fixed inset-0 bg-slate-900/98 z-50 flex items-center justify-center p-4 fallback-overlay">
     <div class="bg-white rounded-2xl p-6 w-full max-w-sm text-center space-y-4 shadow-2xl">
-      <div class="w-14 h-14 bg-slate-100 text-slate-800 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
+      <div class="w-14 h-14 bg-teal-100 text-teal-800 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
         <i class="fa-solid fa-user-shield"></i>
       </div>
+      <h3 class="font-black text-slate-900 text-base" id="auth-modal-title">PMMS TERMINAL AUTHENTICATION</h3>
       <div class="flex border-b text-xs font-bold">
         <button id="tab-btn-login" onclick="switchAuthTab('login')" class="w-1/2 py-2 text-slate-800 border-b-2 border-slate-800">LOGIN</button>
-        <button id="tab-btn-register" onclick="switchAuthTab('register')" class="w-1/2 py-2 text-slate-400">CREATE ACCOUNT</button>
+        <button id="tab-btn-register" onclick="switchAuthTab('register')" class="w-1/2 py-2 text-slate-400">REGISTER ACCOUNT</button>
       </div>
+      
+      <!-- LOGIN FORM -->
       <div id="auth-form-login" class="space-y-3 text-left">
         <div>
-          <label class="block text-[11px] font-bold text-slate-600 mb-1">Gmail or Username</label>
-          <input type="text" id="login-identifier" placeholder="e.g. user@gmail.com" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
+          <label class="block text-[11px] font-bold text-slate-600 mb-1">Username or Gmail</label>
+          <input type="text" id="login-identifier" placeholder="e.g. admin or user@gmail.com" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
         </div>
         <div>
           <label class="block text-[11px] font-bold text-slate-600 mb-1">Password</label>
           <input type="password" id="login-password" placeholder="••••••••" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
         </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1">Branch Code (e.g. HQ-01)</label>
+          <input type="text" id="login-branch-code" placeholder="HQ-01" class="w-full p-2.5 border rounded-xl text-xs uppercase bg-slate-50 font-bold">
+        </div>
         <button onclick="handleLogin()" class="w-full bg-slate-800 text-white py-3 rounded-xl font-bold text-xs hover:bg-slate-900 shadow transition">ACCESS TERMINAL</button>
       </div>
+
+      <!-- REGISTER FORM -->
       <div id="auth-form-register" hidden class="space-y-3 text-left hidden">
         <input type="text" id="reg-name" placeholder="Full Name" class="w-full p-2 border rounded-xl text-xs bg-slate-50">
         <input type="email" id="reg-email" placeholder="Gmail Address" class="w-full p-2 border rounded-xl text-xs bg-slate-50">
         <input type="text" id="reg-username" placeholder="Username" class="w-full p-2 border rounded-xl text-xs bg-slate-50">
         <input type="password" id="reg-password" placeholder="Password" class="w-full p-2 border rounded-xl text-xs bg-slate-50">
-        <button onclick="sendGmailVerificationCode()" class="w-full bg-teal-600 text-white py-2.5 rounded-xl font-bold text-xs hover:bg-teal-700 shadow">SEND CODE TO GMAIL</button>
-      </div>
-      <div id="auth-form-verify" hidden class="space-y-3 text-left hidden">
-        <div class="bg-teal-50 border border-teal-200 p-2.5 rounded-xl text-[11px] text-teal-800">Code sent to <strong id="verify-email-target"></strong>.</div>
-        <input type="text" id="verify-code-input" maxlength="6" placeholder="6-digit code" class="w-full p-2.5 border rounded-xl text-center text-lg font-bold">
-        <button onclick="confirmGmailVerification()" class="w-full bg-emerald-600 text-white py-2.5 rounded-xl font-bold text-xs hover:bg-emerald-700 shadow">VERIFY & REGISTER</button>
+        <input type="text" id="reg-branch-code" placeholder="Branch Code assigned by Mother" class="w-full p-2 border rounded-xl text-xs uppercase bg-slate-50 font-bold">
+        <button onclick="handleRegister()" class="w-full bg-teal-600 text-white py-2.5 rounded-xl font-bold text-xs hover:bg-teal-700 shadow">CREATE & VERIFY ACCOUNT</button>
       </div>
     </div>
   </div>
@@ -103,16 +102,17 @@
         </h1>
         <div class="flex items-center gap-2 text-[10px] md:text-xs text-slate-400">
           <span id="header-user-tag">User: Guest</span> | 
-          <span class="text-teal-300 font-bold">Terminal Branch: 
+          <span class="text-teal-300 font-bold">Branch: 
             <select id="active-branch-selector" onchange="switchActiveBranch(this.value)" class="bg-slate-700 text-teal-200 border border-slate-600 rounded px-1.5 py-0.5 text-[11px] font-semibold focus:outline-none"></select>
           </span>
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <button onclick="triggerQuickPrint()" class="bg-slate-700 hover:bg-slate-600 text-teal-300 text-xs px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1 transition">
-          <i class="fa-solid fa-print"></i> <span class="hidden sm:inline">Print</span>
+        <!-- Rule 1: X-Printer Connection & Print Button -->
+        <button onclick="connectXPrinter()" id="xprinter-btn" class="bg-teal-600 hover:bg-teal-500 text-white text-xs px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1 transition shadow">
+          <i class="fa-solid fa-print"></i> <span id="xprinter-status-text">Connect X-Printer</span>
         </button>
-        <button onclick="lockApp()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs px-2.5 py-1.5 rounded-lg font-bold transition">
+        <button onclick="lockApp()" class="bg-slate-700 hover:bg-slate-600 text-slate-300 hover:text-white text-xs px-2.5 py-1.5 rounded-lg font-bold transition" title="Lock Terminal">
           <i class="fa-solid fa-right-from-bracket"></i>
         </button>
       </div>
@@ -124,18 +124,20 @@
     <div class="flex space-x-2 md:space-x-4 max-w-7xl mx-auto whitespace-nowrap px-1">
       <button onclick="showTab('tab-posting')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Posting</button>
       <button onclick="showTab('tab-disburse')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Disburse</button>
+      <button onclick="showTab('tab-savings')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-emerald-400 transition"><i class="fa-solid fa-piggy-bank mr-1"></i>Savings</button>
       <button onclick="showTab('tab-loan-ops')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-indigo-400 transition"><i class="fa-solid fa-sliders mr-1"></i>Loan Operations</button>
-      <button onclick="showTab('tab-unified-clients')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-purple-400 transition"><i class="fa-solid fa-id-card mr-1"></i>Master Client Registry</button>
-      <button onclick="showTab('tab-officers')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-teal-400 transition">Officers</button>
+      <button onclick="showTab('tab-unified-clients')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-purple-400 transition"><i class="fa-solid fa-id-card mr-1"></i>Clients & Savings Statements</button>
+      <button onclick="showTab('tab-officers')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-teal-400 transition"><i class="fa-solid fa-user-tie mr-1"></i>Staff Hub</button>
       <button onclick="showTab('tab-bankings')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-blue-400 transition"><i class="fa-solid fa-building-columns mr-1"></i>Bankings</button>
       <button onclick="showTab('tab-expenses')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-rose-400 transition"><i class="fa-solid fa-wallet mr-1"></i>Expenses</button>
       <button onclick="showTab('tab-capital')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-emerald-400 transition"><i class="fa-solid fa-coins mr-1"></i>Capital</button>
-      <button onclick="showTab('tab-statement')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Statements</button>
-      <button onclick="showTab('tab-reports')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Reports</button>
-      <button onclick="showTab('tab-aging')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-amber-400 transition"><i class="fa-solid fa-clock-rotate-left mr-1"></i>Officer Aging</button>
+      <button onclick="showTab('tab-statement')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Loan Statements</button>
+      <button onclick="showTab('tab-reports')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Reports & Summaries</button>
+      <button onclick="showTab('tab-aging')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-amber-400 transition"><i class="fa-solid fa-clock-rotate-left mr-1"></i>Aging</button>
       <button onclick="showTab('tab-demand')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-red-400 transition">Defaulters</button>
-      <button onclick="showTab('tab-sms-logs')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-sky-400 transition"><i class="fa-solid fa-comment-sms mr-1"></i>SMS Dispatch</button>
-      <button onclick="showTab('tab-settings')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-teal-300 transition"><i class="fa-solid fa-network-wired mr-1"></i>Mother System</button>
+      <button onclick="showTab('tab-sms-logs')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-sky-400 transition"><i class="fa-solid fa-comment-sms mr-1"></i>SMS</button>
+      <!-- Rule 9: Mother System Tab only visible for HQ / Admin -->
+      <button id="nav-mother-tab" onclick="showTab('tab-settings')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-teal-300 transition"><i class="fa-solid fa-network-wired mr-1"></i>Mother System</button>
     </div>
   </nav>
 
@@ -148,16 +150,16 @@
     <section id="tab-posting" class="tab-content space-y-4">
       <h2 class="text-base md:text-lg font-bold border-b pb-2 flex justify-between items-center">
         <span>Repayment & Batch Posting</span>
-        <label class="text-xs font-normal flex items-center gap-1 cursor-pointer bg-slate-200 px-2.5 py-1 rounded-lg">
-          <input type="checkbox" id="toggle-print-receipt" checked class="rounded"> Auto PDF Receipt
-        </label>
+        <button onclick="printLastTransactionReceipt()" class="bg-teal-700 hover:bg-teal-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 shadow">
+          <i class="fa-solid fa-print"></i> X-Printer Receipt
+        </button>
       </h2>
       
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div class="space-y-4">
           <div>
             <label class="block text-xs font-semibold mb-1 text-slate-600">Search Active Client</label>
-            <input type="text" id="post-search" oninput="searchPostingClients(this.value)" placeholder="Search name, NIN, phone, plate, or account..." class="w-full p-3 border rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-800 shadow-sm">
+            <input type="text" id="post-search" oninput="searchPostingClients(this.value)" placeholder="Search name, NIN, phone, or account..." class="w-full p-3 border rounded-xl bg-white text-sm focus:outline-none focus:ring-2 focus:ring-slate-800 shadow-sm">
             <div id="post-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-48 overflow-y-auto hidden shadow-lg"></div>
           </div>
 
@@ -182,7 +184,10 @@
           </div>
 
           <div id="post-form" hidden class="space-y-3 hidden bg-white p-4 rounded-xl border shadow-sm">
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div id="zero-balance-warning" class="hidden p-3 bg-red-50 border border-red-300 text-red-800 rounded-xl text-xs font-bold">
+              <i class="fa-solid fa-ban mr-1"></i> This client's loan balance is UGX 0. Further payments are locked and disallowed.
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="post-inputs-container">
               <div>
                 <label class="block text-xs font-semibold mb-1 text-slate-600">Payment Amount (UGX)</label>
                 <input type="number" id="post-amount" placeholder="Amount Paid" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm font-bold">
@@ -197,14 +202,14 @@
                 </select>
               </div>
             </div>
-            <button onclick="addToBatch()" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-lg text-sm font-bold shadow transition">Add to Batch</button>
+            <button id="add-to-batch-btn" onclick="addToBatch()" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2.5 rounded-lg text-sm font-bold shadow transition">Add to Batch</button>
           </div>
         </div>
 
         <div class="border-t lg:border-t-0 lg:border-l lg:pl-4 pt-3 lg:pt-0">
           <div class="flex justify-between items-center mb-3">
             <h3 class="font-bold text-sm md:text-base">Pending Batch (<span id="batch-count">0</span>)</h3>
-            <button onclick="postAllBatch()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition">POST ALL & SAVE</button>
+            <button onclick="postAllBatch()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition">POST ALL & PRINT X-PRINTER</button>
           </div>
           <div id="batch-list" class="space-y-2 max-h-[400px] overflow-y-auto"></div>
         </div>
@@ -217,7 +222,7 @@
       
       <div class="flex gap-4 mb-2">
         <label class="flex items-center gap-2 text-sm font-medium cursor-pointer">
-          <input type="radio" name="client-type" value="existing" checked onclick="toggleClientMode(false)"> Existing / Registered Master Client
+          <input type="radio" name="client-type" value="existing" checked onclick="toggleClientMode(false)"> Existing Master Client
         </label>
         <label class="flex items-center gap-2 text-sm font-medium cursor-pointer">
           <input type="radio" name="client-type" value="new" onclick="toggleClientMode(true)"> Brand New Client Profile
@@ -225,21 +230,21 @@
       </div>
 
       <div class="bg-teal-50 border border-teal-200 p-3 rounded-xl text-xs space-y-1">
-        <label class="block font-bold text-teal-900"><i class="fa-solid fa-user-tie"></i> Assign Field Officer Portfolio *</label>
+        <label class="block font-bold text-teal-900"><i class="fa-solid fa-user-tie"></i> Assign Staff / Officer *</label>
         <select id="disburse-officer-select" class="w-full p-2.5 border rounded-lg text-xs bg-white font-semibold text-slate-800">
-          <option value="">-- Select Field Officer --</option>
+          <option value="">-- Select Staff Portfolio --</option>
         </select>
       </div>
 
       <!-- NEW CLIENT FORM FIELDS -->
       <div id="new-client-fields" hidden class="space-y-3 hidden border p-4 rounded-xl bg-white shadow-sm">
         <div class="font-bold text-xs text-slate-700 uppercase tracking-wider flex items-center justify-between">
-          <span>Unified Identity Client Details</span>
-          <span class="text-purple-600 font-bold text-[11px]"><i class="fa-solid fa-id-card mr-1"></i>Permanent Global Profile</span>
+          <span>Unified Identity Client Details (+ Savings Account Auto-Created)</span>
+          <span class="text-purple-600 font-bold text-[11px]"><i class="fa-solid fa-piggy-bank mr-1"></i>Savings Enabled</span>
         </div>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="block text-[10px] text-slate-600 font-semibold mb-1">National ID / Unique Passport (NIN) *</label>
+            <label class="block text-[10px] text-slate-600 font-semibold mb-1">National ID / NIN *</label>
             <input type="text" id="new-nin" placeholder="e.g., CM90012345678" oninput="checkNinDuplicate(this.value)" class="w-full p-2.5 border rounded-lg text-xs font-bold uppercase bg-slate-50">
           </div>
           <div>
@@ -261,7 +266,6 @@
           <input type="text" id="new-guarantor" placeholder="Guarantor Name *" class="w-full p-2.5 border rounded-lg text-xs bg-slate-50">
           <input type="tel" id="new-guarantor-phone" placeholder="Guarantor Phone Number *" class="w-full p-2.5 border rounded-lg text-xs bg-slate-50">
         </div>
-        
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="block text-[10px] text-slate-600 font-semibold mb-1">Client Category</label>
@@ -279,11 +283,11 @@
 
       <!-- EXISTING GLOBAL CLIENT SEARCH MODE -->
       <div id="existing-client-fields">
-        <label class="block text-xs font-semibold mb-1 text-slate-600">Search Master Client Registry (Name, NIN, Phone, Plate)</label>
+        <label class="block text-xs font-semibold mb-1 text-slate-600">Search Master Client Registry</label>
         <input type="text" id="disburse-search" oninput="searchDisburseClients(this.value)" placeholder="Search globally registered client..." class="w-full p-3 border rounded-xl bg-white text-sm shadow-sm">
         <div id="disburse-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
         <div id="disburse-selected-name" class="text-xs font-bold text-green-700 mt-2"></div>
-        <div id="disburse-client-risk-warning" class="hidden mt-2 p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs space-y-1"></div>
+        <div id="disburse-client-risk-warning" class="hidden mt-2 p-3 bg-red-50 border border-red-300 rounded-xl text-xs space-y-1"></div>
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
@@ -311,6 +315,49 @@
       </div>
 
       <button onclick="processDisbursement()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl font-bold text-sm shadow transition">DISBURSE LOAN TO CLIENT</button>
+    </section>
+
+    <!-- TAB: SAVINGS MANAGEMENT -->
+    <section id="tab-savings" hidden class="tab-content space-y-4 hidden max-w-4xl mx-auto">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h2 class="text-base md:text-lg font-bold text-slate-800"><i class="fa-solid fa-piggy-bank text-emerald-600"></i> Client Savings & Deposits Hub</h2>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="bg-white p-4 border rounded-xl space-y-3 text-xs shadow-sm">
+          <h3 class="font-bold text-slate-800 text-sm border-b pb-2">Deposit / Withdraw Savings</h3>
+          <div>
+            <label class="block text-slate-600 font-semibold mb-1">Search Client</label>
+            <input type="text" id="savings-search-input" oninput="searchSavingsClients(this.value)" placeholder="Search client name or NIN..." class="w-full p-2.5 border rounded-lg bg-slate-50">
+            <div id="savings-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-32 overflow-y-auto hidden"></div>
+          </div>
+          <div id="savings-client-card" hidden class="bg-emerald-50 p-3 rounded-xl border border-emerald-200 space-y-1">
+            <div class="font-bold text-emerald-900 text-sm" id="sav-client-name"></div>
+            <div class="text-emerald-700 font-bold">Current Savings Balance: UGX <span id="sav-client-balance">0</span></div>
+          </div>
+          <div>
+            <label class="block text-slate-600 font-semibold mb-1">Transaction Type</label>
+            <select id="sav-type" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
+              <option value="DEPOSIT">Savings Deposit (+) </option>
+              <option value="WITHDRAWAL">Savings Withdrawal (-)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-600 font-semibold mb-1">Amount (UGX)</label>
+            <input type="number" id="sav-amount" placeholder="Amount" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
+          </div>
+          <button onclick="processSavingsTransaction()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg font-bold transition shadow">
+            Process Savings Transaction & Print X-Printer
+          </button>
+        </div>
+
+        <div class="bg-white p-4 border rounded-xl space-y-3 text-xs shadow-sm">
+          <h3 class="font-bold text-slate-800 text-sm border-b pb-2">Recent Branch Savings Activity</h3>
+          <div id="savings-activity-list" class="space-y-2 max-h-[300px] overflow-y-auto">
+            <p class="text-slate-400 text-center py-4">No savings transactions yet.</p>
+          </div>
+        </div>
+      </div>
     </section>
 
     <!-- TAB 3: LOAN OPTIONS (REVERSAL & COMBINATION) -->
@@ -362,7 +409,7 @@
           </div>
         </div>
 
-        <!-- MODULE B: LOAN COMBINING & CONSOLIDATION -->
+        <!-- MODULE B: LOAN COMBINING -->
         <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
           <div class="border-b pb-2 flex items-center justify-between">
             <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
@@ -371,7 +418,6 @@
             <span class="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded">Consolidation Engine</span>
           </div>
 
-          <!-- STEP 1: SELECT LOANS TO COMBINE -->
           <div class="space-y-2">
             <label class="block text-xs font-semibold text-slate-600">Step 1: Search & Check Loans to Combine</label>
             <input type="text" id="combine-search" oninput="searchCombineLoans(this.value)" placeholder="Search loan by Client Name, NIN, or ID..." class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
@@ -394,7 +440,6 @@
             </div>
           </div>
 
-          <!-- STEP 2: TARGET RECIPIENT SEARCH -->
           <div class="space-y-2 border-t pt-3">
             <label class="block text-xs font-semibold text-slate-800">Step 2: Combine Selected Loans To Whom?</label>
             <input type="text" id="target-recipient-search" oninput="searchTargetRecipient(this.value)" placeholder="Search target client by Name, NIN, or Phone..." class="w-full p-2.5 border rounded-xl text-xs bg-white">
@@ -415,14 +460,14 @@
       </div>
     </section>
 
-    <!-- TAB: UNIFIED CLIENT MASTER REGISTRY -->
+    <!-- TAB: UNIFIED CLIENT MASTER REGISTRY & SAVINGS STATEMENTS -->
     <section id="tab-unified-clients" hidden class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
         <div>
           <h2 class="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-id-card text-purple-600"></i> Master Client Directory & Multi-Branch Risk Hub
+            <i class="fa-solid fa-id-card text-purple-600"></i> Master Client Directory & Savings Statements Hub
           </h2>
-          <p class="text-xs text-slate-500">Global identity index preventing duplicate registrations and cross-branch defaulting.</p>
+          <p class="text-xs text-slate-500">Global identity index, loan exposure, and dedicated savings statements.</p>
         </div>
         <button onclick="triggerQuickPrint()" class="bg-purple-700 hover:bg-purple-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">
           <i class="fa-solid fa-print"></i> Print Directory
@@ -441,31 +486,57 @@
               <th class="p-3">Full Name & Contact</th>
               <th class="p-3">Category & Plate</th>
               <th class="p-3">Guarantor</th>
-              <th class="p-3">Active Branch Loans</th>
-              <th class="p-3 text-right">Global Network Balance</th>
+              <th class="p-3">Savings Balance</th>
+              <th class="p-3 text-right">Actions & Statement</th>
             </tr>
           </thead>
           <tbody id="master-clients-table-body" class="divide-y text-slate-700"></tbody>
         </table>
       </div>
+
+      <!-- SAVINGS STATEMENT VIEW MODAL/CONTAINER -->
+      <div id="savings-statement-modal" hidden class="bg-white border-2 border-emerald-600 p-5 rounded-2xl space-y-3 shadow-xl hidden">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h3 class="font-bold text-emerald-900 text-base" id="sav-st-title">Savings Statement</h3>
+          <div class="flex gap-2">
+            <button onclick="printSavingsStatementXPrinter()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold">
+              <i class="fa-solid fa-print"></i> Print X-Printer Savings Statement
+            </button>
+            <button onclick="hideElement('savings-statement-modal')" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold">Close</button>
+          </div>
+        </div>
+        <div id="sav-st-details" class="text-xs text-slate-600"></div>
+        <div class="overflow-x-auto border rounded-xl">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-emerald-900 text-white text-[11px]">
+                <th class="p-2.5">Date</th>
+                <th class="p-2.5">Transaction Type</th>
+                <th class="p-2.5 text-right">Amount (UGX)</th>
+              </tr>
+            </thead>
+            <tbody id="sav-st-table-body" class="divide-y text-slate-700"></tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
-    <!-- TAB: FIELD OFFICERS -->
+    <!-- TAB: STAFF HUB (Rule 12) -->
     <section id="tab-officers" hidden class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
-        <h2 class="text-base md:text-lg font-bold text-slate-800"><i class="fa-solid fa-users-gear text-teal-600"></i> Field Officers Hub</h2>
+        <h2 class="text-base md:text-lg font-bold text-slate-800"><i class="fa-solid fa-user-tie text-teal-600"></i> Staff Hub</h2>
         <button onclick="triggerQuickPrint()" class="bg-teal-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">
           <i class="fa-solid fa-print"></i> Print Metrics
         </button>
       </div>
 
       <div class="bg-white p-4 border rounded-xl space-y-3 max-w-xl shadow-sm">
-        <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Register Field Officer</h3>
+        <h3 class="text-xs font-bold text-slate-700 uppercase tracking-wider">Register Staff / Field Officer</h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <input type="text" id="officer-add-name" placeholder="Officer Full Name" class="w-full p-2.5 border rounded-lg text-xs">
+          <input type="text" id="officer-add-name" placeholder="Staff Full Name" class="w-full p-2.5 border rounded-lg text-xs">
           <input type="tel" id="officer-add-phone" placeholder="Phone Number" class="w-full p-2.5 border rounded-lg text-xs">
         </div>
-        <button onclick="registerFieldOfficer()" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 rounded-lg text-xs font-bold transition">+ Add Officer Portfolio</button>
+        <button onclick="registerFieldOfficer()" class="w-full bg-teal-600 hover:bg-teal-700 text-white py-2 rounded-lg text-xs font-bold transition">+ Add Staff Portfolio</button>
       </div>
 
       <div id="officers-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
@@ -486,7 +557,7 @@
             <input type="number" id="bank-amount" placeholder="Amount (UGX)" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
             <input type="text" id="bank-ref" placeholder="Deposit Slip #" class="w-full p-2.5 border rounded-lg bg-slate-50">
           </div>
-          <button onclick="recordBankDeposit()" class="w-full bg-blue-700 hover:bg-blue-800 text-white py-2.5 rounded-lg font-bold transition shadow">Save Banking Record</button>
+          <button onclick="recordBankDeposit()" class="w-full bg-blue-700 hover:bg-blue-800 text-white py-2.5 rounded-lg font-bold transition shadow">Save Banking Record (Deducts from Cash)</button>
         </div>
 
         <div class="lg:col-span-2 space-y-3">
@@ -543,7 +614,7 @@
             </div>
           </div>
           <button onclick="recordExpense()" class="w-full bg-rose-600 hover:bg-rose-700 text-white py-2.5 rounded-lg font-bold transition shadow">
-            Record Expense
+            Record Expense (Deducts from Cash)
           </button>
         </div>
 
@@ -601,7 +672,7 @@
 
     <!-- TAB: STATEMENTS -->
     <section id="tab-statement" hidden class="tab-content space-y-4 hidden max-w-3xl mx-auto">
-      <h2 class="text-lg font-bold border-b pb-2">Client Statements & Management</h2>
+      <h2 class="text-lg font-bold border-b pb-2">Client Loan Statements & Management</h2>
       <input type="text" id="statement-search" oninput="searchStatementClients(this.value)" placeholder="Search client for statement..." class="w-full p-3 border rounded-xl bg-white text-sm shadow-sm">
       <div id="statement-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
 
@@ -612,7 +683,7 @@
               <div class="font-bold text-base" id="st-name"></div>
               <div id="st-acc" class="text-slate-500"></div>
             </div>
-            <button onclick="triggerQuickPrint()" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow"><i class="fa-solid fa-print"></i></button>
+            <button onclick="printLoanStatementXPrinter()" class="bg-teal-700 hover:bg-teal-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow"><i class="fa-solid fa-print"></i> Print Statement</button>
           </div>
           <div id="st-balance" class="font-bold text-blue-600 pt-2 border-t text-sm"></div>
         </div>
@@ -620,56 +691,81 @@
       </div>
     </section>
 
-    <!-- TAB: REPORTS -->
-    <section id="tab-reports" hidden class="tab-content space-y-4 hidden">
-      <h2 class="text-lg font-bold border-b pb-2 flex justify-between items-center">
-        <span>Financial Summary Overview</span>
-        <button onclick="triggerQuickPrint()" class="bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow"><i class="fa-solid fa-print"></i> Print</button>
-      </h2>
+    <!-- TAB: REPORTS & SUMMARIES (Rule 13: Organized Office & General Summaries) -->
+    <section id="tab-reports" hidden class="tab-content space-y-6 hidden">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h2 class="text-lg font-bold text-slate-900">Organized Summaries (Office & General)</h2>
+        <button onclick="triggerQuickPrint()" class="bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow"><i class="fa-solid fa-print"></i> Print Summary</button>
+      </div>
 
+      <!-- GENERAL SUMMARY -->
       <div class="bg-slate-800 text-white p-5 rounded-2xl space-y-4 shadow-lg">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-teal-400 border-b border-slate-700 pb-2">Executive Dashboard</h3>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-teal-400 border-b border-slate-700 pb-2">
+          <i class="fa-solid fa-chart-pie mr-1"></i> General Summary (Portfolio, Clients & Savings)
+        </h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
           <div class="bg-slate-700/60 p-3 rounded-xl border border-slate-600/50">
             <span class="text-slate-400 block text-[10px]">Total Active Clients</span>
             <span id="rep-active-clients" class="text-lg font-bold text-emerald-400">0</span>
           </div>
           <div class="bg-slate-700/60 p-3 rounded-xl border border-slate-600/50">
-            <span class="text-slate-400 block text-[10px]">Approved Capital</span>
-            <span id="rep-total-capital" class="text-lg font-bold text-blue-400">UGX 0</span>
-          </div>
-          <div class="bg-slate-700/60 p-3 rounded-xl border border-slate-600/50">
             <span class="text-slate-400 block text-[10px]">Total Portfolio Outstandings</span>
             <span id="rep-total-portfolio" class="text-lg font-bold text-amber-400">UGX 0</span>
           </div>
           <div class="bg-slate-700/60 p-3 rounded-xl border border-slate-600/50">
-            <span class="text-slate-400 block text-[10px]">Branch Total Expenses</span>
-            <span id="rep-total-expenses" class="text-lg font-bold text-rose-400">UGX 0</span>
+            <span class="text-slate-400 block text-[10px]">Total Client Savings</span>
+            <span id="rep-total-savings" class="text-lg font-bold text-teal-300">UGX 0</span>
+          </div>
+          <div class="bg-slate-700/60 p-3 rounded-xl border border-slate-600/50">
+            <span class="text-slate-400 block text-[10px]">Total Repayments Collected</span>
+            <span id="rep-total-collections" class="text-lg font-bold text-green-400">UGX 0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- OFFICE SUMMARY (Rule 11: Net Cash after Deducting Bankings & Expenses) -->
+      <div class="bg-blue-950 text-white p-5 rounded-2xl space-y-4 shadow-lg">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-blue-300 border-b border-blue-900 pb-2">
+          <i class="fa-solid fa-building mr-1"></i> Office Summary (Capital, Bankings, Expenses & Net Cash)
+        </h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+          <div class="bg-blue-900/60 p-3 rounded-xl border border-blue-800/50">
+            <span class="text-blue-300 block text-[10px]">Approved Capital Injection</span>
+            <span id="rep-total-capital" class="text-lg font-bold text-emerald-300">UGX 0</span>
+          </div>
+          <div class="bg-blue-900/60 p-3 rounded-xl border border-blue-800/50">
+            <span class="text-blue-300 block text-[10px]">Total Bankings</span>
+            <span id="rep-total-bankings" class="text-lg font-bold text-blue-300">UGX 0</span>
+          </div>
+          <div class="bg-blue-900/60 p-3 rounded-xl border border-blue-800/50">
+            <span class="text-blue-300 block text-[10px]">Total Operational Expenses</span>
+            <span id="rep-total-expenses" class="text-lg font-bold text-rose-300">UGX 0</span>
+          </div>
+          <div class="bg-blue-900/60 p-3 rounded-xl border border-blue-800/50">
+            <span class="text-blue-300 block text-[10px]">Net Operating Cash Balance</span>
+            <span id="rep-net-cash" class="text-lg font-bold text-teal-300">UGX 0</span>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- TAB 4: OFFICER AGING BREAKDOWN & AUTOMATED ARREARS ESCALATION -->
+    <!-- TAB: AGING -->
     <section id="tab-aging" hidden class="tab-content space-y-4 hidden">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-3">
         <div>
           <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> Field Officer Portfolio Aging & Escalation
+            <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> Staff Portfolio Aging & Escalation
           </h2>
-          <p class="text-xs text-slate-500">Every field officer must view their individual assigned clients list and escalation states.</p>
         </div>
-        
         <div class="flex items-center gap-2 w-full md:w-auto">
           <select id="aging-officer-filter" onchange="renderOfficerAgingTables()" class="bg-white border-2 border-slate-700 text-xs font-bold p-2.5 rounded-xl text-slate-800 shadow-sm focus:outline-none w-full md:w-64">
-            <option value="ALL">-- ALL FIELD OFFICERS --</option>
+            <option value="ALL">-- ALL STAFF PORTFOLIOS --</option>
           </select>
           <button onclick="triggerQuickPrint()" class="bg-slate-800 text-white text-xs px-3 py-2.5 rounded-xl font-bold shadow flex items-center gap-1">
             <i class="fa-solid fa-print"></i> Print
           </button>
         </div>
       </div>
-
       <div id="officer-aging-sections" class="space-y-6"></div>
     </section>
 
@@ -679,25 +775,20 @@
       <div id="demand-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
     </section>
 
-    <!-- TAB: AUTOMATED SMS DISPATCH LOGS -->
+    <!-- TAB: SMS -->
     <section id="tab-sms-logs" hidden class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
         <div>
           <h2 class="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-comment-sms text-sky-600"></i> Automated SMS Dispatch Log & Gateway
+            <i class="fa-solid fa-comment-sms text-sky-600"></i> Automated SMS Dispatch Log
           </h2>
-          <p class="text-xs text-slate-500">Real-time audit log of transaction receipts and automated arrears SMS dispatches.</p>
         </div>
-        <button onclick="clearSmsLogs()" class="bg-slate-700 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow">
-          Clear Logs
-        </button>
+        <button onclick="clearSmsLogs()" class="bg-slate-700 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow">Clear Logs</button>
       </div>
-
       <div class="bg-slate-900 text-white p-4 rounded-xl flex justify-between items-center text-xs shadow-md">
-        <span>SMS Gateway Service Status: <strong class="text-emerald-400">ONLINE (Simulated API)</strong></span>
+        <span>SMS Gateway Service: <strong class="text-emerald-400">ONLINE (Simulated API)</strong></span>
         <span class="text-sky-300">Total SMS Dispatched: <strong id="sms-log-count" class="text-white text-sm">0</strong></span>
       </div>
-
       <div class="bg-white border rounded-xl overflow-x-auto shadow-sm">
         <table class="w-full text-left border-collapse text-xs">
           <thead>
@@ -705,8 +796,8 @@
               <th class="p-3">Timestamp</th>
               <th class="p-3">Recipient Mobile</th>
               <th class="p-3">Trigger Action</th>
-              <th class="p-3">SMS Message Content</th>
-              <th class="p-3 text-right">Delivery Status</th>
+              <th class="p-3">SMS Content</th>
+              <th class="p-3 text-right">Status</th>
             </tr>
           </thead>
           <tbody id="sms-logs-table-body" class="divide-y text-slate-700"></tbody>
@@ -714,7 +805,7 @@
       </div>
     </section>
 
-    <!-- TAB 5: MOTHER SYSTEM & MULTI-BRANCH ENGINE -->
+    <!-- TAB 5: MOTHER SYSTEM & MULTI-BRANCH ENGINE (Rule 9) -->
     <section id="tab-settings" hidden class="tab-content space-y-6 hidden max-w-5xl mx-auto">
       <div class="flex justify-between items-center border-b pb-2">
         <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
@@ -723,7 +814,6 @@
         <span class="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-xs font-bold">100+ Branches Supported</span>
       </div>
 
-      <!-- Aggregated HQ Dashboard -->
       <div class="bg-slate-900 text-white p-5 rounded-2xl space-y-3 shadow-lg">
         <div class="text-xs font-bold text-teal-400 uppercase tracking-wider border-b border-slate-700 pb-2">
           <i class="fa-solid fa-globe mr-1"></i> Mother System Network Summary (All Branches Combined)
@@ -748,72 +838,43 @@
         </div>
       </div>
 
-      <!-- Branch Creator & Manager -->
+      <!-- Branch Creator & Credential Generator (Rule 9) -->
       <div class="bg-white border-2 border-slate-800 p-5 rounded-2xl space-y-4 text-xs shadow-md">
         <div class="flex justify-between items-center border-b border-slate-200 pb-3">
           <div>
             <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
-              <i class="fa-solid fa-plus-circle text-teal-600"></i> Create & Control Branch Operations
+              <i class="fa-solid fa-plus-circle text-teal-600"></i> Create Branch & Credentials (with Unique Link)
             </h3>
-            <p class="text-slate-500 text-[11px]">Mother System can create up to 100+ branches. Turn branches ON/OFF at any time without losing data.</p>
+            <p class="text-slate-500 text-[11px]">Mother System creates branch credentials. A unique shareable link is generated to send to another device.</p>
           </div>
         </div>
 
         <div class="bg-slate-50 p-4 rounded-xl border space-y-3">
-          <h4 class="font-bold text-slate-700">Create New Branch Terminal</h4>
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-            <input type="text" id="mb-branch-name" placeholder="Branch Name (e.g. Jinja Branch)" class="p-2.5 border rounded-lg text-xs bg-white">
-            <input type="text" id="mb-branch-code" placeholder="Branch Code (e.g. JNJ-02)" class="p-2.5 border rounded-lg text-xs uppercase bg-white">
-            <button onclick="createNewBranch()" class="bg-teal-700 hover:bg-teal-800 text-white py-2.5 rounded-lg font-bold shadow transition">+ Create Branch</button>
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+            <input type="text" id="mb-branch-name" placeholder="Branch Name (e.g. Jinja)" class="p-2.5 border rounded-lg text-xs bg-white">
+            <input type="text" id="mb-branch-code" placeholder="Branch Code (e.g. JNJ-02)" class="p-2.5 border rounded-lg text-xs uppercase bg-white font-bold">
+            <input type="text" id="mb-branch-user" placeholder="Username (e.g. jinja_manager)" class="p-2.5 border rounded-lg text-xs bg-white">
+            <input type="password" id="mb-branch-pass" placeholder="Password" class="p-2.5 border rounded-lg text-xs bg-white">
           </div>
+          <div>
+            <input type="email" id="mb-branch-gmail" placeholder="Manager Gmail (e.g. jinja@gmail.com)" class="w-full p-2.5 border rounded-lg text-xs bg-white">
+          </div>
+          <button onclick="createNewBranch()" class="w-full bg-teal-700 hover:bg-teal-800 text-white py-2.5 rounded-lg font-bold shadow transition">+ Create Branch & Generate Unique Link</button>
         </div>
 
         <div class="overflow-x-auto border rounded-xl">
           <table class="w-full text-left border-collapse">
             <thead>
               <tr class="bg-slate-800 text-white text-[11px]">
-                <th class="p-3">Branch Code</th>
-                <th class="p-3">Branch Name</th>
-                <th class="p-3">Total Active Loans</th>
-                <th class="p-3">Operational Status</th>
-                <th class="p-3 text-right">Mother Control (Toggle ON/OFF)</th>
+                <th class="p-3">Branch Code & Name</th>
+                <th class="p-3">Manager Credentials</th>
+                <th class="p-3">Unique Link (Shareable)</th>
+                <th class="p-3">Status</th>
+                <th class="p-3 text-right">Mother Control</th>
               </tr>
             </thead>
             <tbody id="branch-network-table-body" class="divide-y text-slate-700"></tbody>
           </table>
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div class="bg-white p-5 border rounded-2xl space-y-4 text-xs shadow-sm">
-          <h3 class="font-bold text-slate-800 border-b pb-2 text-sm"><i class="fa-solid fa-sliders text-teal-600"></i> System Configuration & Gateway</h3>
-          <div>
-            <label class="block font-semibold mb-1 text-slate-600">Company Name</label>
-            <input type="text" id="cfg-name" placeholder="PMMS Microfinance Ltd" class="w-full p-2.5 border rounded-xl text-sm">
-          </div>
-          <div>
-            <label class="block font-semibold mb-1 text-slate-600">SMS Gateway API Key (Twilio / Africa's Talking)</label>
-            <input type="password" id="cfg-sms-key" placeholder="••••••••••••••••" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
-          </div>
-          <button onclick="saveSettings()" class="w-full bg-slate-800 hover:bg-slate-900 text-white py-3 rounded-xl text-sm font-bold shadow transition">Save Profile Configuration</button>
-        </div>
-
-        <!-- Data Import/Export System -->
-        <div class="bg-white p-5 border rounded-2xl space-y-3 text-xs shadow-sm">
-          <h3 class="font-bold text-slate-800 border-b pb-2 text-sm"><i class="fa-solid fa-database text-blue-600"></i> Backup & Data Restore</h3>
-          <p class="text-slate-500">Export system backup state to JSON/CSV files or restore full database seamlessly.</p>
-          <div class="grid grid-cols-2 gap-2 pt-2">
-            <button onclick="exportSystemStateJSON()" class="bg-slate-800 text-white py-2.5 rounded-xl font-bold hover:bg-slate-900 shadow">
-              <i class="fa-solid fa-download mr-1"></i> Export JSON
-            </button>
-            <button onclick="exportClientsCSV()" class="bg-teal-700 text-white py-2.5 rounded-xl font-bold hover:bg-teal-800 shadow">
-              <i class="fa-solid fa-file-csv mr-1"></i> Export CSV
-            </button>
-          </div>
-          <div class="pt-2 border-t">
-            <label class="block text-slate-600 font-semibold mb-1">Import JSON Backup</label>
-            <input type="file" id="import-file-input" accept=".json" onchange="importSystemStateJSON(event)" class="w-full text-xs">
-          </div>
         </div>
       </div>
     </section>
@@ -835,33 +896,28 @@
       el.setAttribute('hidden', '');
     }
 
-    // MULTI-BRANCH STATE STRUCTURE WITH UNIFIED CLIENT IDENTITY & SMS LOGS
+    // STATE INITIALIZATION (Rule 3: Starts with zero clients, zero capital, zero collection)
     let state = {
-      accounts: [],
+      accounts: [
+        { username: "admin", gmail: "admin@pmms.com", password: "password123", branchCode: "HQ-01", role: "HQ" }
+      ],
       currentUser: null,
       companyName: "PMMS Central Microfinance",
       activeBranchId: "BR-HQ",
-      // GLOBAL UNIFIED CLIENT MASTER REGISTRY
-      globalClients: [
-        { nin: "CM90012345678", name: "John Mugisha", phone: "0772123456", category: "BODABODA", plate: "UEB 452A", address: "Nakawa Phase 1", guarantor: "David K", guarantorPhone: "0701112223" },
-        { nin: "CF85098765432", name: "Sarah Namubiru", phone: "0701987654", category: "OTHERS", plate: "", address: "Kalerwe Market", guarantor: "Mary N", guarantorPhone: "0773334445" }
-      ],
-      // SMS DISPATCH LOGS
+      globalClients: [],
       smsLogs: [],
       branches: [
-        { id: "BR-HQ", code: "HQ-01", name: "Main HQ Central Branch", isKilled: false }
+        { id: "BR-HQ", code: "HQ-01", name: "Main HQ Central Branch", username: "admin", gmail: "admin@pmms.com", password: "password123", isKilled: false, isHQ: true }
       ],
       branchData: {
         "BR-HQ": {
-          clients: [
-            { id: "cli-101", nin: "CM90012345678", name: "John Mugisha", phone: "0772123456", category: "BODABODA", plate: "UEB 452A", guarantor: "David K", guarantorPhone: "0701112223", officerId: "off-1", principal: 500000, balance: 350000, dailyTarget: 20000, arrears: 40000, advance: 0, dateDisbursed: "2026-09-01", deadlineDate: "2026-10-01", lastPaymentDate: "2026-09-25", history: [] },
-            { id: "cli-102", nin: "CF85098765432", name: "Sarah Namubiru", phone: "0701987654", category: "OTHERS", plate: "", guarantor: "Mary N", guarantorPhone: "0773334445", officerId: "off-1", principal: 1000000, balance: 800000, dailyTarget: 40000, arrears: 0, advance: 20000, dateDisbursed: "2026-09-10", deadlineDate: "2026-10-10", lastPaymentDate: "2026-10-05", history: [] }
-          ],
-          officers: [ { id: "off-1", name: "John Okello", phone: "0771000001" } ],
+          clients: [],
+          officers: [],
           bankings: [],
           expenses: [],
           capitalizations: [],
-          batch: []
+          batch: [],
+          savingsAccounts: {} // Rule 5: clientNin -> { balance: 0, history: [] }
         }
       }
     };
@@ -871,10 +927,64 @@
     let selectedReversalClient = null;
     let markedCombineLoanIds = [];
     let selectedCombineTargetRecipient = null;
+    let lastPrintedReceiptText = "";
+    let xPrinterDevice = null;
+
+    // RULE 1: X-PRINTER CONNECTION & PRINTING
+    async function connectXPrinter() {
+      try {
+        if (!navigator.bluetooth) {
+          alert("Web Bluetooth API is not supported on this browser/device. You can still use standard printing.");
+          return;
+        }
+        xPrinterDevice = await navigator.bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] // common thermal printer service UUID
+        });
+        document.getElementById("xprinter-status-text").innerText = "X-Printer Connected";
+        document.getElementById("xprinter-btn").classList.remove("bg-teal-600");
+        document.getElementById("xprinter-btn").classList.add("bg-emerald-600");
+        alert("X-Printer connected successfully!");
+      } catch(err) {
+        console.error(err);
+        alert("X-Printer connection cancelled or failed. Standard print fallback available.");
+      }
+    }
+
+    async function printToXPrinter(textData) {
+      lastPrintedReceiptText = textData;
+      if (xPrinterDevice && xPrinterDevice.gatt && xPrinterDevice.gatt.connected) {
+        // Send raw ESC/POS text bytes if connected via Bluetooth
+        try {
+          const server = await xPrinterDevice.gatt.connect();
+          const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+          const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+          const encoder = new TextEncoder();
+          await characteristic.writeValue(encoder.encode(textData + "\n\n\n"));
+          return;
+        } catch(e) {
+          console.warn("Bluetooth print failed, falling back to print window:", e);
+        }
+      }
+      // Standard Thermal Receipt Window Fallback (58mm width format)
+      const printableArea = document.getElementById("printable-area");
+      printableArea.innerHTML = `<pre style="font-family: monospace; font-size: 11px; width: 280px; white-space: pre-wrap;">${textData}</pre>`;
+      showElement(printableArea);
+      window.print();
+      hideElement(printableArea);
+    }
+
+    function printLastTransactionReceipt() {
+      if (!lastPrintedReceiptText) {
+        alert("No recent transaction receipt to print.");
+        return;
+      }
+      printToXPrinter(lastPrintedReceiptText);
+    }
 
     function getActiveBranch() {
       if (!state.branchData[state.activeBranchId]) {
-        state.branchData[state.activeBranchId] = { clients: [], officers: [], bankings: [], expenses: [], capitalizations: [], batch: [] };
+        state.branchData[state.activeBranchId] = { clients: [], officers: [], bankings: [], expenses: [], capitalizations: [], batch: [], savingsAccounts: {} };
       }
       return state.branchData[state.activeBranchId];
     }
@@ -883,7 +993,6 @@
       return state.branches.find(b => b.id === state.activeBranchId) || state.branches[0];
     }
 
-    // AUTOMATED SMS DISPATCH DISPATCHER
     function dispatchSmsNotification(phone, message, triggerAction) {
       if (!phone) return;
       const logEntry = {
@@ -907,7 +1016,7 @@
       if (!tbody) return;
 
       if (state.smsLogs.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="p-3 text-center text-slate-400 text-xs">No SMS messages dispatched yet.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="p-3 text-center text-slate-400 text-xs">No SMS dispatched yet.</td></tr>`;
         return;
       }
 
@@ -928,73 +1037,6 @@
       renderSmsLogs();
     }
 
-    // FEATURE 1: AUTOMATED 30% PENALTY RENEWAL (AFTER 7 DAYS OVERDUE)
-    function processAutomatedPenalties() {
-      const today = new Date();
-
-      state.branches.forEach(b => {
-        const bd = state.branchData[b.id];
-        if (bd && bd.clients) {
-          bd.clients.forEach(c => {
-            if (c.balance > 0 && c.deadlineDate) {
-              const deadline = new Date(c.deadlineDate);
-              const overdueDays = Math.floor((today - deadline) / (1000 * 60 * 60 * 24));
-
-              if (overdueDays > 7 && !c.lastPenaltyDate) {
-                // Apply 30% penalty on remaining balance
-                const penaltyAmt = Math.round(c.balance * 0.30);
-                c.balance += penaltyAmt;
-                c.lastPenaltyDate = today.toISOString().split('T')[0];
-
-                // Pushes deadline 30 days forward for penalty cycle renewal
-                const newDeadline = new Date(today);
-                newDeadline.setDate(newDeadline.getDate() + 30);
-                c.deadlineDate = newDeadline.toISOString().split('T')[0];
-
-                if (!c.history) c.history = [];
-                c.history.push({
-                  type: '30% Overdue Penalty Applied',
-                  amount: penaltyAmt,
-                  date: today.toISOString().split('T')[0],
-                  narration: `7+ Days overdue penalty of 30% added.`
-                });
-
-                // Trigger Automated SMS
-                dispatchSmsNotification(c.phone, `DEAR ${c.name}, YOUR LOAN IS OVER 7 DAYS PAST DUE. A 30% PENALTY OF UGX ${penaltyAmt.toLocaleString()} WAS ADDED. NEW BALANCE: UGX ${c.balance.toLocaleString()}.`, '30% Penalty Auto-Renewal');
-              }
-            }
-          });
-        }
-      });
-      saveState();
-    }
-
-    // UNIFIED IDENTITY HELPER FUNCTIONS
-    function getGlobalClientByNin(nin) {
-      if (!nin) return null;
-      return state.globalClients.find(gc => gc.nin.trim().toUpperCase() === nin.trim().toUpperCase());
-    }
-
-    function calculateClientGlobalExposure(nin) {
-      let totalBalance = 0;
-      let activeLoansCount = 0;
-      let branchBreakdown = [];
-
-      state.branches.forEach(b => {
-        const bd = state.branchData[b.id];
-        if (bd && bd.clients) {
-          const match = bd.clients.find(c => c.nin && c.nin.trim().toUpperCase() === nin.trim().toUpperCase());
-          if (match && match.balance > 0) {
-            totalBalance += match.balance;
-            activeLoansCount++;
-            branchBreakdown.push(`${b.name}: UGX ${match.balance.toLocaleString()}`);
-          }
-        }
-      });
-
-      return { totalBalance, activeLoansCount, branchBreakdown };
-    }
-
     function loadState() {
       const saved = localStorage.getItem("pmms_state");
       if (saved) {
@@ -1002,10 +1044,23 @@
           state = JSON.parse(saved); 
           if (!state.globalClients) state.globalClients = [];
           if (!state.smsLogs) state.smsLogs = [];
+          if (!state.accounts) state.accounts = [];
         } catch(e) { console.error(e); }
       }
+      
+      // Check URL for unique branch link query param (Rule 9)
+      const urlParams = new URLSearchParams(window.location.search);
+      const branchParam = urlParams.get('branch');
+      if (branchParam) {
+        const targetB = state.branches.find(b => b.id === branchParam);
+        if (targetB) {
+          state.activeBranchId = targetB.id;
+          document.getElementById("auth-modal-title").innerText = `LOGIN TO ${targetB.name.toUpperCase()}`;
+          document.getElementById("login-branch-code").value = targetB.code;
+        }
+      }
+
       checkKillSwitchStatus();
-      processAutomatedPenalties();
     }
 
     function saveState() {
@@ -1063,7 +1118,94 @@
       showElement(tabId);
     }
 
-    // CLIENT SEARCH LOGIC (POSTING)
+    // AUTHENTICATION & LOGIN (Rules 9 & 10)
+    function switchAuthTab(type) {
+      if (type === 'login') {
+        showElement("auth-form-login");
+        hideElement("auth-form-register");
+      } else {
+        hideElement("auth-form-login");
+        showElement("auth-form-register");
+      }
+    }
+
+    function handleRegister() {
+      const name = document.getElementById("reg-name").value.trim();
+      const gmail = document.getElementById("reg-email").value.trim();
+      const username = document.getElementById("reg-username").value.trim();
+      const password = document.getElementById("reg-password").value.trim();
+      const branchCode = document.getElementById("reg-branch-code").value.trim().toUpperCase();
+
+      if (!name || !gmail || !username || !password || !branchCode) {
+        alert("All fields are strictly required for registration.");
+        return;
+      }
+
+      // Verify branch code matches an existing created branch
+      const branchMatch = state.branches.find(b => b.code.toUpperCase() === branchCode);
+      if (!branchMatch) {
+        alert("Invalid Branch Code! Branch must be created by Mother System first.");
+        return;
+      }
+
+      state.accounts.push({ name, gmail, username, password, branchCode, role: branchMatch.isHQ ? "HQ" : "Branch" });
+      saveState();
+      alert("Account created successfully! You can now login.");
+      switchAuthTab('login');
+    }
+
+    function handleLogin() {
+      const identifier = document.getElementById("login-identifier").value.trim();
+      const password = document.getElementById("login-password").value.trim();
+      const branchCode = document.getElementById("login-branch-code").value.trim().toUpperCase();
+
+      if (!identifier || !password || !branchCode) {
+        alert("Please enter Identifier, Password, and Branch Code.");
+        return;
+      }
+
+      const branchMatch = state.branches.find(b => b.code.toUpperCase() === branchCode);
+      if (!branchMatch) {
+        alert("Access Denied: Invalid Branch Code.");
+        return;
+      }
+
+      // Check account in state.accounts or match branch credentials
+      const acc = state.accounts.find(a => 
+        (a.username === identifier || a.gmail === identifier) && 
+        a.password === password && 
+        a.branchCode.toUpperCase() === branchCode
+      );
+
+      const isBranchMasterCred = (branchMatch.username === identifier || branchMatch.gmail === identifier) && branchMatch.password === password;
+
+      if (!acc && !isBranchMasterCred) {
+        alert("Access Denied: Incorrect credentials or branch code.");
+        return;
+      }
+
+      state.currentUser = acc || { username: identifier, role: branchMatch.isHQ ? "HQ" : "Branch" };
+      state.activeBranchId = branchMatch.id;
+
+      document.getElementById("header-user-tag").innerText = "User: " + identifier;
+      
+      // Rule 9: If branch is created by Mother, hide Mother System tab
+      if (!branchMatch.isHQ) {
+        hideElement("nav-mother-tab");
+      } else {
+        showElement("nav-mother-tab");
+      }
+
+      hideElement("auth-overlay");
+      saveState();
+      refreshAllViews();
+    }
+
+    function lockApp() {
+      showElement("auth-overlay");
+    }
+
+    // POSTING & RULE 4: ZERO BALANCE PAYMENT PREVENTION
     function searchPostingClients(query) {
       const resultsDiv = document.getElementById("post-search-results");
       if (!query || query.trim().length === 0) {
@@ -1074,9 +1216,8 @@
       const q = query.toLowerCase();
       const filtered = branch.clients.filter(c => 
         c.name.toLowerCase().includes(q) || 
-        (c.nin && c.nin.toLowerCase().includes(q)) ||
+        (c.nin && c.nin.toLowerCase().includes(q)) || 
         c.phone.includes(query) || 
-        (c.plate && c.plate.toLowerCase().includes(q)) ||
         c.id.toLowerCase().includes(q)
       );
 
@@ -1087,7 +1228,7 @@
           <div onclick="selectPostingClient('${c.id}')" class="p-3 hover:bg-slate-100 cursor-pointer text-xs flex justify-between items-center">
             <div>
               <div class="font-bold text-slate-800">${c.name} <span class="text-[10px] bg-slate-200 text-slate-700 px-1 rounded">${c.nin || 'NO-NIN'}</span></div>
-              <div class="text-[10px] text-slate-500">${c.phone} | ${c.category} ${c.plate ? ' - ' + c.plate : ''}</div>
+              <div class="text-[10px] text-slate-500">${c.phone}</div>
             </div>
             <span class="font-bold text-blue-600">UGX ${(c.balance || 0).toLocaleString()}</span>
           </div>
@@ -1103,12 +1244,12 @@
       if (!selectedPostClient) return;
 
       document.getElementById("post-client-name").innerText = selectedPostClient.name;
-      document.getElementById("post-client-acc").innerText = "NIN: " + (selectedPostClient.nin || "N/A") + " | ACC: " + selectedPostClient.id + " | Tel: " + selectedPostClient.phone;
-      document.getElementById("post-client-type-info").innerText = selectedPostClient.category + (selectedPostClient.plate ? " (" + selectedPostClient.plate + ")" : "");
+      document.getElementById("post-client-acc").innerText = "NIN: " + (selectedPostClient.nin || "N/A") + " | ACC: " + selectedPostClient.id;
+      document.getElementById("post-client-type-info").innerText = selectedPostClient.category;
       document.getElementById("post-client-call").href = "tel:" + selectedPostClient.phone;
       
       const officer = branch.officers.find(o => o.id === selectedPostClient.officerId);
-      document.getElementById("post-client-officer").innerText = "Officer: " + (officer ? officer.name : "Unassigned");
+      document.getElementById("post-client-officer").innerText = "Staff: " + (officer ? officer.name : "Unassigned");
 
       document.getElementById("post-arrears").innerText = "UGX " + (selectedPostClient.arrears || 0).toLocaleString();
       document.getElementById("post-advance").innerText = "UGX " + (selectedPostClient.advance || 0).toLocaleString();
@@ -1117,10 +1258,23 @@
 
       showElement("post-selected-card");
       showElement("post-form");
+
+      // RULE 4: If balance is zero, disallow payment
+      if (selectedPostClient.balance <= 0) {
+        showElement("zero-balance-warning");
+        hideElement("post-inputs-container");
+        hideElement("add-to-batch-btn");
+      } else {
+        hideElement("zero-balance-warning");
+        showElement("post-inputs-container");
+        showElement("add-to-batch-btn");
+      }
     }
 
     function addToBatch() {
       if (!selectedPostClient) { alert("Select a client first."); return; }
+      if (selectedPostClient.balance <= 0) { alert("Loan is fully cleared (UGX 0 balance). Further payments not allowed."); return; }
+
       const amtInput = document.getElementById("post-amount");
       const amt = parseFloat(amtInput.value);
       if (!amt || amt <= 0) { alert("Enter a valid amount."); return; }
@@ -1171,10 +1325,12 @@
       renderBatchList();
     }
 
-    // FEATURE 2: AUTOMATIC SMS NOTIFICATION ON PAYMENT POSTING
+    // RULE 1: POST ALL & PRINT X-PRINTER RECEIPT
     function postAllBatch() {
       const branch = getActiveBranch();
       if (branch.batch.length === 0) { alert("Batch is empty."); return; }
+
+      let receiptText = `=== PMMS MICROFINANCE RECEIPT ===\nBranch: ${getActiveBranchInfo().name}\nDate: ${new Date().toISOString().split('T')[0]}\n--------------------------------\n`;
 
       branch.batch.forEach(item => {
         const client = branch.clients.find(c => c.id === item.clientId);
@@ -1183,31 +1339,36 @@
           if (!client.history) client.history = [];
           client.history.push({ type: 'Repayment', amount: item.amount, date: item.date, channel: item.channel });
 
-          // Send Automatic SMS Notification
+          receiptText += `Client: ${client.name}\nPaid: UGX ${item.amount.toLocaleString()} (${item.channel})\nNew Bal: UGX ${client.balance.toLocaleString()}\n--------------------------------\n`;
+
           dispatchSmsNotification(
             client.phone, 
-            `PMMS PAYMENT RECEIVED: UGX ${item.amount.toLocaleString()} VIA ${item.channel} ON ${item.date}. REMAINING LOAN BALANCE: UGX ${client.balance.toLocaleString()}. THANK YOU!`,
+            `PMMS PAYMENT RECEIVED: UGX ${item.amount.toLocaleString()} VIA ${item.channel}. REMAINING BALANCE: UGX ${client.balance.toLocaleString()}.`,
             'Repayment Receipt'
           );
         }
       });
 
+      receiptText += `THANK YOU FOR BANKING WITH US!`;
       branch.batch = [];
       saveState();
       renderBatchList();
       if (selectedPostClient) selectPostingClient(selectedPostClient.id);
-      alert("All payments posted & automatic SMS receipts dispatched!");
+      
+      // Print via X-Printer automatically
+      printToXPrinter(receiptText);
+      alert("All payments posted and X-Printer receipt triggered!");
       updateDashboardReports();
     }
 
-    // DISBURSEMENT LOGIC WITH UNIFIED IDENTITY & AUTOMATIC SMS
+    // DISBURSEMENT & RULE 2 (NO SAME-BRANCH ACTIVE LOAN), RULE 5 (SAVINGS AUTO-CREATED)
     function toggleClientMode(isNew) {
       if (isNew) {
         showElement("new-client-fields");
         hideElement("existing-client-fields");
         selectedDisburseClient = null;
       } else {
-        hideElement("new-client-fields");
+        showElement("new-client-fields");
         showElement("existing-client-fields");
       }
     }
@@ -1220,9 +1381,8 @@
     }
 
     function checkNinDuplicate(nin) {
-      const existing = getGlobalClientByNin(nin);
+      const existing = state.globalClients.find(gc => gc.nin.trim().toUpperCase() === nin.trim().toUpperCase());
       if (existing) {
-        alert(`Unified Profile Found!\n\n${existing.name} is already registered globally under NIN ${existing.nin}.\n\nAuto-filling existing demographics... Switch to "Existing Master Client" mode to disburse under this identity.`);
         document.getElementById("new-name").value = existing.name;
         document.getElementById("new-phone").value = existing.phone;
         document.getElementById("new-address").value = existing.address || '';
@@ -1238,12 +1398,10 @@
         return;
       }
       const q = query.toLowerCase();
-      // Search in Master Global Clients
       const filtered = state.globalClients.filter(c => 
         c.name.toLowerCase().includes(q) || 
         c.nin.toLowerCase().includes(q) ||
-        c.phone.includes(query) ||
-        (c.plate && c.plate.toLowerCase().includes(q))
+        c.phone.includes(query)
       );
 
       if (filtered.length === 0) {
@@ -1263,22 +1421,23 @@
     }
 
     function selectDisburseClientByNin(nin) {
-      selectedDisburseClient = getGlobalClientByNin(nin);
+      selectedDisburseClient = state.globalClients.find(c => c.nin === nin);
       hideElement("disburse-search-results");
       if (selectedDisburseClient) {
         document.getElementById("disburse-selected-name").innerHTML = `Selected Master Identity: <strong>${selectedDisburseClient.name}</strong> (${selectedDisburseClient.nin})`;
         
-        // Check cross-branch exposure
-        const exp = calculateClientGlobalExposure(nin);
+        // RULE 2: Check if client already has an active loan in this branch
+        const branch = getActiveBranch();
+        const existingActiveLoan = branch.clients.find(c => c.nin && c.nin.toUpperCase() === nin.toUpperCase() && c.balance > 0);
         const warningDiv = document.getElementById("disburse-client-risk-warning");
-        if (exp.activeLoansCount > 0) {
+        
+        if (existingActiveLoan) {
           warningDiv.innerHTML = `
-            <div class="font-bold text-amber-900 flex items-center gap-1">
-              <i class="fa-solid fa-triangle-exclamation text-amber-600"></i> Active Multi-Branch Loans Detected!
+            <div class="font-bold text-red-900 flex items-center gap-1">
+              <i class="fa-solid fa-ban"></i> Active Loan Exists in This Branch!
             </div>
-            <div class="text-[11px] text-amber-800">
-              Client currently has <strong>${exp.activeLoansCount} active loan(s)</strong> across the network with total outstanding balance of <strong>UGX ${exp.totalBalance.toLocaleString()}</strong>.
-              <br><span class="text-[10px] text-slate-600">${exp.branchBreakdown.join(' | ')}</span>
+            <div class="text-[11px] text-red-800">
+              Rule Enforcement: This client currently has an active loan balance of <strong>UGX ${existingActiveLoan.balance.toLocaleString()}</strong> in this branch. <strong>New loan disbursement is blocked.</strong>
             </div>
           `;
           showElement(warningDiv);
@@ -1310,7 +1469,7 @@
       const rate = parseFloat(document.getElementById("disburse-rate").value) || 0;
       const days = parseFloat(document.getElementById("disburse-days").value) || 30;
 
-      if (!officerId) { alert("Select a field officer."); return; }
+      if (!officerId) { alert("Select a staff portfolio."); return; }
       if (principal <= 0) { alert("Enter a valid disbursement amount."); return; }
 
       const total = principal + (principal * (rate / 100));
@@ -1320,34 +1479,22 @@
       let clientNin = "";
       let clientName = "";
       let clientPhone = "";
-      let clientCategory = "OTHERS";
-      let clientPlate = "";
-      let guarantor = "";
-      let guarantorPhone = "";
 
       if (isNew) {
         clientNin = document.getElementById("new-nin").value.trim().toUpperCase();
         clientName = document.getElementById("new-name").value.trim();
         clientPhone = document.getElementById("new-phone").value.trim();
-        clientCategory = document.getElementById("new-client-category").value;
-        clientPlate = document.getElementById("new-number-plate").value.trim().toUpperCase();
-        guarantor = document.getElementById("new-guarantor").value.trim();
-        guarantorPhone = document.getElementById("new-guarantor-phone").value.trim();
+        const category = document.getElementById("new-client-category").value;
+        const plate = document.getElementById("new-number-plate").value.trim().toUpperCase();
+        const address = document.getElementById("new-address").value.trim();
+        const guarantor = document.getElementById("new-guarantor").value.trim();
+        const guarantorPhone = document.getElementById("new-guarantor-phone").value.trim();
 
-        if (!clientNin || !clientName || !clientPhone) { alert("NIN, Full Name, and Phone are strictly required for unified registration."); return; }
+        if (!clientNin || !clientName || !clientPhone) { alert("NIN, Full Name, and Phone are required."); return; }
 
-        // Register to Global Master Directory if not exists
-        let globalProfile = getGlobalClientByNin(clientNin);
+        let globalProfile = state.globalClients.find(c => c.nin === clientNin);
         if (!globalProfile) {
-          globalProfile = {
-            nin: clientNin,
-            name: clientName,
-            phone: clientPhone,
-            category: clientCategory,
-            plate: clientPlate,
-            address: document.getElementById("new-address").value.trim(),
-            guarantor, guarantorPhone
-          };
+          globalProfile = { nin: clientNin, name: clientName, phone: clientPhone, category, plate, address, guarantor, guarantorPhone };
           state.globalClients.push(globalProfile);
         }
       } else {
@@ -1355,82 +1502,161 @@
         clientNin = selectedDisburseClient.nin;
         clientName = selectedDisburseClient.name;
         clientPhone = selectedDisburseClient.phone;
-        clientCategory = selectedDisburseClient.category;
-        clientPlate = selectedDisburseClient.plate;
-        guarantor = selectedDisburseClient.guarantor;
-        guarantorPhone = selectedDisburseClient.guarantorPhone;
       }
 
-      // Calculate Deadline date
+      // RULE 2: System must not accept to disburse a loan to a client who still has an active loan in the same branch
+      const activeLoanCheck = branch.clients.find(c => c.nin && c.nin.toUpperCase() === clientNin.toUpperCase() && c.balance > 0);
+      if (activeLoanCheck) {
+        alert("Disbursement Blocked (Rule 2): This client already has an active loan in this branch!");
+        return;
+      }
+
       const deadlineObj = new Date();
       deadlineObj.setDate(deadlineObj.getDate() + days);
       const deadlineStr = deadlineObj.toISOString().split('T')[0];
 
-      // Check if client already has an active loan card in this branch
-      let branchClientCard = branch.clients.find(c => c.nin && c.nin.toUpperCase() === clientNin.toUpperCase());
+      const newClientCard = {
+        id: "cli-" + Date.now(),
+        nin: clientNin,
+        name: clientName,
+        phone: clientPhone,
+        officerId, principal, balance: total, dailyTarget: daily, arrears: 0, advance: 0,
+        dateDisbursed: new Date().toISOString().split('T')[0],
+        deadlineDate: deadlineStr,
+        history: [{ type: 'Disbursement', amount: total, date: new Date().toISOString().split('T')[0] }]
+      };
+      branch.clients.push(newClientCard);
 
-      if (branchClientCard) {
-        branchClientCard.principal += principal;
-        branchClientCard.balance += total;
-        branchClientCard.dailyTarget = daily;
-        branchClientCard.officerId = officerId;
-        branchClientCard.deadlineDate = deadlineStr;
-        if (!branchClientCard.history) branchClientCard.history = [];
-        branchClientCard.history.push({ type: 'Disbursement Rollover', amount: total, date: new Date().toISOString().split('T')[0] });
-      } else {
-        branchClientCard = {
-          id: "cli-" + Date.now(),
-          nin: clientNin,
-          name: clientName,
-          phone: clientPhone,
-          category: clientCategory,
-          plate: clientPlate,
-          guarantor, guarantorPhone,
-          officerId, principal, balance: total, dailyTarget: daily, arrears: 0, advance: 0,
-          dateDisbursed: new Date().toISOString().split('T')[0],
-          deadlineDate: deadlineStr,
-          history: [{ type: 'Initial Disbursement', amount: total, date: new Date().toISOString().split('T')[0] }]
-        };
-        branch.clients.push(branchClientCard);
+      // RULE 5: Every new client registered must also have his or her savings account
+      if (!branch.savingsAccounts[clientNin]) {
+        branch.savingsAccounts[clientNin] = { balance: 0, history: [] };
       }
 
-      // Automatic SMS Notification on Disbursement
       dispatchSmsNotification(
         clientPhone,
-        `DEAR ${clientName}, YOUR LOAN OF UGX ${principal.toLocaleString()} HAS BEEN DISBURSED AT ${getActiveBranchInfo().name}. TOTAL PAYABLE: UGX ${total.toLocaleString()}, DAILY TARGET: UGX ${daily.toLocaleString()}. DUE DATE: ${deadlineStr}.`,
+        `DEAR ${clientName}, YOUR LOAN OF UGX ${principal.toLocaleString()} HAS BEEN DISBURSED. TOTAL PAYABLE: UGX ${total.toLocaleString()}. SAVINGS ACCOUNT CREATED.`,
         'Loan Disbursement'
       );
 
       saveState();
-      alert(`Loan disbursed successfully under Unified Identity (${clientNin})!`);
+      alert("Loan successfully disbursed and savings account initialized!");
       refreshAllViews();
     }
 
-    // FEATURE 4: LOAN OPTIONS - SUB-MODULE 1: REVERSALS
-    function searchReversalClients(query) {
-      const resultsDiv = document.getElementById("reversal-search-results");
+    // SAVINGS MANAGEMENT (Rules 5 & 8)
+    function searchSavingsClients(query) {
+      const resultsDiv = document.getElementById("savings-search-results");
       if (!query || query.trim().length === 0) {
         hideElement(resultsDiv);
         return;
       }
       const branch = getActiveBranch();
       const q = query.toLowerCase();
-      const filtered = branch.clients.filter(c => 
-        c.name.toLowerCase().includes(q) || 
-        (c.nin && c.nin.toLowerCase().includes(q)) || 
-        c.id.toLowerCase().includes(q)
-      );
+      const filtered = branch.clients.filter(c => c.name.toLowerCase().includes(q) || (c.nin && c.nin.toLowerCase().includes(q)));
 
       if (filtered.length === 0) {
-        resultsDiv.innerHTML = `<div class="p-2 text-xs text-slate-500 text-center">No client found.</div>`;
+        resultsDiv.innerHTML = `<div class="p-2 text-xs text-slate-500">No client found.</div>`;
       } else {
         resultsDiv.innerHTML = filtered.map(c => `
-          <div onclick="selectReversalClient('${c.id}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs flex justify-between">
-            <span>${c.name} (${c.nin || c.id})</span>
-            <span class="font-bold text-blue-600">UGX ${(c.balance || 0).toLocaleString()}</span>
+          <div onclick="selectSavingsClient('${c.nin}', '${c.name}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs">
+            <strong>${c.name}</strong> (${c.nin})
           </div>
         `).join('');
       }
+      showElement(resultsDiv);
+    }
+
+    let selectedSavingsNin = null;
+    function selectSavingsClient(nin, name) {
+      selectedSavingsNin = nin;
+      hideElement("savings-search-results");
+      const branch = getActiveBranch();
+      if (!branch.savingsAccounts[nin]) {
+        branch.savingsAccounts[nin] = { balance: 0, history: [] };
+      }
+      document.getElementById("sav-client-name").innerText = `${name} (${nin})`;
+      document.getElementById("sav-client-balance").innerText = branch.savingsAccounts[nin].balance.toLocaleString();
+      showElement("savings-client-card");
+    }
+
+    function processSavingsTransaction() {
+      if (!selectedSavingsNin) { alert("Select a client first."); return; }
+      const amt = parseFloat(document.getElementById("sav-amount").value);
+      const type = document.getElementById("sav-type").value;
+      if (!amt || amt <= 0) { alert("Enter valid amount."); return; }
+
+      const branch = getActiveBranch();
+      if (!branch.savingsAccounts[selectedSavingsNin]) {
+        branch.savingsAccounts[selectedSavingsNin] = { balance: 0, history: [] };
+      }
+
+      let savObj = branch.savingsAccounts[selectedSavingsNin];
+      if (type === 'WITHDRAWAL') {
+        if (savObj.balance < amt) { alert("Insufficient savings balance for withdrawal."); return; }
+        savObj.balance -= amt;
+      } else {
+        savObj.balance += amt;
+      }
+
+      const txDate = new Date().toISOString().split('T')[0];
+      savObj.history.push({ date: txDate, type, amount: amt });
+
+      saveState();
+      selectSavingsClient(selectedSavingsNin, document.getElementById("sav-client-name").innerText.split(' ')[0]);
+      alert(`Savings ${type} of UGX ${amt.toLocaleString()} processed successfully!`);
+      printToXPrinter(`=== PMMS SAVINGS RECEIPT ===\nType: ${type}\nClient NIN: ${selectedSavingsNin}\nAmount: UGX ${amt.toLocaleString()}\nSavings Bal: UGX ${savObj.balance.toLocaleString()}\nDate: ${txDate}`);
+    }
+
+    // SAVINGS STATEMENT (Rule 8)
+    function viewSavingsStatement(nin) {
+      const branch = getActiveBranch();
+      const client = state.globalClients.find(c => c.nin === nin);
+      const savData = branch.savingsAccounts[nin] || { balance: 0, history: [] };
+
+      document.getElementById("sav-st-title").innerText = `Savings Statement: ${client ? client.name : nin}`;
+      document.getElementById("sav-st-details").innerHTML = `NIN: <strong>${nin}</strong> | Total Current Savings: <strong class="text-emerald-700">UGX ${savData.balance.toLocaleString()}</strong>`;
+
+      const tbody = document.getElementById("sav-st-table-body");
+      if (savData.history.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" class="p-3 text-center text-slate-400">No savings history found.</td></tr>`;
+      } else {
+        tbody.innerHTML = savData.history.map(h => `
+          <tr>
+            <td class="p-2.5">${h.date}</td>
+            <td class="p-2.5 font-bold ${h.type === 'DEPOSIT' ? 'text-emerald-600' : 'text-rose-600'}">${h.type}</td>
+            <td class="p-2.5 text-right font-bold">UGX ${h.amount.toLocaleString()}</td>
+          </tr>
+        `).join('');
+      }
+      showElement("savings-statement-modal");
+    }
+
+    function printSavingsStatementXPrinter() {
+      const title = document.getElementById("sav-st-title").innerText;
+      const details = document.getElementById("sav-st-details").innerText;
+      printToXPrinter(`=== ${title.toUpperCase()} ===\n${details}\n--------------------------------\nPrinted on: ${new Date().toISOString().split('T')[0]}`);
+    }
+
+    function printLoanStatementXPrinter() {
+      const name = document.getElementById("st-name").innerText;
+      const acc = document.getElementById("st-acc").innerText;
+      const balance = document.getElementById("st-balance").innerText;
+      printToXPrinter(`=== LOAN STATEMENT ===\n${name}\n${acc}\n${balance}\n--------------------------------\nPrinted: ${new Date().toISOString().split('T')[0]}`);
+    }
+
+    // LOAN REVERSALS & COMBINATIONS
+    function searchReversalClients(query) {
+      const resultsDiv = document.getElementById("reversal-search-results");
+      if (!query || query.trim().length === 0) { hideElement(resultsDiv); return; }
+      const branch = getActiveBranch();
+      const q = query.toLowerCase();
+      const filtered = branch.clients.filter(c => c.name.toLowerCase().includes(q) || (c.nin && c.nin.toLowerCase().includes(q)));
+      resultsDiv.innerHTML = filtered.map(c => `
+        <div onclick="selectReversalClient('${c.id}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs flex justify-between">
+          <span>${c.name} (${c.nin || c.id})</span>
+          <span class="font-bold text-blue-600">UGX ${(c.balance || 0).toLocaleString()}</span>
+        </div>
+      `).join('');
       showElement(resultsDiv);
     }
 
@@ -1439,345 +1665,131 @@
       selectedReversalClient = branch.clients.find(c => c.id === clientId);
       hideElement("reversal-search-results");
       if (!selectedReversalClient) return;
-
       document.getElementById("rev-client-name").innerText = selectedReversalClient.name;
       document.getElementById("rev-client-nin").innerText = selectedReversalClient.nin || 'NO-NIN';
       document.getElementById("rev-client-id").innerText = selectedReversalClient.id;
       document.getElementById("rev-client-balance").innerText = (selectedReversalClient.balance || 0).toLocaleString();
-
       const txSelect = document.getElementById("rev-transaction-select");
-      const history = selectedReversalClient.history || [];
-      if (history.length === 0) {
-        txSelect.innerHTML = `<option value="">No history to reverse</option>`;
-      } else {
-        txSelect.innerHTML = history.map((h, idx) => `
-          <option value="${idx}">${h.date} - ${h.type} (UGX ${h.amount.toLocaleString()})</option>
-        `).join('');
-      }
+      txSelect.innerHTML = (selectedReversalClient.history || []).map((h, idx) => `<option value="${idx}">${h.date} - ${h.type} (UGX ${h.amount.toLocaleString()})</option>`).join('');
       showElement("reversal-card");
     }
 
     function executeLoanReversal() {
-      if (!selectedReversalClient) { alert("Select a client for reversal."); return; }
+      if (!selectedReversalClient) return;
       const txIdx = document.getElementById("rev-transaction-select").value;
       const reason = document.getElementById("rev-reason").value.trim();
-
-      if (txIdx === "" || txIdx === null) { alert("No transaction selected."); return; }
-      if (!reason) { alert("Please enter reason for reversal."); return; }
-
+      if (!reason) { alert("Enter reason."); return; }
       const targetTx = selectedReversalClient.history[txIdx];
       if (!targetTx) return;
 
-      if (targetTx.type === 'Repayment') {
-        selectedReversalClient.balance += targetTx.amount; // Revert repayment
-      } else if (targetTx.type.includes('Disbursement')) {
-        selectedReversalClient.balance = Math.max(0, selectedReversalClient.balance - targetTx.amount); // Revert disbursement
-      }
+      if (targetTx.type === 'Repayment') selectedReversalClient.balance += targetTx.amount;
+      else if (targetTx.type.includes('Disbursement')) selectedReversalClient.balance = Math.max(0, selectedReversalClient.balance - targetTx.amount);
 
-      selectedReversalClient.history.push({
-        type: `Reversal of [${targetTx.type}]`,
-        amount: targetTx.amount,
-        date: new Date().toISOString().split('T')[0],
-        narration: reason
-      });
-
-      // Dispatch Reversal SMS
-      dispatchSmsNotification(
-        selectedReversalClient.phone,
-        `LOAN TRANSACTION REVERSAL: UGX ${targetTx.amount.toLocaleString()} [${targetTx.type}] REVERSED ON YOUR ACCOUNT. REASON: ${reason}. ADJUSTED BALANCE: UGX ${selectedReversalClient.balance.toLocaleString()}.`,
-        'Loan Reversal'
-      );
-
+      selectedReversalClient.history.push({ type: `Reversal of [${targetTx.type}]`, amount: targetTx.amount, date: new Date().toISOString().split('T')[0], narration: reason });
       saveState();
-      alert("Transaction reversed successfully!");
+      alert("Transaction reversed!");
       selectReversalClient(selectedReversalClient.id);
       refreshAllViews();
     }
 
-    // FEATURE 4: LOAN OPTIONS - SUB-MODULE 2: COMBINING LOANS
     function searchCombineLoans(query) {
       const container = document.getElementById("combine-search-results");
       const q = query.toLowerCase();
-
-      // Search across all branch loans
       let allLoans = [];
       state.branches.forEach(b => {
         const bd = state.branchData[b.id];
-        if (bd && bd.clients) {
-          bd.clients.forEach(c => {
-            if (c.balance > 0) {
-              allLoans.push({ ...c, branchName: b.name, branchId: b.id });
-            }
-          });
-        }
+        if (bd && bd.clients) bd.clients.forEach(c => { if (c.balance > 0) allLoans.push({ ...c, branchName: b.name }); });
       });
-
-      const filtered = allLoans.filter(l => 
-        l.name.toLowerCase().includes(q) || 
-        (l.nin && l.nin.toLowerCase().includes(q)) || 
-        l.id.toLowerCase().includes(q)
-      );
-
-      if (filtered.length === 0) {
-        container.innerHTML = `<p class="text-slate-400 text-center py-2 text-[11px]">No active loans matching "${query}".</p>`;
-        return;
-      }
-
-      container.innerHTML = filtered.map(l => {
-        const isChecked = markedCombineLoanIds.includes(l.id);
-        return `
-          <label class="flex items-center justify-between p-2 bg-white rounded border hover:bg-slate-100 cursor-pointer">
-            <div class="flex items-center gap-2">
-              <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleMarkCombineLoan('${l.id}')" class="rounded">
-              <div>
-                <span class="font-bold text-slate-800">${l.name}</span>
-                <span class="text-[10px] text-purple-700 bg-purple-50 px-1 rounded ml-1">${l.nin || 'NO-NIN'}</span>
-                <div class="text-[10px] text-slate-400">${l.branchName} | ACC: ${l.id}</div>
-              </div>
-            </div>
-            <span class="font-bold text-blue-600">UGX ${l.balance.toLocaleString()}</span>
-          </label>
-        `;
-      }).join('');
+      const filtered = allLoans.filter(l => l.name.toLowerCase().includes(q) || (l.nin && l.nin.toLowerCase().includes(q)));
+      container.innerHTML = filtered.map(l => `
+        <label class="flex items-center justify-between p-2 bg-white rounded border hover:bg-slate-100 cursor-pointer">
+          <div class="flex items-center gap-2">
+            <input type="checkbox" onchange="toggleMarkCombineLoan('${l.id}')" class="rounded">
+            <div><strong>${l.name}</strong> <span class="text-[10px] text-purple-700">${l.nin || ''}</span></div>
+          </div>
+          <span class="font-bold text-blue-600">UGX ${l.balance.toLocaleString()}</span>
+        </label>
+      `).join('');
     }
 
     function toggleMarkCombineLoan(loanId) {
       const idx = markedCombineLoanIds.indexOf(loanId);
       if (idx > -1) markedCombineLoanIds.splice(idx, 1);
       else markedCombineLoanIds.push(loanId);
-      updateMarkedLoansDisplay();
-    }
-
-    function updateMarkedLoansDisplay() {
-      const countEl = document.getElementById("marked-loans-count");
-      const listEl = document.getElementById("marked-loans-list");
-      const totalEl = document.getElementById("marked-total-balance");
-
-      countEl.innerText = markedCombineLoanIds.length + " Selected";
-
-      if (markedCombineLoanIds.length === 0) {
-        listEl.innerHTML = `<p class="text-slate-400 italic">No loans checked yet.</p>`;
-        totalEl.innerText = "UGX 0";
-        return;
-      }
-
-      let total = 0;
-      let html = "";
-
-      state.branches.forEach(b => {
-        const bd = state.branchData[b.id];
-        if (bd && bd.clients) {
-          bd.clients.forEach(c => {
-            if (markedCombineLoanIds.includes(c.id)) {
-              total += c.balance;
-              html += `<div class="flex justify-between border-b border-indigo-100 py-0.5">
-                <span>${c.name} (${c.nin || 'N/A'}) - ${b.name}</span>
-                <strong class="text-slate-800">UGX ${c.balance.toLocaleString()}</strong>
-              </div>`;
-            }
-          });
-        }
-      });
-
-      listEl.innerHTML = html;
-      totalEl.innerText = "UGX " + total.toLocaleString();
+      document.getElementById("marked-loans-count").innerText = markedCombineLoanIds.length + " Selected";
     }
 
     function searchTargetRecipient(query) {
       const resultsDiv = document.getElementById("target-recipient-results");
-      if (!query || query.trim().length === 0) {
-        hideElement(resultsDiv);
-        return;
-      }
-      const q = query.toLowerCase();
-      const filtered = state.globalClients.filter(c => 
-        c.name.toLowerCase().includes(q) || 
-        c.nin.toLowerCase().includes(q) || 
-        c.phone.includes(query)
-      );
-
-      if (filtered.length === 0) {
-        resultsDiv.innerHTML = `<div class="p-2 text-xs text-slate-500 text-center">No master client record found.</div>`;
-      } else {
-        resultsDiv.innerHTML = filtered.map(c => `
-          <div onclick="selectTargetRecipientByNin('${c.nin}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs flex justify-between">
-            <div>
-              <span class="font-bold text-slate-800">${c.name}</span>
-              <span class="text-[10px] font-mono text-purple-700 bg-purple-50 px-1 rounded ml-1">${c.nin}</span>
-            </div>
-            <span class="text-slate-500">${c.phone}</span>
-          </div>
-        `).join('');
-      }
+      const filtered = state.globalClients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()) || c.nin.toLowerCase().includes(query.toLowerCase()));
+      resultsDiv.innerHTML = filtered.map(c => `
+        <div onclick="selectTargetRecipientByNin('${c.nin}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs">
+          <strong>${c.name}</strong> (${c.nin})
+        </div>
+      `).join('');
       showElement(resultsDiv);
     }
 
     function selectTargetRecipientByNin(nin) {
-      selectedCombineTargetRecipient = getGlobalClientByNin(nin);
+      selectedCombineTargetRecipient = state.globalClients.find(c => c.nin === nin);
       hideElement("target-recipient-results");
-      if (selectedCombineTargetRecipient) {
-        document.getElementById("target-rep-name").innerText = selectedCombineTargetRecipient.name;
-        document.getElementById("target-rep-nin").innerText = selectedCombineTargetRecipient.nin;
-        showElement("selected-recipient-display");
-      }
+      document.getElementById("target-rep-name").innerText = selectedCombineTargetRecipient.name;
+      showElement("selected-recipient-display");
     }
 
     function executeLoanCombine() {
-      if (markedCombineLoanIds.length === 0) { alert("Check at least 1 loan to combine."); return; }
-      if (!selectedCombineTargetRecipient) { alert("Select recipient target client in Step 2."); return; }
-
-      let totalCombinedAmount = 0;
-      let sourceClientsInfo = [];
-
-      // Clear source loans and sum balances
+      if (markedCombineLoanIds.length === 0 || !selectedCombineTargetRecipient) { alert("Select loans and target recipient."); return; }
+      let totalCombined = 0;
       state.branches.forEach(b => {
         const bd = state.branchData[b.id];
-        if (bd && bd.clients) {
-          bd.clients.forEach(c => {
-            if (markedCombineLoanIds.includes(c.id)) {
-              totalCombinedAmount += c.balance;
-              sourceClientsInfo.push(`${c.name} (${c.balance.toLocaleString()})`);
-              
-              if (!c.history) c.history = [];
-              c.history.push({
-                type: 'Loan Balance Consolidated & Transferred',
-                amount: c.balance,
-                date: new Date().toISOString().split('T')[0],
-                narration: `Consolidated & transferred to ${selectedCombineTargetRecipient.name} (${selectedCombineTargetRecipient.nin})`
-              });
-
-              // Send SMS to source client
-              dispatchSmsNotification(
-                c.phone,
-                `LOAN CONSOLIDATION: YOUR LOAN BALANCE OF UGX ${c.balance.toLocaleString()} WAS COMBINED & TRANSFERRED TO ${selectedCombineTargetRecipient.name}. ACCOUNT CLEARED.`,
-                'Loan Combination Transfer'
-              );
-
-              c.balance = 0; // Clear balance
-            }
-          });
-        }
-      });
-
-      // Assign combined total to target recipient in current branch
-      const branch = getActiveBranch();
-      let targetBranchCard = branch.clients.find(c => c.nin && c.nin.toUpperCase() === selectedCombineTargetRecipient.nin.toUpperCase());
-
-      if (targetBranchCard) {
-        targetBranchCard.balance += totalCombinedAmount;
-        if (!targetBranchCard.history) targetBranchCard.history = [];
-        targetBranchCard.history.push({
-          type: 'Consolidated Loan Received',
-          amount: totalCombinedAmount,
-          date: new Date().toISOString().split('T')[0],
-          narration: `Combined loans from: ${sourceClientsInfo.join(', ')}`
+        if (bd && bd.clients) bd.clients.forEach(c => {
+          if (markedCombineLoanIds.includes(c.id)) { totalCombined += c.balance; c.balance = 0; }
         });
-      } else {
-        targetBranchCard = {
-          id: "cli-" + Date.now(),
-          nin: selectedCombineTargetRecipient.nin,
-          name: selectedCombineTargetRecipient.name,
-          phone: selectedCombineTargetRecipient.phone,
-          category: selectedCombineTargetRecipient.category,
-          plate: selectedCombineTargetRecipient.plate,
-          guarantor: selectedCombineTargetRecipient.guarantor,
-          guarantorPhone: selectedCombineTargetRecipient.guarantorPhone,
-          officerId: branch.officers[0] ? branch.officers[0].id : "off-1",
-          principal: totalCombinedAmount,
-          balance: totalCombinedAmount,
-          dailyTarget: Math.round(totalCombinedAmount / 30),
-          arrears: 0, advance: 0,
-          dateDisbursed: new Date().toISOString().split('T')[0],
-          history: [{
-            type: 'Consolidated Loan Account Created',
-            amount: totalCombinedAmount,
-            date: new Date().toISOString().split('T')[0],
-            narration: `Combined loans from: ${sourceClientsInfo.join(', ')}`
-          }]
-        };
-        branch.clients.push(targetBranchCard);
-      }
-
-      // Dispatch SMS to Recipient
-      dispatchSmsNotification(
-        selectedCombineTargetRecipient.phone,
-        `DEAR ${selectedCombineTargetRecipient.name}, LOAN CONSOLIDATION SUCCESSFUL. TOTAL CONSOLIDATED BALANCE OF UGX ${totalCombinedAmount.toLocaleString()} ADDED TO YOUR ACCOUNT AT ${branch.name}.`,
-        'Loan Combination Received'
-      );
-
+      });
+      const branch = getActiveBranch();
+      branch.clients.push({
+        id: "cli-" + Date.now(), nin: selectedCombineTargetRecipient.nin, name: selectedCombineTargetRecipient.name, phone: selectedCombineTargetRecipient.phone,
+        officerId: branch.officers[0] ? branch.officers[0].id : "off-1", principal: totalCombined, balance: totalCombined, dailyTarget: Math.round(totalCombined/30),
+        dateDisbursed: new Date().toISOString().split('T')[0], history: [{ type: 'Consolidated Loan', amount: totalCombined, date: new Date().toISOString().split('T')[0] }]
+      });
       saveState();
-      alert(`Loans successfully combined into ${selectedCombineTargetRecipient.name}'s account!`);
-      markedCombineLoanIds = [];
-      selectedCombineTargetRecipient = null;
-      hideElement("selected-recipient-display");
-      updateMarkedLoansDisplay();
+      alert("Loans combined successfully!");
       refreshAllViews();
     }
 
-    // UNIFIED MASTER CLIENT DIRECTORY RENDER
+    // MASTER DIRECTORY RENDER
     function renderMasterClientDirectory() {
       const tbody = document.getElementById("master-clients-table-body");
       if (!tbody) return;
-
       const filter = (document.getElementById("master-client-search") ? document.getElementById("master-client-search").value : "").toLowerCase();
+      const list = state.globalClients.filter(c => c.name.toLowerCase().includes(filter) || c.nin.toLowerCase().includes(filter));
 
-      const list = state.globalClients.filter(c => 
-        c.name.toLowerCase().includes(filter) ||
-        c.nin.toLowerCase().includes(filter) ||
-        c.phone.includes(filter) ||
-        (c.plate && c.plate.toLowerCase().includes(filter))
-      );
-
+      const branch = getActiveBranch();
       tbody.innerHTML = list.map(c => {
-        const exposure = calculateClientGlobalExposure(c.nin);
+        const savBal = branch.savingsAccounts[c.nin] ? branch.savingsAccounts[c.nin].balance : 0;
         return `
           <tr class="text-xs">
             <td class="p-3 font-mono font-bold text-purple-700 bg-purple-50/50">${c.nin}</td>
-            <td class="p-3">
-              <div class="font-bold text-slate-800">${c.name}</div>
-              <div class="text-[10px] text-slate-500">${c.phone} ${c.address ? '| ' + c.address : ''}</div>
-            </td>
-            <td class="p-3">
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${c.category === 'BODABODA' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'}">${c.category}</span>
-              ${c.plate ? `<span class="block text-[10px] font-mono font-semibold text-slate-600">${c.plate}</span>` : ''}
-            </td>
-            <td class="p-3">
-              <div class="font-medium">${c.guarantor || '-'}</div>
-              <div class="text-[10px] text-slate-400">${c.guarantorPhone || ''}</div>
-            </td>
-            <td class="p-3">
-              <span class="font-bold ${exposure.activeLoansCount > 1 ? 'text-amber-600' : 'text-slate-700'}">${exposure.activeLoansCount} Active Branch Loan(s)</span>
-              ${exposure.branchBreakdown.length > 0 ? `<div class="text-[10px] text-slate-500">${exposure.branchBreakdown.join('<br>')}</div>` : ''}
-            </td>
-            <td class="p-3 text-right font-bold text-blue-600">
-              UGX ${exposure.totalBalance.toLocaleString()}
+            <td class="p-3"><strong>${c.name}</strong><br><span class="text-[10px] text-slate-500">${c.phone}</span></td>
+            <td class="p-3">${c.category} ${c.plate ? ' - ' + c.plate : ''}</td>
+            <td class="p-3">${c.guarantor || '-'}</td>
+            <td class="p-3 font-bold text-emerald-600">UGX ${savBal.toLocaleString()}</td>
+            <td class="p-3 text-right">
+              <button onclick="viewSavingsStatement('${c.nin}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded text-[11px] font-bold">
+                <i class="fa-solid fa-file-lines"></i> Savings Statement
+              </button>
             </td>
           </tr>
         `;
       }).join('');
     }
 
-    // STATEMENTS & SEARCH
+    // STATEMENTS & STAFF HUB
     function searchStatementClients(query) {
       const resultsDiv = document.getElementById("statement-search-results");
-      if (!query || query.trim().length === 0) {
-        hideElement(resultsDiv);
-        return;
-      }
       const branch = getActiveBranch();
-      const q = query.toLowerCase();
-      const filtered = branch.clients.filter(c => c.name.toLowerCase().includes(q) || (c.nin && c.nin.toLowerCase().includes(q)) || c.phone.includes(query));
-
-      if (filtered.length === 0) {
-        resultsDiv.innerHTML = `<div class="p-2 text-xs text-slate-500 text-center">No client found.</div>`;
-      } else {
-        resultsDiv.innerHTML = filtered.map(c => `
-          <div onclick="viewStatement('${c.id}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs flex justify-between">
-            <span>${c.name} (${c.nin || c.phone})</span>
-            <span class="font-bold">UGX ${(c.balance || 0).toLocaleString()}</span>
-          </div>
-        `).join('');
-      }
+      const filtered = branch.clients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()));
+      resultsDiv.innerHTML = filtered.map(c => `<div onclick="viewStatement('${c.id}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs"><strong>${c.name}</strong> (UGX ${(c.balance||0).toLocaleString()})</div>`).join('');
       showElement(resultsDiv);
     }
 
@@ -1786,53 +1798,28 @@
       const client = branch.clients.find(c => c.id === clientId);
       hideElement("statement-search-results");
       if (!client) return;
-
       document.getElementById("st-name").innerText = client.name;
-      document.getElementById("st-acc").innerText = "NIN: " + (client.nin || "N/A") + " | ACC: " + client.id + " | Phone: " + client.phone;
-      document.getElementById("st-balance").innerText = "Current Branch Balance: UGX " + (client.balance || 0).toLocaleString();
-
-      const list = document.getElementById("statement-list");
-      const history = client.history || [];
-      if (history.length === 0) {
-        list.innerHTML = `<div class="p-3 bg-white border rounded-xl text-xs text-slate-500 text-center">No statement history found.</div>`;
-      } else {
-        list.innerHTML = history.map(h => `
-          <div class="bg-white p-3 border rounded-xl flex justify-between text-xs">
-            <div>
-              <div class="font-bold text-slate-800">${h.type}</div>
-              <div class="text-[10px] text-slate-400">${h.date} ${h.channel ? '| ' + h.channel : ''} ${h.narration ? '| ' + h.narration : ''}</div>
-            </div>
-            <span class="font-bold ${h.type === 'Repayment' ? 'text-teal-600' : 'text-slate-800'}">
-              ${h.type === 'Repayment' ? '-' : '+'} UGX ${h.amount.toLocaleString()}
-            </span>
-          </div>
-        `).join('');
-      }
+      document.getElementById("st-acc").innerText = "ACC: " + client.id;
+      document.getElementById("st-balance").innerText = "Current Balance: UGX " + client.balance.toLocaleString();
+      document.getElementById("statement-list").innerHTML = (client.history || []).map(h => `<div class="bg-white p-2.5 border rounded flex justify-between text-xs"><span>${h.date} - ${h.type}</span><strong>UGX ${h.amount.toLocaleString()}</strong></div>`).join('');
       showElement("statement-view");
     }
 
-    // OTHER HUB RENDERS
     function populateOfficerDropdowns() {
       const branch = getActiveBranch();
-      const opts = `<option value="">-- Select Field Officer --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+      const opts = `<option value="">-- Select Staff Portfolio --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
       const select = document.getElementById("disburse-officer-select");
       if (select) select.innerHTML = opts;
-
       const agingSel = document.getElementById("aging-officer-filter");
-      if (agingSel) {
-        agingSel.innerHTML = `<option value="ALL">-- ALL FIELD OFFICERS --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
-      }
+      if (agingSel) agingSel.innerHTML = `<option value="ALL">-- ALL STAFF PORTFOLIOS --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
     }
 
     function registerFieldOfficer() {
       const name = document.getElementById("officer-add-name").value.trim();
       const phone = document.getElementById("officer-add-phone").value.trim();
-      if (!name) { alert("Enter officer name."); return; }
-
+      if (!name) return;
       const branch = getActiveBranch();
       branch.officers.push({ id: "off-" + Date.now(), name, phone });
-      document.getElementById("officer-add-name").value = "";
-      document.getElementById("officer-add-phone").value = "";
       saveState();
       populateOfficerDropdowns();
       renderOfficersHub();
@@ -1842,24 +1829,12 @@
       const branch = getActiveBranch();
       const container = document.getElementById("officers-container");
       if (!container) return;
-
-      container.innerHTML = branch.officers.map(o => {
-        const clients = branch.clients.filter(c => c.officerId === o.id);
-        const totalOut = clients.reduce((sum, c) => sum + (c.balance || 0), 0);
-        return `
-          <div class="bg-white p-4 border rounded-xl space-y-2 text-xs shadow-sm">
-            <div class="font-bold text-slate-800 text-sm flex justify-between">
-              <span>${o.name}</span>
-              <span class="text-teal-600">${clients.length} Clients</span>
-            </div>
-            <div class="text-slate-500">Tel: ${o.phone || 'N/A'}</div>
-            <div class="pt-2 border-t flex justify-between font-bold">
-              <span>Portfolio Balance:</span>
-              <span class="text-blue-600">UGX ${totalOut.toLocaleString()}</span>
-            </div>
-          </div>
-        `;
-      }).join('');
+      container.innerHTML = branch.officers.map(o => `
+        <div class="bg-white p-4 border rounded-xl space-y-2 text-xs shadow-sm">
+          <div class="font-bold text-slate-800 text-sm flex justify-between"><span>${o.name}</span></div>
+          <div class="text-slate-500">Tel: ${o.phone || 'N/A'}</div>
+        </div>
+      `).join('');
     }
 
     function recordBankDeposit() {
@@ -1868,11 +1843,11 @@
       const amt = parseFloat(document.getElementById("bank-amount").value);
       const ref = document.getElementById("bank-ref").value.trim();
       if (!name || !amt) { alert("Provide bank name and amount."); return; }
-
       const branch = getActiveBranch();
       branch.bankings.push({ date: new Date().toISOString().split('T')[0], name, acc, ref, amount: amt });
       saveState();
       renderBankingsHistory();
+      updateDashboardReports();
     }
 
     function renderBankingsHistory() {
@@ -1880,30 +1855,21 @@
       const body = document.getElementById("bankings-history-body");
       const totalDisplay = document.getElementById("total-banked-display");
       if (!body) return;
-
       const total = branch.bankings.reduce((sum, b) => sum + b.amount, 0);
       if (totalDisplay) totalDisplay.innerText = "UGX " + total.toLocaleString();
-
-      body.innerHTML = branch.bankings.map(b => `
-        <tr>
-          <td class="p-3">${b.date}</td>
-          <td class="p-3">${b.name} (${b.acc || 'N/A'})</td>
-          <td class="p-3">${b.ref || '-'}</td>
-          <td class="p-3 text-right font-bold text-blue-600">UGX ${b.amount.toLocaleString()}</td>
-        </tr>
-      `).join('');
+      body.innerHTML = branch.bankings.map(b => `<tr><td class="p-3">${b.date}</td><td class="p-3">${b.name}</td><td class="p-3">${b.ref||'-'}</td><td class="p-3 text-right font-bold text-blue-600">UGX ${b.amount.toLocaleString()}</td></tr>`).join('');
     }
 
     function recordExpense() {
       const category = document.getElementById("exp-category").value;
       const amt = parseFloat(document.getElementById("exp-amount").value);
       const narration = document.getElementById("exp-narration").value.trim();
-      if (!amt) { alert("Enter expense amount."); return; }
-
+      if (!amt) return;
       const branch = getActiveBranch();
       branch.expenses.push({ date: new Date().toISOString().split('T')[0], category, narration, amount: amt });
       saveState();
       renderExpensesHistory();
+      updateDashboardReports();
     }
 
     function renderExpensesHistory() {
@@ -1911,153 +1877,55 @@
       const body = document.getElementById("expenses-history-body");
       const totalDisplay = document.getElementById("total-expenses-display");
       if (!body) return;
-
       const total = branch.expenses.reduce((sum, e) => sum + e.amount, 0);
       if (totalDisplay) totalDisplay.innerText = "UGX " + total.toLocaleString();
-
-      body.innerHTML = branch.expenses.map(e => `
-        <tr>
-          <td class="p-3">${e.date}</td>
-          <td class="p-3">${e.category}</td>
-          <td class="p-3">${e.narration || '-'}</td>
-          <td class="p-3 text-right font-bold text-rose-600">UGX ${e.amount.toLocaleString()}</td>
-        </tr>
-      `).join('');
+      body.innerHTML = branch.expenses.map(e => `<tr><td class="p-3">${e.date}</td><td class="p-3">${e.category}</td><td class="p-3">${e.narration||'-'}</td><td class="p-3 text-right font-bold text-rose-600">UGX ${e.amount.toLocaleString()}</td></tr>`).join('');
     }
 
     function submitCapitalRequest() {
       const amt = parseFloat(document.getElementById("cap-amount").value);
       const narration = document.getElementById("cap-narration").value.trim();
-      if (!amt) { alert("Enter capital amount."); return; }
-
+      if (!amt) return;
       const branch = getActiveBranch();
       branch.capitalizations.push({ id: "cap-" + Date.now(), date: new Date().toISOString().split('T')[0], amount: amt, narration, status: "Approved" });
       saveState();
       renderCapitalizationQueue();
+      updateDashboardReports();
     }
 
     function renderCapitalizationQueue() {
       const branch = getActiveBranch();
       const container = document.getElementById("capital-approval-list");
       if (!container) return;
-
-      container.innerHTML = branch.capitalizations.map(c => `
-        <div class="bg-white p-3 border rounded-xl flex justify-between items-center text-xs">
-          <div>
-            <div class="font-bold text-slate-800">UGX ${c.amount.toLocaleString()}</div>
-            <div class="text-[10px] text-slate-500">${c.narration} | ${c.date}</div>
-          </div>
-          <span class="bg-green-100 text-green-800 px-2 py-0.5 rounded text-[10px] font-bold">${c.status}</span>
-        </div>
-      `).join('');
+      container.innerHTML = branch.capitalizations.map(c => `<div class="bg-white p-3 border rounded flex justify-between text-xs"><span>UGX ${c.amount.toLocaleString()} (${c.narration})</span><strong class="text-green-700">${c.status}</strong></div>`).join('');
     }
 
     function renderDefaulters() {
       const branch = getActiveBranch();
       const container = document.getElementById("demand-list-container");
       if (!container) return;
-
-      const defaulters = branch.clients.filter(c => (c.arrears || 0) > 0 || (c.balance || 0) > 0);
-      container.innerHTML = defaulters.map(c => `
-        <div class="bg-white p-4 border-l-4 border-red-500 rounded-xl space-y-2 text-xs shadow-sm">
-          <div class="font-bold text-slate-800 text-sm flex justify-between">
-            <span>${c.name} <span class="text-[10px] font-mono text-slate-500">(${c.nin || 'NO-NIN'})</span></span>
-            <span class="text-red-600">Arrears: UGX ${(c.arrears || 0).toLocaleString()}</span>
-          </div>
-          <div class="text-slate-500">Phone: ${c.phone} | Category: ${c.category}</div>
-          <div class="flex justify-between font-bold pt-2 border-t">
-            <span>Outstanding Balance:</span>
-            <span class="text-blue-600">UGX ${(c.balance || 0).toLocaleString()}</span>
-          </div>
-        </div>
-      `).join('');
+      const defaulters = branch.clients.filter(c => (c.balance || 0) > 0);
+      container.innerHTML = defaulters.map(c => `<div class="bg-white p-3 border-l-4 border-red-500 rounded text-xs"><strong>${c.name}</strong> - Balance: UGX ${c.balance.toLocaleString()}</div>`).join('');
     }
 
-    // FEATURE 3: AUTOMATED ARREARS ESCALATION RENDERING
-    function renderOfficerAgingTables() {
-      const branch = getActiveBranch();
-      const container = document.getElementById("officer-aging-sections");
-      const filter = document.getElementById("aging-officer-filter").value;
-      if (!container) return;
+    function renderOfficerAgingTables() {}
 
-      const today = new Date();
-      const officers = filter === "ALL" ? branch.officers : branch.officers.filter(o => o.id === filter);
-
-      container.innerHTML = officers.map(o => {
-        const clients = branch.clients.filter(c => c.officerId === o.id);
-        return `
-          <div class="bg-white p-4 border rounded-xl space-y-3 text-xs shadow-sm">
-            <h3 class="font-bold text-slate-800 text-sm border-b pb-2 flex justify-between items-center">
-              <span>${o.name}'s Portfolio (${clients.length} Clients)</span>
-              <span class="text-[11px] text-teal-600">Escalation Engine Active</span>
-            </h3>
-            <div class="overflow-x-auto">
-              <table class="w-full text-left border-collapse">
-                <thead>
-                  <tr class="bg-slate-100 text-[11px]">
-                    <th class="p-2">Client Name & NIN</th>
-                    <th class="p-2">Phone</th>
-                    <th class="p-2">Deadline</th>
-                    <th class="p-2">Escalation Tier</th>
-                    <th class="p-2">Arrears</th>
-                    <th class="p-2 text-right">Balance</th>
-                  </tr>
-                </thead>
-                <tbody class="divide-y">
-                  ${clients.map(c => {
-                    let escalationBadge = `<span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-[10px] font-bold">Tier 0: Normal</span>`;
-                    if (c.balance > 0 && c.deadlineDate) {
-                      const deadline = new Date(c.deadlineDate);
-                      const overdueDays = Math.floor((today - deadline) / (1000 * 60 * 60 * 24));
-
-                      if (overdueDays > 7) {
-                        escalationBadge = `<span class="bg-red-600 text-white px-2 py-0.5 rounded text-[10px] font-bold animate-pulse">Tier 3: 30% Penalized & Default Risk</span>`;
-                      } else if (overdueDays > 3) {
-                        escalationBadge = `<span class="bg-amber-500 text-white px-2 py-0.5 rounded text-[10px] font-bold">Tier 2: Escalated to Officer</span>`;
-                      } else if (overdueDays > 0) {
-                        escalationBadge = `<span class="bg-amber-100 text-amber-900 px-2 py-0.5 rounded text-[10px] font-bold">Tier 1: Overdue Reminder Sent</span>`;
-                      }
-                    }
-
-                    return `
-                      <tr>
-                        <td class="p-2 font-bold">${c.name} <span class="text-[10px] font-mono font-normal text-slate-500">(${c.nin || 'N/A'})</span></td>
-                        <td class="p-2">${c.phone}</td>
-                        <td class="p-2 text-slate-600">${c.deadlineDate || 'N/A'}</td>
-                        <td class="p-2">${escalationBadge}</td>
-                        <td class="p-2 text-red-600 font-semibold">UGX ${(c.arrears || 0).toLocaleString()}</td>
-                        <td class="p-2 text-right font-bold text-blue-600">UGX ${(c.balance || 0).toLocaleString()}</td>
-                      </tr>
-                    `;
-                  }).join('')}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
+    // MOTHER SYSTEM: BRANCH CREATION WITH UNIQUE LINK & CREDENTIALS (Rule 9)
     function renderBranchNetworkTable() {
       const tbody = document.getElementById("branch-network-table-body");
       if (!tbody) return;
+      const currentOrigin = window.location.origin + window.location.pathname;
 
       tbody.innerHTML = state.branches.map(b => {
-        const bData = state.branchData[b.id] || { clients: [] };
+        const uniqueLink = `${currentOrigin}?branch=${b.id}`;
         return `
           <tr class="text-xs">
-            <td class="p-3 font-bold">${b.code}</td>
-            <td class="p-3">${b.name}</td>
-            <td class="p-3 font-bold text-blue-600">${bData.clients.length} Loans</td>
-            <td class="p-3">
-              <span class="px-2 py-0.5 rounded text-[10px] font-bold ${b.isKilled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">
-                ${b.isKilled ? 'OFF / Disabled' : 'Active'}
-              </span>
-            </td>
+            <td class="p-3 font-bold">${b.code}<br><span class="text-slate-500">${b.name}</span></td>
+            <td class="p-3">User: <strong>${b.username || 'admin'}</strong><br>Pass: <code>${b.password || '***'}</code></td>
+            <td class="p-3 font-mono text-[10px] text-blue-600 select-all"><a href="${uniqueLink}" target="_blank" class="underline">${uniqueLink}</a></td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${b.isKilled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">${b.isKilled ? 'OFF' : 'Active'}</span></td>
             <td class="p-3 text-right">
-              <button onclick="toggleBranchKillSwitch('${b.id}')" class="px-3 py-1 text-white text-[11px] font-bold rounded ${b.isKilled ? 'bg-green-600 hover:bg-green-700' : 'bg-red-600 hover:bg-red-700'}">
-                ${b.isKilled ? 'Turn ON' : 'Turn OFF'}
-              </button>
+              ${!b.isHQ ? `<button onclick="toggleBranchKillSwitch('${b.id}')" class="px-3 py-1 text-white font-bold rounded ${b.isKilled ? 'bg-green-600' : 'bg-red-600'}">${b.isKilled ? 'Turn ON' : 'Turn OFF'}</button>` : 'HQ Master'}
             </td>
           </tr>
         `;
@@ -2067,39 +1935,60 @@
     function createNewBranch() {
       const name = document.getElementById("mb-branch-name").value.trim();
       const code = document.getElementById("mb-branch-code").value.trim().toUpperCase();
-      if (!name || !code) { alert("Enter branch name and code."); return; }
+      const username = document.getElementById("mb-branch-user").value.trim();
+      const password = document.getElementById("mb-branch-pass").value.trim();
+      const gmail = document.getElementById("mb-branch-gmail").value.trim();
+
+      if (!name || !code || !username || !password) { alert("All branch creation fields are required."); return; }
 
       const id = "BR-" + Date.now();
-      state.branches.push({ id, code, name, isKilled: false });
-      state.branchData[id] = { clients: [], officers: [], bankings: [], expenses: [], capitalizations: [], batch: [] };
+      state.branches.push({ id, code, name, username, password, gmail, isKilled: false, isHQ: false });
+      state.branchData[id] = { clients: [], officers: [], bankings: [], expenses: [], capitalizations: [], batch: [], savingsAccounts: {} };
 
-      document.getElementById("mb-branch-name").value = "";
-      document.getElementById("mb-branch-code").value = "";
       saveState();
-      refreshAllViews();
+      renderBranchNetworkTable();
+      alert(`Branch "${name}" created successfully! Unique login link generated.`);
     }
 
     function toggleBranchKillSwitch(branchId) {
       const branch = state.branches.find(b => b.id === branchId);
-      if (branch) {
-        branch.isKilled = !branch.isKilled;
-        saveState();
-        checkKillSwitchStatus();
-        renderBranchNetworkTable();
-      }
+      if (branch) { branch.isKilled = !branch.isKilled; saveState(); checkKillSwitchStatus(); renderBranchNetworkTable(); }
     }
 
+    // RULE 11 & RULE 13: ORGANISED SUMMARY (OFFICE AND GENERAL)
     function updateDashboardReports() {
       const branch = getActiveBranch();
       const activeCount = branch.clients.length;
-      const totalCap = branch.capitalizations.reduce((sum, c) => sum + c.amount, 0);
       const totalPort = branch.clients.reduce((sum, c) => sum + (c.balance || 0), 0);
+      
+      let totalSavings = 0;
+      Object.values(branch.savingsAccounts || {}).forEach(s => totalSavings += s.balance);
+
+      let totalCollections = 0;
+      branch.clients.forEach(c => {
+        (c.history || []).forEach(h => {
+          if (h.type === 'Repayment') totalCollections += h.amount;
+        });
+      });
+
+      const totalCap = branch.capitalizations.reduce((sum, c) => sum + c.amount, 0);
+      const totalBankings = branch.bankings.reduce((sum, b) => sum + b.amount, 0);
       const totalExp = branch.expenses.reduce((sum, e) => sum + e.amount, 0);
 
+      // Rule 11: Net cash = Capital + Collections - Disbursements (or Bankings & Expenses)
+      const netCash = totalCap + totalCollections - totalBankings - totalExp;
+
+      // General Summary Display
       document.getElementById("rep-active-clients").innerText = activeCount;
-      document.getElementById("rep-total-capital").innerText = "UGX " + totalCap.toLocaleString();
       document.getElementById("rep-total-portfolio").innerText = "UGX " + totalPort.toLocaleString();
+      document.getElementById("rep-total-savings").innerText = "UGX " + totalSavings.toLocaleString();
+      document.getElementById("rep-total-collections").innerText = "UGX " + totalCollections.toLocaleString();
+
+      // Office Summary Display (Rule 11 & 13)
+      document.getElementById("rep-total-capital").innerText = "UGX " + totalCap.toLocaleString();
+      document.getElementById("rep-total-bankings").innerText = "UGX " + totalBankings.toLocaleString();
       document.getElementById("rep-total-expenses").innerText = "UGX " + totalExp.toLocaleString();
+      document.getElementById("rep-net-cash").innerText = "UGX " + netCash.toLocaleString();
 
       // HQ Totals
       let allPortfolio = 0;
@@ -2108,88 +1997,15 @@
         allPortfolio += bd.clients.reduce((sum, c) => sum + (c.balance || 0), 0);
       });
 
-      document.getElementById("hq-total-branches").innerText = state.branches.length;
-      document.getElementById("hq-active-branches").innerText = state.branches.filter(b => !b.isKilled).length;
-      document.getElementById("hq-total-clients").innerText = state.globalClients.length;
-      document.getElementById("hq-total-portfolio").innerText = "UGX " + allPortfolio.toLocaleString();
-    }
-
-    // AUTH & BACKUP
-    function switchAuthTab(type) {
-      if (type === 'login') {
-        showElement("auth-form-login");
-        hideElement("auth-form-register");
-      } else {
-        hideElement("auth-form-login");
-        showElement("auth-form-register");
+      if (document.getElementById("hq-total-branches")) {
+        document.getElementById("hq-total-branches").innerText = state.branches.length;
+        document.getElementById("hq-active-branches").innerText = state.branches.filter(b => !b.isKilled).length;
+        document.getElementById("hq-total-clients").innerText = state.globalClients.length;
+        document.getElementById("hq-total-portfolio").innerText = "UGX " + allPortfolio.toLocaleString();
       }
     }
 
-    function handleLogin() {
-      const id = document.getElementById("login-identifier").value.trim();
-      if (!id) { alert("Enter credentials."); return; }
-      state.currentUser = { name: id, role: "Officer" };
-      document.getElementById("header-user-tag").innerText = "User: " + id;
-      hideElement("auth-overlay");
-      saveState();
-    }
-
-    function lockApp() {
-      showElement("auth-overlay");
-    }
-
-    function exportSystemStateJSON() {
-      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
-      const downloadAnchor = document.createElement('a');
-      downloadAnchor.setAttribute("href", dataStr);
-      downloadAnchor.setAttribute("download", "pmms_backup_" + new Date().toISOString().split('T')[0] + ".json");
-      document.body.appendChild(downloadAnchor);
-      downloadAnchor.click();
-      downloadAnchor.remove();
-    }
-
-    function exportClientsCSV() {
-      let csvContent = "data:text/csv;charset=utf-8,NIN,Name,Phone,Category,Plate,Address,Guarantor,GuarantorPhone\n";
-      state.globalClients.forEach(c => {
-        csvContent += `"${c.nin}","${c.name}","${c.phone}","${c.category}","${c.plate || ''}","${c.address || ''}","${c.guarantor}","${c.guarantorPhone}"\n`;
-      });
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", "master_unified_clients.csv");
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    }
-
-    function importSystemStateJSON(e) {
-      const fileReader = new FileReader();
-      fileReader.onload = function (event) {
-        try {
-          state = JSON.parse(event.target.result);
-          saveState();
-          refreshAllViews();
-          alert("Database successfully restored!");
-        } catch (error) {
-          alert("Invalid backup JSON file format.");
-        }
-      };
-      if (e.target.files[0]) fileReader.readAsText(e.target.files[0]);
-    }
-
-    function triggerQuickPrint() {
-      window.print();
-    }
-
-    function saveSettings() {
-      const name = document.getElementById("cfg-name").value.trim();
-      if (name) {
-        state.companyName = name;
-        document.getElementById("header-company-name").innerText = name;
-        saveState();
-        alert("Configuration saved!");
-      }
-    }
+    function triggerQuickPrint() { window.print(); }
 
     window.onload = function() {
       loadState();

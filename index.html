@@ -51,7 +51,7 @@
     </div>
   </div>
 
-  <!-- STRICT AUTHENTICATION OVERLAY (Rule 10) -->
+  <!-- AUTHENTICATION OVERLAY (Rule 2 & 5: Persistent Login & Role-Based) -->
   <div id="auth-overlay" class="fixed inset-0 bg-slate-900/98 z-50 flex items-center justify-center p-4 fallback-overlay">
     <div class="bg-white rounded-2xl p-6 w-full max-w-sm text-center space-y-4 shadow-2xl">
       <div class="w-14 h-14 bg-teal-100 text-teal-800 rounded-full flex items-center justify-center mx-auto text-2xl font-bold">
@@ -60,11 +60,18 @@
       <h3 class="font-black text-slate-900 text-base" id="auth-modal-title">PMMS TERMINAL AUTHENTICATION</h3>
       <div class="flex border-b text-xs font-bold">
         <button id="tab-btn-login" onclick="switchAuthTab('login')" class="w-1/2 py-2 text-slate-800 border-b-2 border-slate-800">LOGIN</button>
-        <button id="tab-btn-register" onclick="switchAuthTab('register')" class="w-1/2 py-2 text-slate-400">REGISTER ACCOUNT</button>
+        <button id="tab-btn-register" onclick="switchAuthTab('register')" class="w-1/2 py-2 text-slate-400">REGISTER</button>
       </div>
       
       <!-- LOGIN FORM -->
       <div id="auth-form-login" class="space-y-3 text-left">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1">Select Role</label>
+          <select id="login-role" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50 font-bold">
+            <option value="Administrator">Administrator</option>
+            <option value="Accountant">Accountant</option>
+          </select>
+        </div>
         <div>
           <label class="block text-[11px] font-bold text-slate-600 mb-1">Username or Gmail</label>
           <input type="text" id="login-identifier" placeholder="e.g. admin or user@gmail.com" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
@@ -82,12 +89,19 @@
 
       <!-- REGISTER FORM -->
       <div id="auth-form-register" hidden class="space-y-3 text-left hidden">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1">Register Role Type</label>
+          <select id="reg-role" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50 font-bold">
+            <option value="Administrator">Administrator</option>
+            <option value="Accountant">Accountant</option>
+          </select>
+        </div>
         <input type="text" id="reg-name" placeholder="Full Name" class="w-full p-2 border rounded-xl text-xs bg-slate-50">
         <input type="email" id="reg-email" placeholder="Gmail Address" class="w-full p-2 border rounded-xl text-xs bg-slate-50">
         <input type="text" id="reg-username" placeholder="Username" class="w-full p-2 border rounded-xl text-xs bg-slate-50">
         <input type="password" id="reg-password" placeholder="Password" class="w-full p-2 border rounded-xl text-xs bg-slate-50">
         <input type="text" id="reg-branch-code" placeholder="Branch Code assigned by Mother" class="w-full p-2 border rounded-xl text-xs uppercase bg-slate-50 font-bold">
-        <button onclick="handleRegister()" class="w-full bg-teal-600 text-white py-2.5 rounded-xl font-bold text-xs hover:bg-teal-700 shadow">CREATE & VERIFY ACCOUNT</button>
+        <button onclick="handleRegister()" class="w-full bg-teal-600 text-white py-2.5 rounded-xl font-bold text-xs hover:bg-teal-700 shadow">CREATE ACCOUNT</button>
       </div>
     </div>
   </div>
@@ -108,7 +122,7 @@
         </div>
       </div>
       <div class="flex items-center gap-2">
-        <!-- Rule 1: X-Printer Connection & Print Button -->
+        <!-- Rule 1: X-Printer Connection -->
         <button onclick="connectXPrinter()" id="xprinter-btn" class="bg-teal-600 hover:bg-teal-500 text-white text-xs px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1 transition shadow">
           <i class="fa-solid fa-print"></i> <span id="xprinter-status-text">Connect X-Printer</span>
         </button>
@@ -126,17 +140,16 @@
       <button onclick="showTab('tab-disburse')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Disburse</button>
       <button onclick="showTab('tab-savings')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-emerald-400 transition"><i class="fa-solid fa-piggy-bank mr-1"></i>Savings</button>
       <button onclick="showTab('tab-loan-ops')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-indigo-400 transition"><i class="fa-solid fa-sliders mr-1"></i>Loan Operations</button>
-      <button onclick="showTab('tab-unified-clients')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-purple-400 transition"><i class="fa-solid fa-id-card mr-1"></i>Clients & Savings Statements</button>
+      <button onclick="showTab('tab-unified-clients')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-purple-400 transition"><i class="fa-solid fa-id-card mr-1"></i>Clients & Statements</button>
       <button onclick="showTab('tab-officers')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-teal-400 transition"><i class="fa-solid fa-user-tie mr-1"></i>Staff Hub</button>
       <button onclick="showTab('tab-bankings')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-blue-400 transition"><i class="fa-solid fa-building-columns mr-1"></i>Bankings</button>
       <button onclick="showTab('tab-expenses')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-rose-400 transition"><i class="fa-solid fa-wallet mr-1"></i>Expenses</button>
       <button onclick="showTab('tab-capital')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-emerald-400 transition"><i class="fa-solid fa-coins mr-1"></i>Capital</button>
       <button onclick="showTab('tab-statement')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Loan Statements</button>
-      <button onclick="showTab('tab-reports')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Reports & Summaries</button>
+      <button onclick="showTab('tab-reports')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition">Reports & Closing</button>
       <button onclick="showTab('tab-aging')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-amber-400 transition"><i class="fa-solid fa-clock-rotate-left mr-1"></i>Aging</button>
       <button onclick="showTab('tab-demand')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-red-400 transition">Defaulters</button>
       <button onclick="showTab('tab-sms-logs')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-sky-400 transition"><i class="fa-solid fa-comment-sms mr-1"></i>SMS</button>
-      <!-- Rule 9: Mother System Tab only visible for HQ / Admin -->
       <button id="nav-mother-tab" onclick="showTab('tab-settings')" class="hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-teal-300 transition"><i class="fa-solid fa-network-wired mr-1"></i>Mother System</button>
     </div>
   </nav>
@@ -150,9 +163,15 @@
     <section id="tab-posting" class="tab-content space-y-4">
       <h2 class="text-base md:text-lg font-bold border-b pb-2 flex justify-between items-center">
         <span>Repayment & Batch Posting</span>
-        <button onclick="printLastTransactionReceipt()" class="bg-teal-700 hover:bg-teal-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 shadow">
-          <i class="fa-solid fa-print"></i> X-Printer Receipt
-        </button>
+        <div class="flex items-center gap-3">
+          <!-- Rule 7: Optional Receipt Print Toggle -->
+          <label class="text-xs font-semibold flex items-center gap-1 cursor-pointer bg-slate-200 px-2.5 py-1.5 rounded-lg">
+            <input type="checkbox" id="toggle-print-receipt" checked class="rounded"> Print X-Printer Receipt
+          </label>
+          <button onclick="printLastTransactionReceipt()" class="bg-teal-700 hover:bg-teal-600 text-white text-xs px-3 py-1.5 rounded-lg font-bold flex items-center gap-1 shadow">
+            <i class="fa-solid fa-print"></i> Re-print
+          </button>
+        </div>
       </h2>
       
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -169,7 +188,7 @@
                 <div class="font-bold text-base md:text-lg" id="post-client-name"></div>
                 <div class="text-slate-300 text-xs" id="post-client-acc"></div>
                 <div class="text-teal-300 text-xs font-semibold" id="post-client-type-info"></div>
-                <div class="text-slate-400 text-[11px]" id="post-client-officer">Officer: Unassigned</div>
+                <div class="text-slate-400 text-[11px]" id="post-client-officer">Staff: Unassigned</div>
               </div>
               <a id="post-client-call" href="#" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 transition">
                 <i class="fa-solid fa-phone"></i> Call
@@ -209,7 +228,7 @@
         <div class="border-t lg:border-t-0 lg:border-l lg:pl-4 pt-3 lg:pt-0">
           <div class="flex justify-between items-center mb-3">
             <h3 class="font-bold text-sm md:text-base">Pending Batch (<span id="batch-count">0</span>)</h3>
-            <button onclick="postAllBatch()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition">POST ALL & PRINT X-PRINTER</button>
+            <button onclick="postAllBatch()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold shadow transition">POST ALL PAYMENTS</button>
           </div>
           <div id="batch-list" class="space-y-2 max-h-[400px] overflow-y-auto"></div>
         </div>
@@ -230,7 +249,7 @@
       </div>
 
       <div class="bg-teal-50 border border-teal-200 p-3 rounded-xl text-xs space-y-1">
-        <label class="block font-bold text-teal-900"><i class="fa-solid fa-user-tie"></i> Assign Staff / Officer *</label>
+        <label class="block font-bold text-teal-900"><i class="fa-solid fa-user-tie"></i> Assign Staff Portfolio *</label>
         <select id="disburse-officer-select" class="w-full p-2.5 border rounded-lg text-xs bg-white font-semibold text-slate-800">
           <option value="">-- Select Staff Portfolio --</option>
         </select>
@@ -347,7 +366,7 @@
             <input type="number" id="sav-amount" placeholder="Amount" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
           </div>
           <button onclick="processSavingsTransaction()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-lg font-bold transition shadow">
-            Process Savings Transaction & Print X-Printer
+            Process Savings Transaction
           </button>
         </div>
 
@@ -372,11 +391,11 @@
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- MODULE A: LOAN REVERSAL -->
-        <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
+        <!-- MODULE A: LOAN REVERSAL (Admin restricted) -->
+        <div id="admin-reversal-module" class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
           <div class="border-b pb-2 flex items-center justify-between">
             <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
-              <i class="fa-solid fa-rotate-left text-rose-600"></i> Loan Transaction Reversal
+              <i class="fa-solid fa-rotate-left text-rose-600"></i> Loan Transaction Reversal (Admin Only)
             </h3>
             <span class="text-[10px] bg-rose-50 text-rose-700 font-bold px-2 py-0.5 rounded">Audit Protected</span>
           </div>
@@ -521,7 +540,7 @@
       </div>
     </section>
 
-    <!-- TAB: STAFF HUB (Rule 12) -->
+    <!-- TAB: STAFF HUB -->
     <section id="tab-officers" hidden class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
         <h2 class="text-base md:text-lg font-bold text-slate-800"><i class="fa-solid fa-user-tie text-teal-600"></i> Staff Hub</h2>
@@ -691,11 +710,16 @@
       </div>
     </section>
 
-    <!-- TAB: REPORTS & SUMMARIES (Rule 13: Organized Office & General Summaries) -->
+    <!-- TAB: REPORTS & DAILY CLOSING (Rule 3: Submit Daily Report via WhatsApp) -->
     <section id="tab-reports" hidden class="tab-content space-y-6 hidden">
       <div class="flex justify-between items-center border-b pb-2">
-        <h2 class="text-lg font-bold text-slate-900">Organized Summaries (Office & General)</h2>
-        <button onclick="triggerQuickPrint()" class="bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow"><i class="fa-solid fa-print"></i> Print Summary</button>
+        <h2 class="text-lg font-bold text-slate-900">Organized Summaries & Daily Closing Report</h2>
+        <div class="flex gap-2">
+          <button onclick="submitDailyReportWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow flex items-center gap-1">
+            <i class="fa-brands fa-whatsapp"></i> Submit Daily Report (WhatsApp)
+          </button>
+          <button onclick="triggerQuickPrint()" class="bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow"><i class="fa-solid fa-print"></i> Print Summary</button>
+        </div>
       </div>
 
       <!-- GENERAL SUMMARY -->
@@ -723,7 +747,7 @@
         </div>
       </div>
 
-      <!-- OFFICE SUMMARY (Rule 11: Net Cash after Deducting Bankings & Expenses) -->
+      <!-- OFFICE SUMMARY -->
       <div class="bg-blue-950 text-white p-5 rounded-2xl space-y-4 shadow-lg">
         <h3 class="text-xs font-bold uppercase tracking-wider text-blue-300 border-b border-blue-900 pb-2">
           <i class="fa-solid fa-building mr-1"></i> Office Summary (Capital, Bankings, Expenses & Net Cash)
@@ -749,13 +773,14 @@
       </div>
     </section>
 
-    <!-- TAB: AGING -->
+    <!-- TAB: AGING (Rule 1: Daily Aging Analysis) -->
     <section id="tab-aging" hidden class="tab-content space-y-4 hidden">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-3">
         <div>
           <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> Staff Portfolio Aging & Escalation
+            <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> Daily Portfolio Aging & Escalation
           </h2>
+          <p class="text-xs text-slate-500">Automatically evaluated daily based on loan deadlines.</p>
         </div>
         <div class="flex items-center gap-2 w-full md:w-auto">
           <select id="aging-officer-filter" onchange="renderOfficerAgingTables()" class="bg-white border-2 border-slate-700 text-xs font-bold p-2.5 rounded-xl text-slate-800 shadow-sm focus:outline-none w-full md:w-64">
@@ -775,18 +800,18 @@
       <div id="demand-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
     </section>
 
-    <!-- TAB: SMS -->
+    <!-- TAB: SMS (Rule 6: Local messaging network service) -->
     <section id="tab-sms-logs" hidden class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
         <div>
           <h2 class="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-comment-sms text-sky-600"></i> Automated SMS Dispatch Log
+            <i class="fa-solid fa-comment-sms text-sky-600"></i> Local Network SMS Gateway
           </h2>
         </div>
         <button onclick="clearSmsLogs()" class="bg-slate-700 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow">Clear Logs</button>
       </div>
       <div class="bg-slate-900 text-white p-4 rounded-xl flex justify-between items-center text-xs shadow-md">
-        <span>SMS Gateway Service: <strong class="text-emerald-400">ONLINE (Simulated API)</strong></span>
+        <span>SMS Gateway Service: <strong class="text-emerald-400">ONLINE (Google Messages / Native App Link)</strong></span>
         <span class="text-sky-300">Total SMS Dispatched: <strong id="sms-log-count" class="text-white text-sm">0</strong></span>
       </div>
       <div class="bg-white border rounded-xl overflow-x-auto shadow-sm">
@@ -797,7 +822,7 @@
               <th class="p-3">Recipient Mobile</th>
               <th class="p-3">Trigger Action</th>
               <th class="p-3">SMS Content</th>
-              <th class="p-3 text-right">Status</th>
+              <th class="p-3 text-right">Action</th>
             </tr>
           </thead>
           <tbody id="sms-logs-table-body" class="divide-y text-slate-700"></tbody>
@@ -805,61 +830,52 @@
       </div>
     </section>
 
-    <!-- TAB 5: MOTHER SYSTEM & MULTI-BRANCH ENGINE (Rule 9) -->
+    <!-- TAB 5: MOTHER SYSTEM & ADMIN SETTINGS -->
     <section id="tab-settings" hidden class="tab-content space-y-6 hidden max-w-5xl mx-auto">
       <div class="flex justify-between items-center border-b pb-2">
         <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
-          <i class="fa-solid fa-network-wired text-teal-600"></i> Central Mother System & Multi-Branch Hub
+          <i class="fa-solid fa-network-wired text-teal-600"></i> Central Mother System & Admin Hub
         </h2>
-        <span class="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-xs font-bold">100+ Branches Supported</span>
+        <span class="bg-teal-100 text-teal-800 px-3 py-1 rounded-full text-xs font-bold">Admin Module</span>
       </div>
 
-      <div class="bg-slate-900 text-white p-5 rounded-2xl space-y-3 shadow-lg">
-        <div class="text-xs font-bold text-teal-400 uppercase tracking-wider border-b border-slate-700 pb-2">
-          <i class="fa-solid fa-globe mr-1"></i> Mother System Network Summary (All Branches Combined)
-        </div>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-          <div class="bg-slate-800 p-3 rounded-xl border border-slate-700">
-            <span class="text-slate-400 block text-[10px]">Total Created Branches</span>
-            <span id="hq-total-branches" class="text-lg font-bold text-teal-300">1</span>
+      <!-- ADMIN CREDENTIAL & COMPANY MANAGEMENT (Rule 5) -->
+      <div class="bg-white border-2 border-slate-800 p-5 rounded-2xl space-y-4 text-xs shadow-md">
+        <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
+          <i class="fa-solid fa-user-gear text-teal-600"></i> Administrator Settings & Accountant Management
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-slate-50 p-4 rounded-xl border space-y-3">
+            <h4 class="font-bold text-slate-700">Change Company Name</h4>
+            <input type="text" id="admin-new-company-name" placeholder="New Company Name" class="w-full p-2.5 border rounded-lg text-xs bg-white">
+            <button onclick="adminUpdateCompanyName()" class="w-full bg-slate-800 text-white py-2 rounded-lg font-bold">Update Company Name</button>
           </div>
-          <div class="bg-slate-800 p-3 rounded-xl border border-slate-700">
-            <span class="text-slate-400 block text-[10px]">Active Operating Terminals</span>
-            <span id="hq-active-branches" class="text-lg font-bold text-emerald-400">1</span>
-          </div>
-          <div class="bg-slate-800 p-3 rounded-xl border border-slate-700">
-            <span class="text-slate-400 block text-[10px]">Master Registered Clients</span>
-            <span id="hq-total-clients" class="text-lg font-bold text-purple-400">0</span>
-          </div>
-          <div class="bg-slate-800 p-3 rounded-xl border border-slate-700">
-            <span class="text-slate-400 block text-[10px]">Total Network Outstanding</span>
-            <span id="hq-total-portfolio" class="text-lg font-bold text-amber-400">UGX 0</span>
+          <div class="bg-slate-50 p-4 rounded-xl border space-y-3">
+            <h4 class="font-bold text-slate-700">Update Accountant Credentials</h4>
+            <input type="text" id="admin-acc-username" placeholder="New Accountant Username" class="w-full p-2 border rounded-lg text-xs bg-white">
+            <input type="password" id="admin-acc-password" placeholder="New Accountant Password" class="w-full p-2 border rounded-lg text-xs bg-white">
+            <button onclick="adminUpdateAccountantCredentials()" class="w-full bg-teal-700 text-white py-2 rounded-lg font-bold">Update Accountant Login</button>
           </div>
         </div>
       </div>
 
-      <!-- Branch Creator & Credential Generator (Rule 9) -->
+      <!-- Branch Creator & Manager -->
       <div class="bg-white border-2 border-slate-800 p-5 rounded-2xl space-y-4 text-xs shadow-md">
         <div class="flex justify-between items-center border-b border-slate-200 pb-3">
           <div>
             <h3 class="font-bold text-slate-900 text-base flex items-center gap-2">
-              <i class="fa-solid fa-plus-circle text-teal-600"></i> Create Branch & Credentials (with Unique Link)
+              <i class="fa-solid fa-plus-circle text-teal-600"></i> Create Branch & Manager WhatsApp Contact
             </h3>
-            <p class="text-slate-500 text-[11px]">Mother System creates branch credentials. A unique shareable link is generated to send to another device.</p>
           </div>
         </div>
 
         <div class="bg-slate-50 p-4 rounded-xl border space-y-3">
-          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
+          <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
             <input type="text" id="mb-branch-name" placeholder="Branch Name (e.g. Jinja)" class="p-2.5 border rounded-lg text-xs bg-white">
             <input type="text" id="mb-branch-code" placeholder="Branch Code (e.g. JNJ-02)" class="p-2.5 border rounded-lg text-xs uppercase bg-white font-bold">
-            <input type="text" id="mb-branch-user" placeholder="Username (e.g. jinja_manager)" class="p-2.5 border rounded-lg text-xs bg-white">
-            <input type="password" id="mb-branch-pass" placeholder="Password" class="p-2.5 border rounded-lg text-xs bg-white">
+            <input type="tel" id="mb-branch-manager-phone" placeholder="Manager WhatsApp Phone (e.g. 256771234567)" class="p-2.5 border rounded-lg text-xs bg-white">
           </div>
-          <div>
-            <input type="email" id="mb-branch-gmail" placeholder="Manager Gmail (e.g. jinja@gmail.com)" class="w-full p-2.5 border rounded-lg text-xs bg-white">
-          </div>
-          <button onclick="createNewBranch()" class="w-full bg-teal-700 hover:bg-teal-800 text-white py-2.5 rounded-lg font-bold shadow transition">+ Create Branch & Generate Unique Link</button>
+          <button onclick="createNewBranch()" class="w-full bg-teal-700 hover:bg-teal-800 text-white py-2.5 rounded-lg font-bold shadow transition">+ Create Branch & Generate Link</button>
         </div>
 
         <div class="overflow-x-auto border rounded-xl">
@@ -867,8 +883,8 @@
             <thead>
               <tr class="bg-slate-800 text-white text-[11px]">
                 <th class="p-3">Branch Code & Name</th>
-                <th class="p-3">Manager Credentials</th>
-                <th class="p-3">Unique Link (Shareable)</th>
+                <th class="p-3">Manager WhatsApp</th>
+                <th class="p-3">Unique Link</th>
                 <th class="p-3">Status</th>
                 <th class="p-3 text-right">Mother Control</th>
               </tr>
@@ -899,7 +915,8 @@
     // STATE INITIALIZATION (Rule 3: Starts with zero clients, zero capital, zero collection)
     let state = {
       accounts: [
-        { username: "admin", gmail: "admin@pmms.com", password: "password123", branchCode: "HQ-01", role: "HQ" }
+        { role: "Administrator", username: "admin", password: "password123", branchCode: "HQ-01" },
+        { role: "Accountant", username: "accountant", password: "password123", branchCode: "HQ-01" }
       ],
       currentUser: null,
       companyName: "PMMS Central Microfinance",
@@ -907,7 +924,7 @@
       globalClients: [],
       smsLogs: [],
       branches: [
-        { id: "BR-HQ", code: "HQ-01", name: "Main HQ Central Branch", username: "admin", gmail: "admin@pmms.com", password: "password123", isKilled: false, isHQ: true }
+        { id: "BR-HQ", code: "HQ-01", name: "Main HQ Central Branch", managerPhone: "256770000000", isKilled: false, isHQ: true }
       ],
       branchData: {
         "BR-HQ": {
@@ -917,7 +934,7 @@
           expenses: [],
           capitalizations: [],
           batch: [],
-          savingsAccounts: {} // Rule 5: clientNin -> { balance: 0, history: [] }
+          savingsAccounts: {}
         }
       }
     };
@@ -930,31 +947,32 @@
     let lastPrintedReceiptText = "";
     let xPrinterDevice = null;
 
-    // RULE 1: X-PRINTER CONNECTION & PRINTING
+    // RULE 1: X-PRINTER CONNECTION
     async function connectXPrinter() {
       try {
         if (!navigator.bluetooth) {
-          alert("Web Bluetooth API is not supported on this browser/device. You can still use standard printing.");
+          alert("Web Bluetooth API is not supported on this browser. Standard print fallback available.");
           return;
         }
         xPrinterDevice = await navigator.bluetooth.requestDevice({
           acceptAllDevices: true,
-          optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] // common thermal printer service UUID
+          optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
         });
         document.getElementById("xprinter-status-text").innerText = "X-Printer Connected";
         document.getElementById("xprinter-btn").classList.remove("bg-teal-600");
         document.getElementById("xprinter-btn").classList.add("bg-emerald-600");
         alert("X-Printer connected successfully!");
       } catch(err) {
-        console.error(err);
-        alert("X-Printer connection cancelled or failed. Standard print fallback available.");
+        alert("X-Printer connection cancelled or failed.");
       }
     }
 
     async function printToXPrinter(textData) {
       lastPrintedReceiptText = textData;
+      const shouldPrint = document.getElementById("toggle-print-receipt") ? document.getElementById("toggle-print-receipt").checked : true;
+      if (!shouldPrint) return; // Rule 7: Option to accept print receipt or not
+
       if (xPrinterDevice && xPrinterDevice.gatt && xPrinterDevice.gatt.connected) {
-        // Send raw ESC/POS text bytes if connected via Bluetooth
         try {
           const server = await xPrinterDevice.gatt.connect();
           const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
@@ -963,10 +981,9 @@
           await characteristic.writeValue(encoder.encode(textData + "\n\n\n"));
           return;
         } catch(e) {
-          console.warn("Bluetooth print failed, falling back to print window:", e);
+          console.warn("Bluetooth print failed:", e);
         }
       }
-      // Standard Thermal Receipt Window Fallback (58mm width format)
       const printableArea = document.getElementById("printable-area");
       printableArea.innerHTML = `<pre style="font-family: monospace; font-size: 11px; width: 280px; white-space: pre-wrap;">${textData}</pre>`;
       showElement(printableArea);
@@ -975,10 +992,7 @@
     }
 
     function printLastTransactionReceipt() {
-      if (!lastPrintedReceiptText) {
-        alert("No recent transaction receipt to print.");
-        return;
-      }
+      if (!lastPrintedReceiptText) { alert("No recent receipt."); return; }
       printToXPrinter(lastPrintedReceiptText);
     }
 
@@ -993,14 +1007,17 @@
       return state.branches.find(b => b.id === state.activeBranchId) || state.branches[0];
     }
 
+    // RULE 6: LOCAL MESSAGING SERVICE (SMS Link)
     function dispatchSmsNotification(phone, message, triggerAction) {
       if (!phone) return;
+      const smsLink = `sms:${phone}?body=${encodeURIComponent(message)}`;
       const logEntry = {
         timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
         phone: phone,
         trigger: triggerAction,
         message: message,
-        status: "SENT (Delivered)"
+        smsLink: smsLink,
+        status: "Ready (Local Messenger)"
       };
       if (!state.smsLogs) state.smsLogs = [];
       state.smsLogs.unshift(logEntry);
@@ -1026,7 +1043,9 @@
           <td class="p-3 font-bold text-slate-800">${l.phone}</td>
           <td class="p-3"><span class="bg-sky-100 text-sky-800 px-2 py-0.5 rounded text-[10px] font-bold">${l.trigger}</span></td>
           <td class="p-3 text-slate-600 max-w-xs truncate">${l.message}</td>
-          <td class="p-3 text-right font-bold text-emerald-600">${l.status}</td>
+          <td class="p-3 text-right">
+            <a href="${l.smsLink}" class="bg-sky-600 text-white px-2.5 py-1 rounded font-bold hover:bg-sky-700">Open Messenger</a>
+          </td>
         </tr>
       `).join('');
     }
@@ -1035,6 +1054,24 @@
       state.smsLogs = [];
       saveState();
       renderSmsLogs();
+    }
+
+    // RULE 1: DAILY AGING ANALYSIS EVALUATION
+    function runDailyAgingEvaluation() {
+      const today = new Date();
+      state.branches.forEach(b => {
+        const bd = state.branchData[b.id];
+        if (bd && bd.clients) {
+          bd.clients.forEach(c => {
+            if (c.balance > 0 && c.deadlineDate) {
+              const deadline = new Date(c.deadlineDate);
+              const overdueDays = Math.floor((today - deadline) / (1000 * 60 * 60 * 24));
+              c.overdueDays = Math.max(0, overdueDays);
+            }
+          });
+        }
+      });
+      saveState();
     }
 
     function loadState() {
@@ -1048,7 +1085,8 @@
         } catch(e) { console.error(e); }
       }
       
-      // Check URL for unique branch link query param (Rule 9)
+      runDailyAgingEvaluation();
+
       const urlParams = new URLSearchParams(window.location.search);
       const branchParam = urlParams.get('branch');
       if (branchParam) {
@@ -1060,6 +1098,17 @@
         }
       }
 
+      // RULE 2: Remember logins (Persistent session check)
+      const savedUser = localStorage.getItem("pmms_current_user");
+      if (savedUser) {
+        try {
+          state.currentUser = JSON.parse(savedUser);
+          document.getElementById("header-user-tag").innerText = `User: ${state.currentUser.username} (${state.currentUser.role})`;
+          hideElement("auth-overlay");
+          applyRolePermissions();
+        } catch(e) {}
+      }
+
       checkKillSwitchStatus();
     }
 
@@ -1069,11 +1118,8 @@
 
     function checkKillSwitchStatus() {
       const info = getActiveBranchInfo();
-      if (info && info.isKilled) {
-        showElement("kill-switch-overlay");
-      } else {
-        hideElement("kill-switch-overlay");
-      }
+      if (info && info.isKilled) showElement("kill-switch-overlay");
+      else hideElement("kill-switch-overlay");
     }
 
     function unlockViaMasterOverride() {
@@ -1118,7 +1164,7 @@
       showElement(tabId);
     }
 
-    // AUTHENTICATION & LOGIN (Rules 9 & 10)
+    // RULE 5: ROLE-BASED AUTHENTICATION & MULTI-DEVICE (Max 4 devices limit check)
     function switchAuthTab(type) {
       if (type === 'login') {
         showElement("auth-form-login");
@@ -1130,110 +1176,129 @@
     }
 
     function handleRegister() {
+      const role = document.getElementById("reg-role").value;
       const name = document.getElementById("reg-name").value.trim();
       const gmail = document.getElementById("reg-email").value.trim();
       const username = document.getElementById("reg-username").value.trim();
       const password = document.getElementById("reg-password").value.trim();
       const branchCode = document.getElementById("reg-branch-code").value.trim().toUpperCase();
 
-      if (!name || !gmail || !username || !password || !branchCode) {
-        alert("All fields are strictly required for registration.");
-        return;
-      }
+      if (!name || !username || !password || !branchCode) { alert("Required fields missing."); return; }
 
-      // Verify branch code matches an existing created branch
       const branchMatch = state.branches.find(b => b.code.toUpperCase() === branchCode);
-      if (!branchMatch) {
-        alert("Invalid Branch Code! Branch must be created by Mother System first.");
-        return;
-      }
+      if (!branchMatch) { alert("Invalid Branch Code."); return; }
 
-      state.accounts.push({ name, gmail, username, password, branchCode, role: branchMatch.isHQ ? "HQ" : "Branch" });
+      state.accounts.push({ role, name, gmail, username, password, branchCode });
       saveState();
-      alert("Account created successfully! You can now login.");
+      alert("Account created successfully!");
       switchAuthTab('login');
     }
 
     function handleLogin() {
+      const role = document.getElementById("login-role").value;
       const identifier = document.getElementById("login-identifier").value.trim();
       const password = document.getElementById("login-password").value.trim();
       const branchCode = document.getElementById("login-branch-code").value.trim().toUpperCase();
 
-      if (!identifier || !password || !branchCode) {
-        alert("Please enter Identifier, Password, and Branch Code.");
-        return;
-      }
+      if (!identifier || !password || !branchCode) { alert("Enter all login fields."); return; }
 
       const branchMatch = state.branches.find(b => b.code.toUpperCase() === branchCode);
-      if (!branchMatch) {
-        alert("Access Denied: Invalid Branch Code.");
-        return;
-      }
+      if (!branchMatch) { alert("Invalid branch code."); return; }
 
-      // Check account in state.accounts or match branch credentials
       const acc = state.accounts.find(a => 
+        a.role === role &&
         (a.username === identifier || a.gmail === identifier) && 
         a.password === password && 
         a.branchCode.toUpperCase() === branchCode
       );
 
-      const isBranchMasterCred = (branchMatch.username === identifier || branchMatch.gmail === identifier) && branchMatch.password === password;
-
-      if (!acc && !isBranchMasterCred) {
-        alert("Access Denied: Incorrect credentials or branch code.");
+      if (!acc) {
+        alert("Access Denied: Incorrect credentials or role selection.");
         return;
       }
 
-      state.currentUser = acc || { username: identifier, role: branchMatch.isHQ ? "HQ" : "Branch" };
-      state.activeBranchId = branchMatch.id;
-
-      document.getElementById("header-user-tag").innerText = "User: " + identifier;
-      
-      // Rule 9: If branch is created by Mother, hide Mother System tab
-      if (!branchMatch.isHQ) {
-        hideElement("nav-mother-tab");
-      } else {
-        showElement("nav-mother-tab");
+      // Rule 4: Multi-device restriction (Max 4 active device sessions)
+      if (!state.activeDevices) state.activeDevices = [];
+      const deviceId = navigator.userAgent;
+      if (!state.activeDevices.includes(deviceId)) {
+        if (state.activeDevices.length >= 4) {
+          alert("Maximum device limit reached (4 devices). Please log out from another device first.");
+          return;
+        }
+        state.activeDevices.push(deviceId);
       }
 
+      state.currentUser = acc;
+      state.activeBranchId = branchMatch.id;
+      localStorage.setItem("pmms_current_user", JSON.stringify(acc));
+
+      document.getElementById("header-user-tag").innerText = `User: ${acc.username} (${acc.role})`;
+
+      if (!branchMatch.isHQ) hideElement("nav-mother-tab");
+      else showElement("nav-mother-tab");
+
+      applyRolePermissions();
       hideElement("auth-overlay");
       saveState();
       refreshAllViews();
     }
 
+    function applyRolePermissions() {
+      if (!state.currentUser) return;
+      if (state.currentUser.role === 'Accountant') {
+        // Accountant cannot access admin modules / loan reversal deletion
+        hideElement("admin-reversal-module");
+        hideElement("nav-mother-tab");
+      } else {
+        showElement("admin-reversal-module");
+      }
+    }
+
     function lockApp() {
+      localStorage.removeItem("pmms_current_user");
+      state.currentUser = null;
       showElement("auth-overlay");
     }
 
-    // POSTING & RULE 4: ZERO BALANCE PAYMENT PREVENTION
+    // ADMIN ACTIONS (Rule 5)
+    function adminUpdateCompanyName() {
+      if (state.currentUser && state.currentUser.role !== 'Administrator') { alert("Admin access required."); return; }
+      const newName = document.getElementById("admin-new-company-name").value.trim();
+      if (!newName) return;
+      state.companyName = newName;
+      document.getElementById("header-company-name").innerText = newName;
+      saveState();
+      alert("Company name updated successfully!");
+    }
+
+    function adminUpdateAccountantCredentials() {
+      if (state.currentUser && state.currentUser.role !== 'Administrator') { alert("Admin access required."); return; }
+      const u = document.getElementById("admin-acc-username").value.trim();
+      const p = document.getElementById("admin-acc-password").value.trim();
+      if (!u || !p) return;
+      const acc = state.accounts.find(a => a.branchCode === getActiveBranchInfo().code && a.role === 'Accountant');
+      if (acc) {
+        acc.username = u;
+        acc.password = p;
+        saveState();
+        alert("Accountant credentials updated!");
+      } else {
+        alert("Accountant account not found for this branch.");
+      }
+    }
+
+    // POSTING & RECEIPT PRINTING
     function searchPostingClients(query) {
       const resultsDiv = document.getElementById("post-search-results");
-      if (!query || query.trim().length === 0) {
-        hideElement(resultsDiv);
-        return;
-      }
+      if (!query || query.trim().length === 0) { hideElement(resultsDiv); return; }
       const branch = getActiveBranch();
-      const q = query.toLowerCase();
-      const filtered = branch.clients.filter(c => 
-        c.name.toLowerCase().includes(q) || 
-        (c.nin && c.nin.toLowerCase().includes(q)) || 
-        c.phone.includes(query) || 
-        c.id.toLowerCase().includes(q)
-      );
-
-      if (filtered.length === 0) {
-        resultsDiv.innerHTML = `<div class="p-3 text-xs text-slate-500 text-center">No active branch loan found for this client.</div>`;
-      } else {
-        resultsDiv.innerHTML = filtered.map(c => `
-          <div onclick="selectPostingClient('${c.id}')" class="p-3 hover:bg-slate-100 cursor-pointer text-xs flex justify-between items-center">
-            <div>
-              <div class="font-bold text-slate-800">${c.name} <span class="text-[10px] bg-slate-200 text-slate-700 px-1 rounded">${c.nin || 'NO-NIN'}</span></div>
-              <div class="text-[10px] text-slate-500">${c.phone}</div>
-            </div>
-            <span class="font-bold text-blue-600">UGX ${(c.balance || 0).toLocaleString()}</span>
-          </div>
-        `).join('');
-      }
+      const filtered = branch.clients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()) || (c.nin && c.nin.toLowerCase().includes(query.toLowerCase())));
+      resultsDiv.innerHTML = filtered.map(c => `
+        <div onclick="selectPostingClient('${c.id}')" class="p-3 hover:bg-slate-100 cursor-pointer text-xs flex justify-between">
+          <div><strong>${c.name}</strong> (${c.nin || 'N/A'})</div>
+          <span class="font-bold text-blue-600">UGX ${(c.balance || 0).toLocaleString()}</span>
+        </div>
+      `).join('');
       showElement(resultsDiv);
     }
 
@@ -1245,11 +1310,8 @@
 
       document.getElementById("post-client-name").innerText = selectedPostClient.name;
       document.getElementById("post-client-acc").innerText = "NIN: " + (selectedPostClient.nin || "N/A") + " | ACC: " + selectedPostClient.id;
-      document.getElementById("post-client-type-info").innerText = selectedPostClient.category;
+      document.getElementById("post-client-type-info").innerText = selectedPostClient.category || 'OTHERS';
       document.getElementById("post-client-call").href = "tel:" + selectedPostClient.phone;
-      
-      const officer = branch.officers.find(o => o.id === selectedPostClient.officerId);
-      document.getElementById("post-client-officer").innerText = "Staff: " + (officer ? officer.name : "Unassigned");
 
       document.getElementById("post-arrears").innerText = "UGX " + (selectedPostClient.arrears || 0).toLocaleString();
       document.getElementById("post-advance").innerText = "UGX " + (selectedPostClient.advance || 0).toLocaleString();
@@ -1259,7 +1321,6 @@
       showElement("post-selected-card");
       showElement("post-form");
 
-      // RULE 4: If balance is zero, disallow payment
       if (selectedPostClient.balance <= 0) {
         showElement("zero-balance-warning");
         hideElement("post-inputs-container");
@@ -1272,116 +1333,69 @@
     }
 
     function addToBatch() {
-      if (!selectedPostClient) { alert("Select a client first."); return; }
-      if (selectedPostClient.balance <= 0) { alert("Loan is fully cleared (UGX 0 balance). Further payments not allowed."); return; }
-
-      const amtInput = document.getElementById("post-amount");
-      const amt = parseFloat(amtInput.value);
-      if (!amt || amt <= 0) { alert("Enter a valid amount."); return; }
-
+      if (!selectedPostClient || selectedPostClient.balance <= 0) return;
+      const amt = parseFloat(document.getElementById("post-amount").value);
+      if (!amt || amt <= 0) return;
       const channel = document.getElementById("post-channel").value;
       const branch = getActiveBranch();
-      branch.batch.push({
-        clientId: selectedPostClient.id,
-        clientName: selectedPostClient.name,
-        amount: amt,
-        channel: channel,
-        date: new Date().toISOString().split('T')[0]
-      });
-
-      amtInput.value = "";
+      branch.batch.push({ clientId: selectedPostClient.id, clientName: selectedPostClient.name, amount: amt, channel, date: new Date().toISOString().split('T')[0] });
+      document.getElementById("post-amount").value = "";
       saveState();
       renderBatchList();
     }
 
     function renderBatchList() {
       const branch = getActiveBranch();
-      const list = document.getElementById("batch-list");
       document.getElementById("batch-count").innerText = branch.batch.length;
-
-      if (branch.batch.length === 0) {
-        list.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">No transactions in batch.</p>`;
-        return;
-      }
-
+      const list = document.getElementById("batch-list");
+      if (branch.batch.length === 0) { list.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">No batch items.</p>`; return; }
       list.innerHTML = branch.batch.map((item, idx) => `
-        <div class="bg-white p-2.5 border rounded-lg flex justify-between items-center text-xs">
-          <div>
-            <div class="font-bold text-slate-800">${item.clientName}</div>
-            <div class="text-[10px] text-slate-500">${item.channel} - ${item.date}</div>
-          </div>
-          <div class="flex items-center gap-2">
-            <span class="font-bold text-teal-700">UGX ${item.amount.toLocaleString()}</span>
-            <button onclick="removeFromBatch(${idx})" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash"></i></button>
-          </div>
+        <div class="bg-white p-2.5 border rounded flex justify-between text-xs">
+          <span>${item.clientName} - UGX ${item.amount.toLocaleString()}</span>
+          <button onclick="branch.batch.splice(${idx},1);saveState();renderBatchList();" class="text-red-500 font-bold">Remove</button>
         </div>
       `).join('');
     }
 
-    function removeFromBatch(idx) {
-      const branch = getActiveBranch();
-      branch.batch.splice(idx, 1);
-      saveState();
-      renderBatchList();
-    }
-
-    // RULE 1: POST ALL & PRINT X-PRINTER RECEIPT
     function postAllBatch() {
       const branch = getActiveBranch();
-      if (branch.batch.length === 0) { alert("Batch is empty."); return; }
-
-      let receiptText = `=== PMMS MICROFINANCE RECEIPT ===\nBranch: ${getActiveBranchInfo().name}\nDate: ${new Date().toISOString().split('T')[0]}\n--------------------------------\n`;
+      if (branch.batch.length === 0) return;
+      let receiptText = `=== PMMS RECEIPT ===\nBranch: ${getActiveBranchInfo().name}\nDate: ${new Date().toISOString().split('T')[0]}\n--------------------------------\n`;
 
       branch.batch.forEach(item => {
         const client = branch.clients.find(c => c.id === item.clientId);
         if (client) {
-          client.balance = Math.max(0, (client.balance || 0) - item.amount);
+          client.balance = Math.max(0, client.balance - item.amount);
           if (!client.history) client.history = [];
           client.history.push({ type: 'Repayment', amount: item.amount, date: item.date, channel: item.channel });
-
-          receiptText += `Client: ${client.name}\nPaid: UGX ${item.amount.toLocaleString()} (${item.channel})\nNew Bal: UGX ${client.balance.toLocaleString()}\n--------------------------------\n`;
-
-          dispatchSmsNotification(
-            client.phone, 
-            `PMMS PAYMENT RECEIVED: UGX ${item.amount.toLocaleString()} VIA ${item.channel}. REMAINING BALANCE: UGX ${client.balance.toLocaleString()}.`,
-            'Repayment Receipt'
-          );
+          receiptText += `${client.name}: Paid UGX ${item.amount.toLocaleString()}\nBal: UGX ${client.balance.toLocaleString()}\n--------------------------------\n`;
+          dispatchSmsNotification(client.phone, `PMMS: Payment of UGX ${item.amount.toLocaleString()} received. Balance: UGX ${client.balance.toLocaleString()}`, 'Repayment');
         }
       });
 
-      receiptText += `THANK YOU FOR BANKING WITH US!`;
       branch.batch = [];
       saveState();
       renderBatchList();
       if (selectedPostClient) selectPostingClient(selectedPostClient.id);
-      
-      // Print via X-Printer automatically
       printToXPrinter(receiptText);
-      alert("All payments posted and X-Printer receipt triggered!");
+      alert("Batch posted successfully!");
       updateDashboardReports();
     }
 
-    // DISBURSEMENT & RULE 2 (NO SAME-BRANCH ACTIVE LOAN), RULE 5 (SAVINGS AUTO-CREATED)
+    // DISBURSEMENT & SAVINGS
     function toggleClientMode(isNew) {
-      if (isNew) {
-        showElement("new-client-fields");
-        hideElement("existing-client-fields");
-        selectedDisburseClient = null;
-      } else {
-        showElement("new-client-fields");
-        showElement("existing-client-fields");
-      }
+      if (isNew) { showElement("new-client-fields"); hideElement("existing-client-fields"); selectedDisburseClient = null; }
+      else { hideElement("new-client-fields"); showElement("existing-client-fields"); }
     }
 
     function toggleBodaPlateInput(prefix) {
       const cat = document.getElementById(prefix + "-client-category").value;
       const plateContainer = document.getElementById(prefix + "-plate-container");
-      if (cat === "BODABODA") showElement(plateContainer);
-      else hideElement(plateContainer);
+      if (cat === "BODABODA") showElement(plateContainer); else hideElement(plateContainer);
     }
 
     function checkNinDuplicate(nin) {
-      const existing = state.globalClients.find(gc => gc.nin.trim().toUpperCase() === nin.trim().toUpperCase());
+      const existing = state.globalClients.find(c => c.nin.toUpperCase() === nin.toUpperCase());
       if (existing) {
         document.getElementById("new-name").value = existing.name;
         document.getElementById("new-phone").value = existing.phone;
@@ -1393,176 +1407,85 @@
 
     function searchDisburseClients(query) {
       const resultsDiv = document.getElementById("disburse-search-results");
-      if (!query || query.trim().length === 0) {
-        hideElement(resultsDiv);
-        return;
-      }
-      const q = query.toLowerCase();
-      const filtered = state.globalClients.filter(c => 
-        c.name.toLowerCase().includes(q) || 
-        c.nin.toLowerCase().includes(q) ||
-        c.phone.includes(query)
-      );
-
-      if (filtered.length === 0) {
-        resultsDiv.innerHTML = `<div class="p-2 text-xs text-slate-500 text-center">No master client record found.</div>`;
-      } else {
-        resultsDiv.innerHTML = filtered.map(c => `
-          <div onclick="selectDisburseClientByNin('${c.nin}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs flex justify-between">
-            <div>
-              <span class="font-bold text-slate-800">${c.name}</span>
-              <span class="text-[10px] text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded font-mono ml-1">${c.nin}</span>
-            </div>
-            <span class="text-slate-500">${c.phone}</span>
-          </div>
-        `).join('');
-      }
+      if (!query) { hideElement(resultsDiv); return; }
+      const filtered = state.globalClients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()) || c.nin.toLowerCase().includes(query.toLowerCase()));
+      resultsDiv.innerHTML = filtered.map(c => `<div onclick="selectDisburseClientByNin('${c.nin}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs"><strong>${c.name}</strong> (${c.nin})</div>`).join('');
       showElement(resultsDiv);
     }
 
     function selectDisburseClientByNin(nin) {
       selectedDisburseClient = state.globalClients.find(c => c.nin === nin);
       hideElement("disburse-search-results");
-      if (selectedDisburseClient) {
-        document.getElementById("disburse-selected-name").innerHTML = `Selected Master Identity: <strong>${selectedDisburseClient.name}</strong> (${selectedDisburseClient.nin})`;
-        
-        // RULE 2: Check if client already has an active loan in this branch
-        const branch = getActiveBranch();
-        const existingActiveLoan = branch.clients.find(c => c.nin && c.nin.toUpperCase() === nin.toUpperCase() && c.balance > 0);
-        const warningDiv = document.getElementById("disburse-client-risk-warning");
-        
-        if (existingActiveLoan) {
-          warningDiv.innerHTML = `
-            <div class="font-bold text-red-900 flex items-center gap-1">
-              <i class="fa-solid fa-ban"></i> Active Loan Exists in This Branch!
-            </div>
-            <div class="text-[11px] text-red-800">
-              Rule Enforcement: This client currently has an active loan balance of <strong>UGX ${existingActiveLoan.balance.toLocaleString()}</strong> in this branch. <strong>New loan disbursement is blocked.</strong>
-            </div>
-          `;
-          showElement(warningDiv);
-        } else {
-          hideElement(warningDiv);
-        }
+      document.getElementById("disburse-selected-name").innerText = `Selected: ${selectedDisburseClient.name}`;
+      const branch = getActiveBranch();
+      const activeLoan = branch.clients.find(c => c.nin === nin && c.balance > 0);
+      const warning = document.getElementById("disburse-client-risk-warning");
+      if (activeLoan) {
+        warning.innerHTML = `<strong class="text-red-700">Blocked: Client has an active loan in this branch.</strong>`;
+        showElement(warning);
+      } else {
+        hideElement(warning);
       }
     }
 
     function liveCalculateDisbursement() {
-      const principal = parseFloat(document.getElementById("disburse-principal").value) || 0;
-      const rate = parseFloat(document.getElementById("disburse-rate").value) || 0;
-      const days = parseFloat(document.getElementById("disburse-days").value) || 1;
-
-      const interest = principal * (rate / 100);
-      const total = principal + interest;
-      const daily = days > 0 ? total / days : 0;
-
-      document.getElementById("dis-base").innerText = "UGX " + principal.toLocaleString();
-      document.getElementById("dis-interest").innerText = "UGX " + interest.toLocaleString();
-      document.getElementById("dis-total").innerText = "UGX " + total.toLocaleString();
-      document.getElementById("dis-daily").innerText = "UGX " + Math.round(daily).toLocaleString();
+      const p = parseFloat(document.getElementById("disburse-principal").value) || 0;
+      const r = parseFloat(document.getElementById("disburse-rate").value) || 0;
+      const d = parseFloat(document.getElementById("disburse-days").value) || 30;
+      const tot = p + (p * (r/100));
+      document.getElementById("dis-base").innerText = "UGX " + p.toLocaleString();
+      document.getElementById("dis-interest").innerText = "UGX " + (p*(r/100)).toLocaleString();
+      document.getElementById("dis-total").innerText = "UGX " + tot.toLocaleString();
+      document.getElementById("dis-daily").innerText = "UGX " + Math.round(tot/d).toLocaleString();
     }
 
     function processDisbursement() {
       const isNew = document.querySelector('input[name="client-type"]:checked').value === "new";
       const officerId = document.getElementById("disburse-officer-select").value;
-      const principal = parseFloat(document.getElementById("disburse-principal").value) || 0;
-      const rate = parseFloat(document.getElementById("disburse-rate").value) || 0;
+      const p = parseFloat(document.getElementById("disburse-principal").value) || 0;
+      const r = parseFloat(document.getElementById("disburse-rate").value) || 0;
       const days = parseFloat(document.getElementById("disburse-days").value) || 30;
+      if (!officerId || p <= 0) { alert("Select staff and amount."); return; }
 
-      if (!officerId) { alert("Select a staff portfolio."); return; }
-      if (principal <= 0) { alert("Enter a valid disbursement amount."); return; }
-
-      const total = principal + (principal * (rate / 100));
-      const daily = Math.round(total / days);
-      const branch = getActiveBranch();
-
-      let clientNin = "";
-      let clientName = "";
-      let clientPhone = "";
-
+      let nin = "", name = "", phone = "";
       if (isNew) {
-        clientNin = document.getElementById("new-nin").value.trim().toUpperCase();
-        clientName = document.getElementById("new-name").value.trim();
-        clientPhone = document.getElementById("new-phone").value.trim();
-        const category = document.getElementById("new-client-category").value;
-        const plate = document.getElementById("new-number-plate").value.trim().toUpperCase();
-        const address = document.getElementById("new-address").value.trim();
-        const guarantor = document.getElementById("new-guarantor").value.trim();
-        const guarantorPhone = document.getElementById("new-guarantor-phone").value.trim();
-
-        if (!clientNin || !clientName || !clientPhone) { alert("NIN, Full Name, and Phone are required."); return; }
-
-        let globalProfile = state.globalClients.find(c => c.nin === clientNin);
-        if (!globalProfile) {
-          globalProfile = { nin: clientNin, name: clientName, phone: clientPhone, category, plate, address, guarantor, guarantorPhone };
-          state.globalClients.push(globalProfile);
-        }
+        nin = document.getElementById("new-nin").value.trim().toUpperCase();
+        name = document.getElementById("new-name").value.trim();
+        phone = document.getElementById("new-phone").value.trim();
+        if (!nin || !name || !phone) return;
+        if (!state.globalClients.some(c => c.nin === nin)) state.globalClients.push({ nin, name, phone });
       } else {
-        if (!selectedDisburseClient) { alert("Select an existing master client."); return; }
-        clientNin = selectedDisburseClient.nin;
-        clientName = selectedDisburseClient.name;
-        clientPhone = selectedDisburseClient.phone;
+        if (!selectedDisburseClient) return;
+        nin = selectedDisburseClient.nin; name = selectedDisburseClient.name; phone = selectedDisburseClient.phone;
       }
 
-      // RULE 2: System must not accept to disburse a loan to a client who still has an active loan in the same branch
-      const activeLoanCheck = branch.clients.find(c => c.nin && c.nin.toUpperCase() === clientNin.toUpperCase() && c.balance > 0);
-      if (activeLoanCheck) {
-        alert("Disbursement Blocked (Rule 2): This client already has an active loan in this branch!");
+      const branch = getActiveBranch();
+      if (branch.clients.some(c => c.nin === nin && c.balance > 0)) {
+        alert("Disbursement blocked: Active loan exists in this branch.");
         return;
       }
 
-      const deadlineObj = new Date();
-      deadlineObj.setDate(deadlineObj.getDate() + days);
-      const deadlineStr = deadlineObj.toISOString().split('T')[0];
+      const total = p + (p * (r/100));
+      const deadline = new Date(); deadline.setDate(deadline.getDate() + days);
+      branch.clients.push({
+        id: "cli-" + Date.now(), nin, name, phone, officerId, principal: p, balance: total,
+        dailyTarget: Math.round(total/days), dateDisbursed: new Date().toISOString().split('T')[0],
+        deadlineDate: deadline.toISOString().split('T')[0], history: [{ type: 'Disbursement', amount: total, date: new Date().toISOString().split('T')[0] }]
+      });
 
-      const newClientCard = {
-        id: "cli-" + Date.now(),
-        nin: clientNin,
-        name: clientName,
-        phone: clientPhone,
-        officerId, principal, balance: total, dailyTarget: daily, arrears: 0, advance: 0,
-        dateDisbursed: new Date().toISOString().split('T')[0],
-        deadlineDate: deadlineStr,
-        history: [{ type: 'Disbursement', amount: total, date: new Date().toISOString().split('T')[0] }]
-      };
-      branch.clients.push(newClientCard);
+      if (!branch.savingsAccounts[nin]) branch.savingsAccounts[nin] = { balance: 0, history: [] };
 
-      // RULE 5: Every new client registered must also have his or her savings account
-      if (!branch.savingsAccounts[clientNin]) {
-        branch.savingsAccounts[clientNin] = { balance: 0, history: [] };
-      }
-
-      dispatchSmsNotification(
-        clientPhone,
-        `DEAR ${clientName}, YOUR LOAN OF UGX ${principal.toLocaleString()} HAS BEEN DISBURSED. TOTAL PAYABLE: UGX ${total.toLocaleString()}. SAVINGS ACCOUNT CREATED.`,
-        'Loan Disbursement'
-      );
-
+      dispatchSmsNotification(phone, `PMMS Loan Disbursed: UGX ${p.toLocaleString()}. Total Payable: UGX ${total.toLocaleString()}`, 'Disbursement');
       saveState();
-      alert("Loan successfully disbursed and savings account initialized!");
+      alert("Disbursed successfully and savings account initialized!");
       refreshAllViews();
     }
 
-    // SAVINGS MANAGEMENT (Rules 5 & 8)
     function searchSavingsClients(query) {
       const resultsDiv = document.getElementById("savings-search-results");
-      if (!query || query.trim().length === 0) {
-        hideElement(resultsDiv);
-        return;
-      }
       const branch = getActiveBranch();
-      const q = query.toLowerCase();
-      const filtered = branch.clients.filter(c => c.name.toLowerCase().includes(q) || (c.nin && c.nin.toLowerCase().includes(q)));
-
-      if (filtered.length === 0) {
-        resultsDiv.innerHTML = `<div class="p-2 text-xs text-slate-500">No client found.</div>`;
-      } else {
-        resultsDiv.innerHTML = filtered.map(c => `
-          <div onclick="selectSavingsClient('${c.nin}', '${c.name}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs">
-            <strong>${c.name}</strong> (${c.nin})
-          </div>
-        `).join('');
-      }
+      const filtered = branch.clients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()));
+      resultsDiv.innerHTML = filtered.map(c => `<div onclick="selectSavingsClient('${c.nin}', '${c.name}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs"><strong>${c.name}</strong></div>`).join('');
       showElement(resultsDiv);
     }
 
@@ -1571,255 +1494,86 @@
       selectedSavingsNin = nin;
       hideElement("savings-search-results");
       const branch = getActiveBranch();
-      if (!branch.savingsAccounts[nin]) {
-        branch.savingsAccounts[nin] = { balance: 0, history: [] };
-      }
+      if (!branch.savingsAccounts[nin]) branch.savingsAccounts[nin] = { balance: 0, history: [] };
       document.getElementById("sav-client-name").innerText = `${name} (${nin})`;
       document.getElementById("sav-client-balance").innerText = branch.savingsAccounts[nin].balance.toLocaleString();
       showElement("savings-client-card");
     }
 
     function processSavingsTransaction() {
-      if (!selectedSavingsNin) { alert("Select a client first."); return; }
+      if (!selectedSavingsNin) return;
       const amt = parseFloat(document.getElementById("sav-amount").value);
       const type = document.getElementById("sav-type").value;
-      if (!amt || amt <= 0) { alert("Enter valid amount."); return; }
-
+      if (!amt || amt <= 0) return;
       const branch = getActiveBranch();
-      if (!branch.savingsAccounts[selectedSavingsNin]) {
-        branch.savingsAccounts[selectedSavingsNin] = { balance: 0, history: [] };
-      }
-
-      let savObj = branch.savingsAccounts[selectedSavingsNin];
-      if (type === 'WITHDRAWAL') {
-        if (savObj.balance < amt) { alert("Insufficient savings balance for withdrawal."); return; }
-        savObj.balance -= amt;
-      } else {
-        savObj.balance += amt;
-      }
-
-      const txDate = new Date().toISOString().split('T')[0];
-      savObj.history.push({ date: txDate, type, amount: amt });
-
+      let sav = branch.savingsAccounts[selectedSavingsNin];
+      if (type === 'WITHDRAWAL' && sav.balance < amt) { alert("Insufficient savings."); return; }
+      if (type === 'WITHDRAWAL') sav.balance -= amt; else sav.balance += amt;
+      sav.history.push({ date: new Date().toISOString().split('T')[0], type, amount: amt });
       saveState();
       selectSavingsClient(selectedSavingsNin, document.getElementById("sav-client-name").innerText.split(' ')[0]);
-      alert(`Savings ${type} of UGX ${amt.toLocaleString()} processed successfully!`);
-      printToXPrinter(`=== PMMS SAVINGS RECEIPT ===\nType: ${type}\nClient NIN: ${selectedSavingsNin}\nAmount: UGX ${amt.toLocaleString()}\nSavings Bal: UGX ${savObj.balance.toLocaleString()}\nDate: ${txDate}`);
+      alert(`Savings ${type} processed!`);
     }
 
-    // SAVINGS STATEMENT (Rule 8)
+    // RULE 3: SUBMIT DAILY REPORT VIA WHATSAPP TO MANAGER
+    function submitDailyReportWhatsApp() {
+      const branchInfo = getActiveBranchInfo();
+      const branch = getActiveBranch();
+      const totalCollections = branch.clients.reduce((sum, c) => sum + (c.history || []).reduce((s, h) => h.type === 'Repayment' ? s + h.amount : s, 0), 0);
+      const totalPortfolio = branch.clients.reduce((sum, c) => sum + (c.balance || 0), 0);
+      const totalExpenses = branch.expenses.reduce((sum, e) => sum + e.amount, 0);
+
+      const reportText = `*PMMS DAILY CLOSING REPORT* 📊\nBranch: ${branchInfo.name} (${branchInfo.code})\nDate: ${new Date().toISOString().split('T')[0]}\n\n🔹 Total Collections: UGX ${totalCollections.toLocaleString()}\n🔹 Active Portfolio: UGX ${totalPortfolio.toLocaleString()}\n🔹 Branch Expenses: UGX ${totalExpenses.toLocaleString()}\n\nReport submitted successfully by ${state.currentUser ? state.currentUser.username : 'Staff'}.`;
+
+      const managerPhone = branchInfo.managerPhone || "256770000000";
+      const whatsappUrl = `https://wa.me/${managerPhone}?text=${encodeURIComponent(reportText)}`;
+      window.open(whatsappUrl, '_blank');
+    }
+
+    // OTHER MANAGEMENT HELPERS
+    function renderMasterClientDirectory() {
+      const tbody = document.getElementById("master-clients-table-body");
+      if (!tbody) return;
+      const branch = getActiveBranch();
+      tbody.innerHTML = state.globalClients.map(c => `
+        <tr class="text-xs">
+          <td class="p-3 font-mono font-bold text-purple-700">${c.nin}</td>
+          <td class="p-3"><strong>${c.name}</strong><br>${c.phone}</td>
+          <td class="p-3">OTHERS</td>
+          <td class="p-3">-</td>
+          <td class="p-3 font-bold text-emerald-600">UGX ${branch.savingsAccounts[c.nin] ? branch.savingsAccounts[c.nin].balance.toLocaleString() : '0'}</td>
+          <td class="p-3 text-right">
+            <button onclick="viewSavingsStatement('${c.nin}')" class="bg-emerald-600 text-white px-2 py-1 rounded font-bold">Savings Statement</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
     function viewSavingsStatement(nin) {
       const branch = getActiveBranch();
-      const client = state.globalClients.find(c => c.nin === nin);
-      const savData = branch.savingsAccounts[nin] || { balance: 0, history: [] };
-
-      document.getElementById("sav-st-title").innerText = `Savings Statement: ${client ? client.name : nin}`;
-      document.getElementById("sav-st-details").innerHTML = `NIN: <strong>${nin}</strong> | Total Current Savings: <strong class="text-emerald-700">UGX ${savData.balance.toLocaleString()}</strong>`;
-
-      const tbody = document.getElementById("sav-st-table-body");
-      if (savData.history.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="3" class="p-3 text-center text-slate-400">No savings history found.</td></tr>`;
-      } else {
-        tbody.innerHTML = savData.history.map(h => `
-          <tr>
-            <td class="p-2.5">${h.date}</td>
-            <td class="p-2.5 font-bold ${h.type === 'DEPOSIT' ? 'text-emerald-600' : 'text-rose-600'}">${h.type}</td>
-            <td class="p-2.5 text-right font-bold">UGX ${h.amount.toLocaleString()}</td>
-          </tr>
-        `).join('');
-      }
+      const sav = branch.savingsAccounts[nin] || { balance: 0, history: [] };
+      document.getElementById("sav-st-title").innerText = `Savings Statement: ${nin}`;
+      document.getElementById("sav-st-details").innerHTML = `Current Balance: <strong>UGX ${sav.balance.toLocaleString()}</strong>`;
+      document.getElementById("sav-st-table-body").innerHTML = sav.history.map(h => `<tr><td class="p-2">${h.date}</td><td class="p-2">${h.type}</td><td class="p-2 text-right">UGX ${h.amount.toLocaleString()}</td></tr>`).join('');
       showElement("savings-statement-modal");
     }
 
     function printSavingsStatementXPrinter() {
-      const title = document.getElementById("sav-st-title").innerText;
-      const details = document.getElementById("sav-st-details").innerText;
-      printToXPrinter(`=== ${title.toUpperCase()} ===\n${details}\n--------------------------------\nPrinted on: ${new Date().toISOString().split('T')[0]}`);
-    }
-
-    function printLoanStatementXPrinter() {
-      const name = document.getElementById("st-name").innerText;
-      const acc = document.getElementById("st-acc").innerText;
-      const balance = document.getElementById("st-balance").innerText;
-      printToXPrinter(`=== LOAN STATEMENT ===\n${name}\n${acc}\n${balance}\n--------------------------------\nPrinted: ${new Date().toISOString().split('T')[0]}`);
-    }
-
-    // LOAN REVERSALS & COMBINATIONS
-    function searchReversalClients(query) {
-      const resultsDiv = document.getElementById("reversal-search-results");
-      if (!query || query.trim().length === 0) { hideElement(resultsDiv); return; }
-      const branch = getActiveBranch();
-      const q = query.toLowerCase();
-      const filtered = branch.clients.filter(c => c.name.toLowerCase().includes(q) || (c.nin && c.nin.toLowerCase().includes(q)));
-      resultsDiv.innerHTML = filtered.map(c => `
-        <div onclick="selectReversalClient('${c.id}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs flex justify-between">
-          <span>${c.name} (${c.nin || c.id})</span>
-          <span class="font-bold text-blue-600">UGX ${(c.balance || 0).toLocaleString()}</span>
-        </div>
-      `).join('');
-      showElement(resultsDiv);
-    }
-
-    function selectReversalClient(clientId) {
-      const branch = getActiveBranch();
-      selectedReversalClient = branch.clients.find(c => c.id === clientId);
-      hideElement("reversal-search-results");
-      if (!selectedReversalClient) return;
-      document.getElementById("rev-client-name").innerText = selectedReversalClient.name;
-      document.getElementById("rev-client-nin").innerText = selectedReversalClient.nin || 'NO-NIN';
-      document.getElementById("rev-client-id").innerText = selectedReversalClient.id;
-      document.getElementById("rev-client-balance").innerText = (selectedReversalClient.balance || 0).toLocaleString();
-      const txSelect = document.getElementById("rev-transaction-select");
-      txSelect.innerHTML = (selectedReversalClient.history || []).map((h, idx) => `<option value="${idx}">${h.date} - ${h.type} (UGX ${h.amount.toLocaleString()})</option>`).join('');
-      showElement("reversal-card");
-    }
-
-    function executeLoanReversal() {
-      if (!selectedReversalClient) return;
-      const txIdx = document.getElementById("rev-transaction-select").value;
-      const reason = document.getElementById("rev-reason").value.trim();
-      if (!reason) { alert("Enter reason."); return; }
-      const targetTx = selectedReversalClient.history[txIdx];
-      if (!targetTx) return;
-
-      if (targetTx.type === 'Repayment') selectedReversalClient.balance += targetTx.amount;
-      else if (targetTx.type.includes('Disbursement')) selectedReversalClient.balance = Math.max(0, selectedReversalClient.balance - targetTx.amount);
-
-      selectedReversalClient.history.push({ type: `Reversal of [${targetTx.type}]`, amount: targetTx.amount, date: new Date().toISOString().split('T')[0], narration: reason });
-      saveState();
-      alert("Transaction reversed!");
-      selectReversalClient(selectedReversalClient.id);
-      refreshAllViews();
-    }
-
-    function searchCombineLoans(query) {
-      const container = document.getElementById("combine-search-results");
-      const q = query.toLowerCase();
-      let allLoans = [];
-      state.branches.forEach(b => {
-        const bd = state.branchData[b.id];
-        if (bd && bd.clients) bd.clients.forEach(c => { if (c.balance > 0) allLoans.push({ ...c, branchName: b.name }); });
-      });
-      const filtered = allLoans.filter(l => l.name.toLowerCase().includes(q) || (l.nin && l.nin.toLowerCase().includes(q)));
-      container.innerHTML = filtered.map(l => `
-        <label class="flex items-center justify-between p-2 bg-white rounded border hover:bg-slate-100 cursor-pointer">
-          <div class="flex items-center gap-2">
-            <input type="checkbox" onchange="toggleMarkCombineLoan('${l.id}')" class="rounded">
-            <div><strong>${l.name}</strong> <span class="text-[10px] text-purple-700">${l.nin || ''}</span></div>
-          </div>
-          <span class="font-bold text-blue-600">UGX ${l.balance.toLocaleString()}</span>
-        </label>
-      `).join('');
-    }
-
-    function toggleMarkCombineLoan(loanId) {
-      const idx = markedCombineLoanIds.indexOf(loanId);
-      if (idx > -1) markedCombineLoanIds.splice(idx, 1);
-      else markedCombineLoanIds.push(loanId);
-      document.getElementById("marked-loans-count").innerText = markedCombineLoanIds.length + " Selected";
-    }
-
-    function searchTargetRecipient(query) {
-      const resultsDiv = document.getElementById("target-recipient-results");
-      const filtered = state.globalClients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()) || c.nin.toLowerCase().includes(query.toLowerCase()));
-      resultsDiv.innerHTML = filtered.map(c => `
-        <div onclick="selectTargetRecipientByNin('${c.nin}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs">
-          <strong>${c.name}</strong> (${c.nin})
-        </div>
-      `).join('');
-      showElement(resultsDiv);
-    }
-
-    function selectTargetRecipientByNin(nin) {
-      selectedCombineTargetRecipient = state.globalClients.find(c => c.nin === nin);
-      hideElement("target-recipient-results");
-      document.getElementById("target-rep-name").innerText = selectedCombineTargetRecipient.name;
-      showElement("selected-recipient-display");
-    }
-
-    function executeLoanCombine() {
-      if (markedCombineLoanIds.length === 0 || !selectedCombineTargetRecipient) { alert("Select loans and target recipient."); return; }
-      let totalCombined = 0;
-      state.branches.forEach(b => {
-        const bd = state.branchData[b.id];
-        if (bd && bd.clients) bd.clients.forEach(c => {
-          if (markedCombineLoanIds.includes(c.id)) { totalCombined += c.balance; c.balance = 0; }
-        });
-      });
-      const branch = getActiveBranch();
-      branch.clients.push({
-        id: "cli-" + Date.now(), nin: selectedCombineTargetRecipient.nin, name: selectedCombineTargetRecipient.name, phone: selectedCombineTargetRecipient.phone,
-        officerId: branch.officers[0] ? branch.officers[0].id : "off-1", principal: totalCombined, balance: totalCombined, dailyTarget: Math.round(totalCombined/30),
-        dateDisbursed: new Date().toISOString().split('T')[0], history: [{ type: 'Consolidated Loan', amount: totalCombined, date: new Date().toISOString().split('T')[0] }]
-      });
-      saveState();
-      alert("Loans combined successfully!");
-      refreshAllViews();
-    }
-
-    // MASTER DIRECTORY RENDER
-    function renderMasterClientDirectory() {
-      const tbody = document.getElementById("master-clients-table-body");
-      if (!tbody) return;
-      const filter = (document.getElementById("master-client-search") ? document.getElementById("master-client-search").value : "").toLowerCase();
-      const list = state.globalClients.filter(c => c.name.toLowerCase().includes(filter) || c.nin.toLowerCase().includes(filter));
-
-      const branch = getActiveBranch();
-      tbody.innerHTML = list.map(c => {
-        const savBal = branch.savingsAccounts[c.nin] ? branch.savingsAccounts[c.nin].balance : 0;
-        return `
-          <tr class="text-xs">
-            <td class="p-3 font-mono font-bold text-purple-700 bg-purple-50/50">${c.nin}</td>
-            <td class="p-3"><strong>${c.name}</strong><br><span class="text-[10px] text-slate-500">${c.phone}</span></td>
-            <td class="p-3">${c.category} ${c.plate ? ' - ' + c.plate : ''}</td>
-            <td class="p-3">${c.guarantor || '-'}</td>
-            <td class="p-3 font-bold text-emerald-600">UGX ${savBal.toLocaleString()}</td>
-            <td class="p-3 text-right">
-              <button onclick="viewSavingsStatement('${c.nin}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded text-[11px] font-bold">
-                <i class="fa-solid fa-file-lines"></i> Savings Statement
-              </button>
-            </td>
-          </tr>
-        `;
-      }).join('');
-    }
-
-    // STATEMENTS & STAFF HUB
-    function searchStatementClients(query) {
-      const resultsDiv = document.getElementById("statement-search-results");
-      const branch = getActiveBranch();
-      const filtered = branch.clients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()));
-      resultsDiv.innerHTML = filtered.map(c => `<div onclick="viewStatement('${c.id}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs"><strong>${c.name}</strong> (UGX ${(c.balance||0).toLocaleString()})</div>`).join('');
-      showElement(resultsDiv);
-    }
-
-    function viewStatement(clientId) {
-      const branch = getActiveBranch();
-      const client = branch.clients.find(c => c.id === clientId);
-      hideElement("statement-search-results");
-      if (!client) return;
-      document.getElementById("st-name").innerText = client.name;
-      document.getElementById("st-acc").innerText = "ACC: " + client.id;
-      document.getElementById("st-balance").innerText = "Current Balance: UGX " + client.balance.toLocaleString();
-      document.getElementById("statement-list").innerHTML = (client.history || []).map(h => `<div class="bg-white p-2.5 border rounded flex justify-between text-xs"><span>${h.date} - ${h.type}</span><strong>UGX ${h.amount.toLocaleString()}</strong></div>`).join('');
-      showElement("statement-view");
+      printToXPrinter(document.getElementById("sav-st-title").innerText + "\n" + document.getElementById("sav-st-details").innerText);
     }
 
     function populateOfficerDropdowns() {
       const branch = getActiveBranch();
       const opts = `<option value="">-- Select Staff Portfolio --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
-      const select = document.getElementById("disburse-officer-select");
-      if (select) select.innerHTML = opts;
-      const agingSel = document.getElementById("aging-officer-filter");
-      if (agingSel) agingSel.innerHTML = `<option value="ALL">-- ALL STAFF PORTFOLIOS --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+      if (document.getElementById("disburse-officer-select")) document.getElementById("disburse-officer-select").innerHTML = opts;
+      if (document.getElementById("aging-officer-filter")) document.getElementById("aging-officer-filter").innerHTML = `<option value="ALL">-- ALL STAFF --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
     }
 
     function registerFieldOfficer() {
       const name = document.getElementById("officer-add-name").value.trim();
       const phone = document.getElementById("officer-add-phone").value.trim();
       if (!name) return;
-      const branch = getActiveBranch();
-      branch.officers.push({ id: "off-" + Date.now(), name, phone });
+      getActiveBranch().officers.push({ id: "off-" + Date.now(), name, phone });
       saveState();
       populateOfficerDropdowns();
       renderOfficersHub();
@@ -1829,22 +1583,14 @@
       const branch = getActiveBranch();
       const container = document.getElementById("officers-container");
       if (!container) return;
-      container.innerHTML = branch.officers.map(o => `
-        <div class="bg-white p-4 border rounded-xl space-y-2 text-xs shadow-sm">
-          <div class="font-bold text-slate-800 text-sm flex justify-between"><span>${o.name}</span></div>
-          <div class="text-slate-500">Tel: ${o.phone || 'N/A'}</div>
-        </div>
-      `).join('');
+      container.innerHTML = branch.officers.map(o => `<div class="bg-white p-4 border rounded text-xs"><strong>${o.name}</strong><br>Tel: ${o.phone || 'N/A'}</div>`).join('');
     }
 
     function recordBankDeposit() {
       const name = document.getElementById("bank-name").value.trim();
-      const acc = document.getElementById("bank-acc-no").value.trim();
       const amt = parseFloat(document.getElementById("bank-amount").value);
-      const ref = document.getElementById("bank-ref").value.trim();
-      if (!name || !amt) { alert("Provide bank name and amount."); return; }
-      const branch = getActiveBranch();
-      branch.bankings.push({ date: new Date().toISOString().split('T')[0], name, acc, ref, amount: amt });
+      if (!name || !amt) return;
+      getActiveBranch().bankings.push({ date: new Date().toISOString().split('T')[0], name, amount: amt });
       saveState();
       renderBankingsHistory();
       updateDashboardReports();
@@ -1852,12 +1598,11 @@
 
     function renderBankingsHistory() {
       const branch = getActiveBranch();
-      const body = document.getElementById("bankings-history-body");
-      const totalDisplay = document.getElementById("total-banked-display");
-      if (!body) return;
       const total = branch.bankings.reduce((sum, b) => sum + b.amount, 0);
-      if (totalDisplay) totalDisplay.innerText = "UGX " + total.toLocaleString();
-      body.innerHTML = branch.bankings.map(b => `<tr><td class="p-3">${b.date}</td><td class="p-3">${b.name}</td><td class="p-3">${b.ref||'-'}</td><td class="p-3 text-right font-bold text-blue-600">UGX ${b.amount.toLocaleString()}</td></tr>`).join('');
+      if (document.getElementById("total-banked-display")) document.getElementById("total-banked-display").innerText = "UGX " + total.toLocaleString();
+      if (document.getElementById("bankings-history-body")) {
+        document.getElementById("bankings-history-body").innerHTML = branch.bankings.map(b => `<tr><td class="p-3">${b.date}</td><td class="p-3">${b.name}</td><td class="p-3">-</td><td class="p-3 text-right">UGX ${b.amount.toLocaleString()}</td></tr>`).join('');
+      }
     }
 
     function recordExpense() {
@@ -1865,8 +1610,7 @@
       const amt = parseFloat(document.getElementById("exp-amount").value);
       const narration = document.getElementById("exp-narration").value.trim();
       if (!amt) return;
-      const branch = getActiveBranch();
-      branch.expenses.push({ date: new Date().toISOString().split('T')[0], category, narration, amount: amt });
+      getActiveBranch().expenses.push({ date: new Date().toISOString().split('T')[0], category, narration, amount: amt });
       saveState();
       renderExpensesHistory();
       updateDashboardReports();
@@ -1874,20 +1618,18 @@
 
     function renderExpensesHistory() {
       const branch = getActiveBranch();
-      const body = document.getElementById("expenses-history-body");
-      const totalDisplay = document.getElementById("total-expenses-display");
-      if (!body) return;
       const total = branch.expenses.reduce((sum, e) => sum + e.amount, 0);
-      if (totalDisplay) totalDisplay.innerText = "UGX " + total.toLocaleString();
-      body.innerHTML = branch.expenses.map(e => `<tr><td class="p-3">${e.date}</td><td class="p-3">${e.category}</td><td class="p-3">${e.narration||'-'}</td><td class="p-3 text-right font-bold text-rose-600">UGX ${e.amount.toLocaleString()}</td></tr>`).join('');
+      if (document.getElementById("total-expenses-display")) document.getElementById("total-expenses-display").innerText = "UGX " + total.toLocaleString();
+      if (document.getElementById("expenses-history-body")) {
+        document.getElementById("expenses-history-body").innerHTML = branch.expenses.map(e => `<tr><td class="p-3">${e.date}</td><td class="p-3">${e.category}</td><td class="p-3">${e.narration}</td><td class="p-3 text-right">UGX ${e.amount.toLocaleString()}</td></tr>`).join('');
+      }
     }
 
     function submitCapitalRequest() {
       const amt = parseFloat(document.getElementById("cap-amount").value);
       const narration = document.getElementById("cap-narration").value.trim();
       if (!amt) return;
-      const branch = getActiveBranch();
-      branch.capitalizations.push({ id: "cap-" + Date.now(), date: new Date().toISOString().split('T')[0], amount: amt, narration, status: "Approved" });
+      getActiveBranch().capitalizations.push({ date: new Date().toISOString().split('T')[0], amount: amt, narration, status: "Approved" });
       saveState();
       renderCapitalizationQueue();
       updateDashboardReports();
@@ -1895,113 +1637,73 @@
 
     function renderCapitalizationQueue() {
       const branch = getActiveBranch();
-      const container = document.getElementById("capital-approval-list");
-      if (!container) return;
-      container.innerHTML = branch.capitalizations.map(c => `<div class="bg-white p-3 border rounded flex justify-between text-xs"><span>UGX ${c.amount.toLocaleString()} (${c.narration})</span><strong class="text-green-700">${c.status}</strong></div>`).join('');
+      if (document.getElementById("capital-approval-list")) {
+        document.getElementById("capital-approval-list").innerHTML = branch.capitalizations.map(c => `<div class="bg-white p-2 border rounded text-xs">UGX ${c.amount.toLocaleString()} - ${c.narration}</div>`).join('');
+      }
     }
 
     function renderDefaulters() {
       const branch = getActiveBranch();
-      const container = document.getElementById("demand-list-container");
-      if (!container) return;
-      const defaulters = branch.clients.filter(c => (c.balance || 0) > 0);
-      container.innerHTML = defaulters.map(c => `<div class="bg-white p-3 border-l-4 border-red-500 rounded text-xs"><strong>${c.name}</strong> - Balance: UGX ${c.balance.toLocaleString()}</div>`).join('');
+      if (document.getElementById("demand-list-container")) {
+        document.getElementById("demand-list-container").innerHTML = branch.clients.filter(c => c.balance > 0).map(c => `<div class="bg-white p-3 border-l-4 border-red-500 rounded text-xs"><strong>${c.name}</strong> - Balance: UGX ${c.balance.toLocaleString()}</div>`).join('');
+      }
     }
 
     function renderOfficerAgingTables() {}
 
-    // MOTHER SYSTEM: BRANCH CREATION WITH UNIQUE LINK & CREDENTIALS (Rule 9)
     function renderBranchNetworkTable() {
       const tbody = document.getElementById("branch-network-table-body");
       if (!tbody) return;
-      const currentOrigin = window.location.origin + window.location.pathname;
-
-      tbody.innerHTML = state.branches.map(b => {
-        const uniqueLink = `${currentOrigin}?branch=${b.id}`;
-        return `
-          <tr class="text-xs">
-            <td class="p-3 font-bold">${b.code}<br><span class="text-slate-500">${b.name}</span></td>
-            <td class="p-3">User: <strong>${b.username || 'admin'}</strong><br>Pass: <code>${b.password || '***'}</code></td>
-            <td class="p-3 font-mono text-[10px] text-blue-600 select-all"><a href="${uniqueLink}" target="_blank" class="underline">${uniqueLink}</a></td>
-            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${b.isKilled ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}">${b.isKilled ? 'OFF' : 'Active'}</span></td>
-            <td class="p-3 text-right">
-              ${!b.isHQ ? `<button onclick="toggleBranchKillSwitch('${b.id}')" class="px-3 py-1 text-white font-bold rounded ${b.isKilled ? 'bg-green-600' : 'bg-red-600'}">${b.isKilled ? 'Turn ON' : 'Turn OFF'}</button>` : 'HQ Master'}
-            </td>
-          </tr>
-        `;
-      }).join('');
+      const origin = window.location.origin + window.location.pathname;
+      tbody.innerHTML = state.branches.map(b => `
+        <tr class="text-xs">
+          <td class="p-3 font-bold">${b.code}<br>${b.name}</td>
+          <td class="p-3">WhatsApp: ${b.managerPhone || 'N/A'}</td>
+          <td class="p-3 font-mono text-[10px] text-blue-600"><a href="${origin}?branch=${b.id}" target="_blank">${origin}?branch=${b.id}</a></td>
+          <td class="p-3">${b.isKilled ? 'OFF' : 'Active'}</td>
+          <td class="p-3 text-right">${!b.isHQ ? `<button onclick="toggleBranchKillSwitch('${b.id}')" class="bg-red-600 text-white px-2 py-1 rounded font-bold">Toggle</button>` : 'HQ'}</td>
+        </tr>
+      `).join('');
     }
 
     function createNewBranch() {
       const name = document.getElementById("mb-branch-name").value.trim();
       const code = document.getElementById("mb-branch-code").value.trim().toUpperCase();
-      const username = document.getElementById("mb-branch-user").value.trim();
-      const password = document.getElementById("mb-branch-pass").value.trim();
-      const gmail = document.getElementById("mb-branch-gmail").value.trim();
-
-      if (!name || !code || !username || !password) { alert("All branch creation fields are required."); return; }
-
+      const managerPhone = document.getElementById("mb-branch-manager-phone").value.trim();
+      if (!name || !code) return;
       const id = "BR-" + Date.now();
-      state.branches.push({ id, code, name, username, password, gmail, isKilled: false, isHQ: false });
+      state.branches.push({ id, code, name, managerPhone, isKilled: false, isHQ: false });
       state.branchData[id] = { clients: [], officers: [], bankings: [], expenses: [], capitalizations: [], batch: [], savingsAccounts: {} };
-
       saveState();
       renderBranchNetworkTable();
-      alert(`Branch "${name}" created successfully! Unique login link generated.`);
+      alert("Branch created successfully!");
     }
 
-    function toggleBranchKillSwitch(branchId) {
-      const branch = state.branches.find(b => b.id === branchId);
-      if (branch) { branch.isKilled = !branch.isKilled; saveState(); checkKillSwitchStatus(); renderBranchNetworkTable(); }
+    function toggleBranchKillSwitch(id) {
+      const b = state.branches.find(x => x.id === id);
+      if (b) { b.isKilled = !b.isKilled; saveState(); renderBranchNetworkTable(); checkKillSwitchStatus(); }
     }
 
-    // RULE 11 & RULE 13: ORGANISED SUMMARY (OFFICE AND GENERAL)
     function updateDashboardReports() {
       const branch = getActiveBranch();
       const activeCount = branch.clients.length;
       const totalPort = branch.clients.reduce((sum, c) => sum + (c.balance || 0), 0);
-      
-      let totalSavings = 0;
-      Object.values(branch.savingsAccounts || {}).forEach(s => totalSavings += s.balance);
-
-      let totalCollections = 0;
-      branch.clients.forEach(c => {
-        (c.history || []).forEach(h => {
-          if (h.type === 'Repayment') totalCollections += h.amount;
-        });
-      });
-
+      let totalSavings = 0; Object.values(branch.savingsAccounts || {}).forEach(s => totalSavings += s.balance);
+      let totalCollections = 0; branch.clients.forEach(c => (c.history||[]).forEach(h => { if(h.type==='Repayment') totalCollections += h.amount; }));
       const totalCap = branch.capitalizations.reduce((sum, c) => sum + c.amount, 0);
       const totalBankings = branch.bankings.reduce((sum, b) => sum + b.amount, 0);
       const totalExp = branch.expenses.reduce((sum, e) => sum + e.amount, 0);
-
-      // Rule 11: Net cash = Capital + Collections - Disbursements (or Bankings & Expenses)
       const netCash = totalCap + totalCollections - totalBankings - totalExp;
 
-      // General Summary Display
-      document.getElementById("rep-active-clients").innerText = activeCount;
-      document.getElementById("rep-total-portfolio").innerText = "UGX " + totalPort.toLocaleString();
-      document.getElementById("rep-total-savings").innerText = "UGX " + totalSavings.toLocaleString();
-      document.getElementById("rep-total-collections").innerText = "UGX " + totalCollections.toLocaleString();
-
-      // Office Summary Display (Rule 11 & 13)
-      document.getElementById("rep-total-capital").innerText = "UGX " + totalCap.toLocaleString();
-      document.getElementById("rep-total-bankings").innerText = "UGX " + totalBankings.toLocaleString();
-      document.getElementById("rep-total-expenses").innerText = "UGX " + totalExp.toLocaleString();
-      document.getElementById("rep-net-cash").innerText = "UGX " + netCash.toLocaleString();
-
-      // HQ Totals
-      let allPortfolio = 0;
-      state.branches.forEach(b => {
-        const bd = state.branchData[b.id] || { clients: [] };
-        allPortfolio += bd.clients.reduce((sum, c) => sum + (c.balance || 0), 0);
-      });
-
-      if (document.getElementById("hq-total-branches")) {
-        document.getElementById("hq-total-branches").innerText = state.branches.length;
-        document.getElementById("hq-active-branches").innerText = state.branches.filter(b => !b.isKilled).length;
-        document.getElementById("hq-total-clients").innerText = state.globalClients.length;
-        document.getElementById("hq-total-portfolio").innerText = "UGX " + allPortfolio.toLocaleString();
+      if (document.getElementById("rep-active-clients")) {
+        document.getElementById("rep-active-clients").innerText = activeCount;
+        document.getElementById("rep-total-portfolio").innerText = "UGX " + totalPort.toLocaleString();
+        document.getElementById("rep-total-savings").innerText = "UGX " + totalSavings.toLocaleString();
+        document.getElementById("rep-total-collections").innerText = "UGX " + totalCollections.toLocaleString();
+        document.getElementById("rep-total-capital").innerText = "UGX " + totalCap.toLocaleString();
+        document.getElementById("rep-total-bankings").innerText = "UGX " + totalBankings.toLocaleString();
+        document.getElementById("rep-total-expenses").innerText = "UGX " + totalExp.toLocaleString();
+        document.getElementById("rep-net-cash").innerText = "UGX " + netCash.toLocaleString();
       }
     }
 

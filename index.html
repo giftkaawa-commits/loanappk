@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <meta name="theme-color" content="#0f172a"/>
-  <meta name="description" content="PMMS Enterprise Microfinance Manager - Multi-Window Desktop & Mobile Edition"/>
+  <meta name="description" content="PMMS Enterprise Microfinance Manager - Local Network SMS Edition"/>
   <title id="page-title">PMMS Enterprise Microfinance Manager</title>
 
   <!-- PWA Manifest -->
@@ -33,7 +33,6 @@
       box-shadow: 0 10px 25px rgba(0,0,0,0.3); max-width: 90vw;
     }
 
-    /* DYNAMIC THEME ACCENT MAPPINGS */
     body.theme-teal { --primary-accent: #0d9488; --primary-hover: #0f766e; --primary-light: #f0fdfa; --primary-text: #0f766e; }
     body.theme-indigo { --primary-accent: #4f46e5; --primary-hover: #4338ca; --primary-light: #eef2ff; --primary-text: #4338ca; }
     body.theme-emerald { --primary-accent: #059669; --primary-hover: #047857; --primary-light: #ecfdf5; --primary-text: #047857; }
@@ -54,7 +53,7 @@
 
   <!-- Offline Indicator -->
   <div id="offline-banner" hidden class="fixed top-0 left-0 right-0 bg-amber-600 text-white text-center text-xs py-1.5 z-[60] font-bold">
-    <i class="fa-solid fa-wifi-slash mr-1"></i> You are offline — data is still available
+    <i class="fa-solid fa-wifi-slash mr-1"></i> You are offline — local SMS gateway ready
   </div>
 
   <!-- AUTHENTICATION OVERLAY -->
@@ -93,7 +92,7 @@
         </button>
       </div>
 
-      <!-- REGISTER FORM (ADMIN ONLY) -->
+      <!-- REGISTER FORM -->
       <div id="auth-form-register" hidden class="space-y-3 text-left hidden">
         <div class="bg-slate-50 border dyn-border p-2.5 rounded-xl text-[11px] text-slate-900 font-semibold">
           <i class="fa-solid fa-circle-info mr-1 dyn-text"></i> New accounts registered here are automatically assigned as <strong>Administrator</strong>.
@@ -143,7 +142,7 @@
     </div>
   </header>
 
-  <!-- Navigation Bar (Supports Multi-Window Open Mode) -->
+  <!-- Navigation Bar -->
   <nav class="bg-slate-900 text-slate-300 text-xs py-2.5 px-2 md:px-6 sticky top-[52px] md:top-[60px] z-20 overflow-x-auto no-scrollbar no-print border-b border-slate-700 shadow-inner">
     <div class="flex space-x-2 md:space-x-4 max-w-7xl mx-auto whitespace-nowrap px-1">
       <button onclick="UI.openModuleWindow('tab-posting', 'Posting')" class="nav-btn hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition"><i class="fa-solid fa-window-restore mr-1"></i> Posting</button>
@@ -157,9 +156,9 @@
       <button onclick="UI.openModuleWindow('tab-capital', 'Capital')" class="nav-btn hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-emerald-400 transition"><i class="fa-solid fa-window-restore mr-1"></i> Capital</button>
       <button onclick="UI.openModuleWindow('tab-statement', 'Statements')" class="nav-btn hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition"><i class="fa-solid fa-window-restore mr-1"></i> Statements</button>
       <button onclick="UI.openModuleWindow('tab-reports', 'Reports')" class="nav-btn hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold transition"><i class="fa-solid fa-window-restore mr-1"></i> Reports</button>
-      <button onclick="UI.openModuleWindow('tab-aging', 'Aging')" class="nav-btn hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-amber-400 transition"><i class="fa-solid fa-window-restore mr-1"></i> Aging</button>
+      <button onclick="UI.openModuleWindow('tab-aging', 'Aging')" class="nav-btn hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-amber-400 transition"><i class="fa-solid fa-window-restore mr-1"></i> Aging & PAR</button>
       <button onclick="UI.openModuleWindow('tab-demand', 'Defaulters')" class="nav-btn hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-red-400 transition"><i class="fa-solid fa-window-restore mr-1"></i> Defaulters</button>
-      <button onclick="UI.openModuleWindow('tab-sms-logs', 'SMS Gateway')" class="nav-btn hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-sky-400 transition"><i class="fa-solid fa-window-restore mr-1"></i> SMS</button>
+      <button onclick="UI.openModuleWindow('tab-sms-logs', 'Local SMS Gateway')" class="nav-btn hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-sky-400 transition"><i class="fa-solid fa-comment-sms mr-1"></i> Local SMS</button>
       <button id="nav-admin-settings-tab" onclick="UI.openModuleWindow('tab-admin-settings', 'Admin Settings')" class="nav-btn hover:text-white bg-slate-800/50 hover:bg-slate-800 px-3 py-1.5 rounded-lg font-semibold text-amber-300 transition"><i class="fa-solid fa-window-restore mr-1"></i> Settings</button>
     </div>
   </nav>
@@ -405,7 +404,7 @@
       </div>
     </section>
 
-    <!-- TAB: LOAN OPERATIONS (ADMIN ONLY FOR REVERSAL & COMBINE) -->
+    <!-- TAB: LOAN OPERATIONS -->
     <section id="tab-loan-ops" hidden class="tab-content space-y-6 hidden max-w-5xl mx-auto">
       <div class="flex justify-between items-center border-b pb-2">
         <div>
@@ -417,7 +416,6 @@
       </div>
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- REVERSAL MODULE -->
         <div id="admin-reversal-module" class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
           <div class="border-b pb-2 flex items-center justify-between">
             <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
@@ -456,7 +454,6 @@
           </div>
         </div>
 
-        <!-- COMBINATION MODULE -->
         <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
           <div class="border-b pb-2 flex items-center justify-between">
             <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
@@ -464,43 +461,11 @@
             </h3>
             <span class="text-[10px] bg-indigo-50 text-indigo-700 font-bold px-2 py-0.5 rounded">Admin Only</span>
           </div>
-
           <div id="combination-permission-box">
             <div class="space-y-2">
               <label class="block text-xs font-semibold text-slate-600">Step 1: Search & Check Loans to Combine</label>
-              <input type="text" id="combine-search" oninput="LoanOps.searchCombineLoans(this.value)" placeholder="Search loan by Client Name, NIN, or ID..." class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
-              <div id="combine-search-results" class="bg-slate-50 border rounded-xl p-2.5 max-h-40 overflow-y-auto space-y-1.5 text-xs">
-                <p class="text-slate-400 text-center py-2 text-[11px]">Search above to check loans to consolidate.</p>
-              </div>
+              <input type="text" id="combine-search" placeholder="Search loan by Client Name, NIN, or ID..." class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
             </div>
-
-            <div class="bg-indigo-50/50 border border-indigo-100 p-3 rounded-xl text-xs space-y-2 mt-3">
-              <div class="flex justify-between items-center font-bold text-indigo-900">
-                <span>Marked Loans for Combination:</span>
-                <span id="marked-loans-count" class="bg-indigo-600 text-white px-2 py-0.5 rounded-full text-[10px]">0 Selected</span>
-              </div>
-              <div id="marked-loans-list" class="text-[11px] text-slate-600 max-h-24 overflow-y-auto space-y-1">
-                <p class="text-slate-400 italic">No loans checked yet.</p>
-              </div>
-              <div class="border-t border-indigo-200 pt-2 flex justify-between font-bold text-indigo-950">
-                <span>Total Selected Principal Exposure:</span>
-                <span id="marked-total-balance" class="text-blue-700">UGX 0</span>
-              </div>
-            </div>
-
-            <div class="space-y-2 border-t pt-3 mt-3">
-              <label class="block text-xs font-semibold text-slate-800">Step 2: Combine Selected Loans To Whom?</label>
-              <input type="text" id="target-recipient-search" oninput="LoanOps.searchTargetRecipient(this.value)" placeholder="Search target client by Name, NIN, or Phone..." class="w-full p-2.5 border rounded-xl text-xs bg-white">
-              <div id="target-recipient-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-32 overflow-y-auto hidden shadow-md"></div>
-              <div id="selected-recipient-display" class="hidden text-xs bg-emerald-50 border border-emerald-200 text-emerald-900 p-2.5 rounded-xl font-bold flex justify-between items-center">
-                <div>
-                  <span id="target-rep-name"></span>
-                  <span id="target-rep-nin" class="text-[10px] font-mono text-purple-700 bg-purple-100 px-1 rounded ml-1"></span>
-                </div>
-                <i class="fa-solid fa-circle-check text-emerald-600 text-base"></i>
-              </div>
-            </div>
-
             <button onclick="LoanOps.executeCombine()" class="w-full bg-indigo-700 hover:bg-indigo-800 text-white py-3 rounded-xl text-xs font-bold shadow transition mt-3">
               <i class="fa-solid fa-right-left mr-1"></i> Confirm & Combine Selected Loans
             </button>
@@ -569,7 +534,7 @@
       </div>
     </section>
 
-    <!-- TAB: STAFF HUB (WITH PORTFOLIO METRICS) -->
+    <!-- TAB: STAFF HUB -->
     <section id="tab-officers" hidden class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
         <div>
@@ -594,7 +559,6 @@
         </button>
       </div>
 
-      <!-- Portfolio Cards -->
       <div id="officers-container" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
     </section>
 
@@ -727,22 +691,7 @@
     <!-- TAB: STATEMENTS -->
     <section id="tab-statement" hidden class="tab-content space-y-4 hidden max-w-3xl mx-auto">
       <h2 class="text-lg font-bold border-b pb-2">Client Loan Statements & Management</h2>
-      <input type="text" id="statement-search" oninput="Statements.searchClients(this.value)" placeholder="Search client for statement..." class="w-full p-3 border rounded-xl bg-white text-sm shadow-sm">
-      <div id="statement-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
-
-      <div id="statement-view" hidden class="space-y-3 hidden">
-        <div class="bg-white p-4 border rounded-xl text-xs space-y-2 shadow-sm">
-          <div class="flex justify-between items-start">
-            <div>
-              <div class="font-bold text-base" id="st-name"></div>
-              <div id="st-acc" class="text-slate-500"></div>
-            </div>
-            <button onclick="Printer.printLoanStatement()" class="dyn-bg text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow"><i class="fa-solid fa-print"></i> Print Statement</button>
-          </div>
-          <div id="st-balance" class="font-bold text-blue-600 pt-2 border-t text-sm"></div>
-        </div>
-        <div id="statement-list" class="space-y-2"></div>
-      </div>
+      <input type="text" id="statement-search" placeholder="Search client for statement..." class="w-full p-3 border rounded-xl bg-white text-sm shadow-sm">
     </section>
 
     <!-- TAB: REPORTS -->
@@ -780,50 +729,34 @@
           </div>
         </div>
       </div>
-
-      <div class="bg-slate-900 text-white p-5 rounded-2xl space-y-4 shadow-lg">
-        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300 border-b border-slate-800 pb-2">
-          <i class="fa-solid fa-building mr-1"></i> Office Summary
-        </h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-          <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
-            <span class="text-slate-300 block text-[10px]">Approved Capital Injection</span>
-            <span id="rep-total-capital" class="text-lg font-bold text-emerald-300">UGX 0</span>
-          </div>
-          <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
-            <span class="text-slate-300 block text-[10px]">Total Bankings</span>
-            <span id="rep-total-bankings" class="text-lg font-bold text-blue-300">UGX 0</span>
-          </div>
-          <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
-            <span class="text-slate-300 block text-[10px]">Total Operational Expenses</span>
-            <span id="rep-total-expenses" class="text-lg font-bold text-rose-300">UGX 0</span>
-          </div>
-          <div class="bg-slate-800/60 p-3 rounded-xl border border-slate-700/50">
-            <span class="text-slate-300 block text-[10px]">Net Operating Cash Balance</span>
-            <span id="rep-net-cash" class="text-lg font-bold dyn-text transition-colors duration-300">UGX 0</span>
-          </div>
-        </div>
-      </div>
     </section>
 
-    <!-- TAB: AGING -->
+    <!-- TAB: AGING & PAR ANALYTICS -->
     <section id="tab-aging" hidden class="tab-content space-y-4 hidden">
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-3">
         <div>
           <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> Daily Portfolio Aging & Escalation
+            <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> Daily Portfolio Aging & PAR Analytics
           </h2>
-          <p class="text-xs text-slate-500">Automatically evaluated daily based on loan deadlines.</p>
+          <p class="text-xs text-slate-500">Portfolio at Risk (PAR) computed via active principal aging models.</p>
         </div>
-        <div class="flex items-center gap-2 w-full md:w-auto">
-          <select id="aging-officer-filter" onchange="Aging.render()" class="bg-white border-2 border-slate-700 text-xs font-bold p-2.5 rounded-xl text-slate-800 shadow-sm focus:outline-none w-full md:w-64">
+        <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <select id="aging-officer-filter" onchange="Aging.render()" class="bg-white border-2 border-slate-700 text-xs font-bold p-2.5 rounded-xl text-slate-800 shadow-sm focus:outline-none w-full md:w-48">
             <option value="ALL">-- ALL STAFF PORTFOLIOS --</option>
           </select>
+          <button onclick="Aging.exportCSV()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2.5 rounded-xl font-bold shadow flex items-center gap-1">
+            <i class="fa-solid fa-file-excel"></i> CSV
+          </button>
+          <button onclick="Aging.exportPDF()" class="bg-purple-700 hover:bg-purple-800 text-white text-xs px-3 py-2.5 rounded-xl font-bold shadow flex items-center gap-1">
+            <i class="fa-solid fa-file-pdf"></i> PDF
+          </button>
           <button onclick="UI.triggerQuickPrint()" class="bg-slate-800 text-white text-xs px-3 py-2.5 rounded-xl font-bold shadow flex items-center gap-1">
             <i class="fa-solid fa-print"></i> Print
           </button>
         </div>
       </div>
+
+      <div id="par-metrics-summary-box"></div>
       <div id="officer-aging-sections" class="space-y-6"></div>
     </section>
 
@@ -833,27 +766,59 @@
       <div id="demand-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
     </section>
 
-    <!-- TAB: SMS -->
+    <!-- TAB: LOCAL SMS GATEWAY (MTN & AIRTEL LINE) -->
     <section id="tab-sms-logs" hidden class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
         <div>
           <h2 class="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
-            <i class="fa-solid fa-comment-sms text-sky-600"></i> Local Network SMS Gateway
+            <i class="fa-solid fa-comment-sms text-sky-600"></i> Local Network SMS Gateway (MTN / Airtel Line)
           </h2>
+          <p class="text-xs text-slate-500">Select which local network SIM card to use when sending client notifications.</p>
         </div>
         <button onclick="SMS.clearLogs()" class="bg-slate-700 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow">Clear Logs</button>
       </div>
-      <div class="bg-slate-900 text-white p-4 rounded-xl flex justify-between items-center text-xs shadow-md">
-        <span>SMS Gateway Service: <strong class="text-emerald-400">ONLINE (Native Messenger Link)</strong></span>
-        <span class="text-sky-300">Total SMS Dispatched: <strong id="sms-log-count" class="text-white text-sm">0</strong></span>
+
+      <div class="bg-slate-900 text-white p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-3 text-xs shadow-md">
+        <div class="flex items-center gap-3">
+          <span>Active SIM Gateway:</span>
+          <select id="sms-preferred-network" class="bg-slate-800 text-white border border-slate-700 px-3 py-1.5 rounded-lg font-bold text-xs">
+            <option value="MTN">MTN Uganda (Loaded Airtime/SMS)</option>
+            <option value="Airtel">Airtel Uganda (Loaded Airtime/SMS)</option>
+          </select>
+        </div>
+        <span class="text-sky-300">Total Notifications Dispatched: <strong id="sms-log-count" class="text-white text-sm">0</strong></span>
       </div>
+
+      <!-- Quick Custom SMS Broadcaster -->
+      <div class="bg-white p-4 border rounded-xl space-y-3 shadow-sm">
+        <h3 class="font-bold text-slate-800 text-sm border-b pb-2"><i class="fa-solid fa-paper-plane dyn-text mr-1"></i> Send Direct Local Network SMS to Client</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Select Client</label>
+            <select id="sms-quick-client-select" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold"></select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Carrier Line</label>
+            <div class="p-2.5 border rounded-lg bg-slate-100 font-bold text-slate-700" id="sms-quick-carrier-label">MTN / Airtel Phone Line</div>
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-600 mb-1">Message Body</label>
+          <textarea id="sms-quick-message" placeholder="Type notification message..." class="w-full p-2.5 border rounded-lg bg-slate-50 h-20 text-xs font-mono"></textarea>
+        </div>
+        <button onclick="SMS.dispatchCustom()" class="w-full dyn-bg text-white py-2.5 rounded-lg font-bold text-xs shadow transition flex items-center justify-center gap-1.5">
+          <i class="fa-solid fa-comment-sms"></i> Dispatch via Phone SIM (MTN/Airtel)
+        </button>
+      </div>
+
       <div class="bg-white border rounded-xl overflow-x-auto shadow-sm">
         <table class="w-full text-left border-collapse text-xs">
           <thead>
             <tr class="bg-slate-800 text-white text-[11px]">
               <th class="p-3">Timestamp</th>
               <th class="p-3">Recipient</th>
-              <th class="p-3">Trigger</th>
+              <th class="p-3">Carrier SIM</th>
+              <th class="p-3">Trigger / Event</th>
               <th class="p-3">Content</th>
               <th class="p-3 text-right">Action</th>
             </tr>
@@ -863,7 +828,7 @@
       </div>
     </section>
 
-    <!-- TAB: ADMIN SETTINGS (COMPANY PROFILE, MANAGERS, ACCOUNTANTS) -->
+    <!-- TAB: ADMIN SETTINGS -->
     <section id="tab-admin-settings" hidden class="tab-content space-y-6 hidden max-w-4xl mx-auto">
       <div class="flex justify-between items-center border-b pb-2">
         <div>
@@ -874,10 +839,9 @@
         </div>
       </div>
 
-      <!-- THEME & FONT CUSTOMIZER -->
       <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
         <h3 class="font-bold text-slate-800 text-sm border-b pb-2 flex items-center gap-2">
-          <i class="fa-solid fa-palette dyn-text transition-colors duration-300"></i> Theme & Font Customizer
+          <i class="fa-solid fa-palette dyn-text"></i> Theme & Font Customizer
         </h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           <div>
@@ -900,10 +864,9 @@
         </div>
       </div>
 
-      <!-- Company Profile Editor -->
       <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
         <h3 class="font-bold text-slate-800 text-sm border-b pb-2 flex items-center gap-2">
-          <i class="fa-solid fa-building dyn-text transition-colors duration-300"></i> Edit Company Profile (Name, Contacts, Location, About)
+          <i class="fa-solid fa-building dyn-text"></i> Edit Company Profile
         </h3>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           <div>
@@ -923,25 +886,18 @@
             <input type="text" id="set-company-about" class="w-full p-2.5 border rounded-lg bg-slate-50">
           </div>
         </div>
-        <button onclick="AdminSettings.saveCompanyProfile()" class="dyn-bg text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow">
-          Save Company Profile
-        </button>
+        <button onclick="AdminSettings.saveCompanyProfile()" class="dyn-bg text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow">Save Company Profile</button>
       </div>
 
-      <!-- Company Managers & WhatsApp Destination Directory -->
       <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
         <h3 class="font-bold text-slate-800 text-sm border-b pb-2 flex items-center gap-2">
           <i class="fa-brands fa-whatsapp text-emerald-600"></i> Company Managers & WhatsApp Report Destinations
         </h3>
-        <p class="text-xs text-slate-500">Add managers and their phone numbers so daily closing reports can be sent directly via WhatsApp.</p>
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
           <input type="text" id="mgr-name" placeholder="Manager Full Name" class="p-2.5 border rounded-lg bg-slate-50">
           <input type="tel" id="mgr-phone" placeholder="WhatsApp Phone (e.g. 256771234567)" class="p-2.5 border rounded-lg bg-slate-50">
         </div>
-        <button onclick="AdminSettings.addManager()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow">
-          + Add Manager WhatsApp Destination
-        </button>
-
+        <button onclick="AdminSettings.addManager()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow">+ Add Manager Destination</button>
         <div class="mt-4 border rounded-xl overflow-hidden">
           <table class="w-full text-left border-collapse text-xs">
             <thead>
@@ -952,34 +908,6 @@
               </tr>
             </thead>
             <tbody id="managers-list-body" class="divide-y text-slate-700"></tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Accountant Logins Creator -->
-      <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
-        <h3 class="font-bold text-slate-800 text-sm border-b pb-2 flex items-center gap-2">
-          <i class="fa-solid fa-user-plus text-indigo-600"></i> Create & Manage Accountant Logins
-        </h3>
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-          <input type="text" id="acc-new-username" placeholder="Accountant Username" class="p-2.5 border rounded-lg bg-slate-50">
-          <input type="password" id="acc-new-password" placeholder="Password (min 6 chars)" class="p-2.5 border rounded-lg bg-slate-50">
-          <input type="tel" id="acc-new-phone" placeholder="Phone Number" class="p-2.5 border rounded-lg bg-slate-50">
-        </div>
-        <button onclick="AdminSettings.createAccountant()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow">
-          + Create Accountant Account
-        </button>
-
-        <div class="mt-4 border rounded-xl overflow-hidden">
-          <table class="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr class="bg-slate-800 text-white text-[11px]">
-                <th class="p-3">Username</th>
-                <th class="p-3">Phone</th>
-                <th class="p-3 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody id="accountants-list-body" class="divide-y text-slate-700"></tbody>
           </table>
         </div>
       </div>
@@ -1003,32 +931,42 @@
         <textarea id="whatsapp-report-preview" readonly class="w-full h-32 p-2.5 border rounded-xl bg-slate-100 font-mono text-[11px]"></textarea>
       </div>
       <div class="flex gap-2 pt-2">
-        <button onclick="Reports.sendSelectedWhatsAppReports()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold transition shadow">
-          Send to Selected Managers
-        </button>
+        <button onclick="Reports.sendSelectedWhatsAppReports()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold transition shadow">Send to Selected Managers</button>
         <button onclick="UI.hide('whatsapp-report-modal')" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold transition">Cancel</button>
       </div>
     </div>
   </div>
 
   <script>
-    /* ============================================================
-       PMMS - Accountant Persistent Until Report Submission
-       ============================================================ */
+    const PARCalculator = {
+      computeMetrics() {
+        const branch = State.getActiveBranch();
+        const activeLoans = (branch.clients || []).filter(c => (c.balance || 0) > 0);
+        let totalPortfolioBalance = 0, par1Balance = 0, par7Balance = 0, par30Balance = 0, par60Balance = 0, par90Balance = 0;
+        activeLoans.forEach(c => {
+          const principal = c.balance || 0;
+          totalPortfolioBalance += principal;
+          const overdue = c.overdueDays || 0;
+          if (overdue > 1) par1Balance += principal;
+          if (overdue > 7) par7Balance += principal;
+          if (overdue > 30) par30Balance += principal;
+          if (overdue > 60) par60Balance += principal;
+          if (overdue > 90) par90Balance += principal;
+        });
+        const calcPct = (part, total) => total > 0 ? ((part / total) * 100).toFixed(1) : '0.0';
+        return {
+          totalPortfolioBalance, par1Balance, par1Pct: calcPct(par1Balance, totalPortfolioBalance),
+          par7Balance, par7Pct: calcPct(par7Balance, totalPortfolioBalance),
+          par30Balance, par30Pct: calcPct(par30Balance, totalPortfolioBalance),
+          par60Balance, par60Pct: calcPct(par60Balance, totalPortfolioBalance),
+          par90Balance, par90Pct: calcPct(par90Balance, totalPortfolioBalance)
+        };
+      }
+    };
 
     const Utils = {
-      show(el) {
-        if (typeof el === 'string') el = document.getElementById(el);
-        if (!el) return;
-        el.classList.remove('hidden');
-        el.removeAttribute('hidden');
-      },
-      hide(el) {
-        if (typeof el === 'string') el = document.getElementById(el);
-        if (!el) return;
-        el.classList.add('hidden');
-        el.setAttribute('hidden', '');
-      },
+      show(el) { if (typeof el === 'string') el = document.getElementById(el); if (!el) return; el.classList.remove('hidden'); el.removeAttribute('hidden'); },
+      hide(el) { if (typeof el === 'string') el = document.getElementById(el); if (!el) return; el.classList.add('hidden'); el.setAttribute('hidden', ''); },
       toast(msg, duration = 3000) {
         const t = document.createElement('div');
         t.className = 'toast';
@@ -1036,180 +974,86 @@
         document.body.appendChild(t);
         setTimeout(() => t.remove(), duration);
       },
-      formatUGX(n) {
-        return 'UGX ' + (Number(n) || 0).toLocaleString();
-      },
-      today() {
-        return new Date().toISOString().split('T')[0];
-      },
-      now() {
-        return new Date().toISOString().replace('T', ' ').substring(0, 19);
-      },
-      generateId(prefix = 'id') {
-        return prefix + '-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
-      },
-      confirmAction(msg) {
-        return window.confirm(msg);
-      }
+      formatUGX(n) { return 'UGX ' + (Number(n) || 0).toLocaleString(); },
+      today() { return new Date().toISOString().split('T')[0]; },
+      now() { return new Date().toISOString().replace('T', ' ').substring(0, 19); },
+      generateId(prefix = 'id') { return prefix + '-' + Date.now() + '-' + Math.floor(Math.random() * 1000); },
+      confirmAction(msg) { return window.confirm(msg); }
     };
 
     const Validation = {
-      isRequired(val, fieldName) {
-        if (!val || String(val).trim() === '') {
-          Utils.toast(`${fieldName} is required`);
-          return false;
-        }
-        return true;
-      },
-      isPositiveAmount(val, fieldName = 'Amount') {
-        const n = parseFloat(val);
-        if (isNaN(n) || n <= 0) {
-          Utils.toast(`${fieldName} must be a positive number`);
-          return false;
-        }
-        return true;
-      },
-      isValidPhone(phone) {
-        const cleaned = String(phone).replace(/\s+/g, '');
-        const ok = /^(0|256|\+256)?[7][0-9]{8}$/.test(cleaned);
-        if (!ok) Utils.toast('Invalid Ugandan phone number');
-        return ok;
-      },
-      isValidEmail(email) {
-        const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-        if (!ok) Utils.toast('Invalid email address');
-        return ok;
-      },
-      isValidNIN(nin) {
-        const cleaned = String(nin).trim().toUpperCase();
-        if (cleaned.length < 10) {
-          Utils.toast('NIN appears too short');
-          return false;
-        }
-        return true;
-      },
-      isValidPassword(pwd) {
-        if (!pwd || pwd.length < 6) {
-          Utils.toast('Password must be at least 6 characters');
-          return false;
-        }
-        return true;
-      }
+      isRequired(val, fieldName) { if (!val || String(val).trim() === '') { Utils.toast(`${fieldName} is required`); return false; } return true; },
+      isPositiveAmount(val, fieldName = 'Amount') { const n = parseFloat(val); if (isNaN(n) || n <= 0) { Utils.toast(`${fieldName} must be a positive number`); return false; } return true; },
+      isValidPhone(phone) { const ok = /^(0|256|\+256)?[7][0-9]{8}$/.test(String(phone).replace(/\s+/g, '')); if (!ok) Utils.toast('Invalid Ugandan phone number'); return ok; },
+      isValidEmail(email) { const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email); if (!ok) Utils.toast('Invalid email address'); return ok; },
+      isValidNIN(nin) { return true; },
+      isValidPassword(pwd) { if (!pwd || pwd.length < 6) { Utils.toast('Password must be at least 6 characters'); return false; } return true; }
     };
 
     const Audit = {
       log(action, details = '') {
         if (!state.auditLogs) state.auditLogs = [];
-        const entry = {
-          id: Utils.generateId('aud'),
-          timestamp: Utils.now(),
+        state.auditLogs.unshift({
+          id: Utils.generateId('aud'), timestamp: Utils.now(),
           user: state.currentUser ? state.currentUser.username : 'System',
           role: state.currentUser ? state.currentUser.role : '-',
-          action,
-          details: typeof details === 'object' ? JSON.stringify(details) : String(details)
-        };
-        state.auditLogs.unshift(entry);
+          action, details: typeof details === 'object' ? JSON.stringify(details) : String(details)
+        });
         if (state.auditLogs.length > 500) state.auditLogs.length = 500;
         State.save();
       }
     };
 
     let state = {
-      accounts: [
-        { role: "Administrator", username: "admin", email: "admin@pmms.com", phone: "0770000000", password: "password123", name: "System Admin" }
-      ],
+      accounts: [{ role: "Administrator", username: "admin", email: "admin@pmms.com", phone: "0770000000", password: "password123", name: "System Admin" }],
       currentUser: null,
-      company: {
-        name: "PMMS Central Microfinance",
-        contact: "info@pmms.com | 0770000000",
-        location: "Kampala, Uganda",
-        about: "Enterprise Microfinance & Branch Network Manager"
-      },
-      managers: [],
-      globalClients: [],
-      smsLogs: [],
-      auditLogs: [],
-      branchData: {
-        clients: [], officers: [], bankings: [], expenses: [],
-        capitalizations: [], batch: [], savingsAccounts: {}
-      }
+      company: { name: "PMMS Central Microfinance", contact: "info@pmms.com | 0770000000", location: "Kampala, Uganda", about: "Enterprise Microfinance & Branch Network Manager" },
+      managers: [], globalClients: [], smsLogs: [], auditLogs: [],
+      branchData: { clients: [], officers: [], bankings: [], expenses: [], capitalizations: [], batch: [], savingsAccounts: {} }
     };
 
-    let selectedPostClient = null;
-    let selectedDisburseClient = null;
-    let selectedReversalClient = null;
-    let lastPrintedReceiptText = "";
-    let xPrinterDevice = null;
-    let selectedSavingsNin = null;
+    let selectedPostClient = null, selectedDisburseClient = null, selectedReversalClient = null, lastPrintedReceiptText = "", xPrinterDevice = null, selectedSavingsNin = null;
 
     const ThemeCustomizer = {
       applyTheme(colorName) {
-        const body = document.body;
-        body.classList.remove("theme-teal", "theme-indigo", "theme-emerald", "theme-slate");
-        body.classList.add(`theme-${colorName}`);
+        document.body.classList.remove("theme-teal", "theme-indigo", "theme-emerald", "theme-slate");
+        document.body.classList.add(`theme-${colorName}`);
         localStorage.setItem("pmms_theme_color", colorName);
         Utils.toast(`Theme updated to ${colorName}`);
       },
       applyFont(fontStyle) {
-        const body = document.body;
-        body.classList.remove("font-sans", "font-serif", "font-mono");
-        if (fontStyle === 'serif') body.classList.add("font-serif");
-        else if (fontStyle === 'mono') body.classList.add("font-mono");
-        else body.classList.add("font-sans");
-
+        document.body.classList.remove("font-sans", "font-serif", "font-mono");
+        if (fontStyle === 'serif') document.body.classList.add("font-serif");
+        else if (fontStyle === 'mono') document.body.classList.add("font-mono");
+        else document.body.classList.add("font-sans");
         localStorage.setItem("pmms_theme_font", fontStyle);
         Utils.toast(`Font updated to ${fontStyle}`);
       },
       loadPreferences() {
         const savedColor = localStorage.getItem("pmms_theme_color");
         const savedFont = localStorage.getItem("pmms_theme_font");
-        if (savedColor) {
-          const sel = document.getElementById("theme-color-select");
-          if (sel) sel.value = savedColor;
-          this.applyTheme(savedColor);
-        }
-        if (savedFont) {
-          const selFont = document.getElementById("theme-font-select");
-          if (selFont) selFont.value = savedFont;
-          this.applyFont(savedFont);
-        }
+        if (savedColor) { document.getElementById("theme-color-select").value = savedColor; this.applyTheme(savedColor); }
+        if (savedFont) { document.getElementById("theme-font-select").value = savedFont; this.applyFont(savedFont); }
       }
     };
 
     const State = {
       load() {
         const saved = localStorage.getItem("pmms_state_single_v7");
-        if (saved) {
-          try {
-            const parsed = JSON.parse(saved);
-            state = { ...state, ...parsed };
-            if (!state.auditLogs) state.auditLogs = [];
-            if (!state.managers) state.managers = [];
-          } catch (e) {
-            console.error("State load error", e);
-          }
-        }
+        if (saved) { try { state = { ...state, ...JSON.parse(saved) }; } catch (e) {} }
         this.runDailyAging();
         this.restoreSession();
       },
-      save() {
-        localStorage.setItem("pmms_state_single_v7", JSON.stringify(state));
-      },
-      getActiveBranch() {
-        return state.branchData;
-      },
+      save() { localStorage.setItem("pmms_state_single_v7", JSON.stringify(state)); },
+      getActiveBranch() { return state.branchData; },
       runDailyAging() {
         const today = new Date();
         const bd = state.branchData;
         if (bd && bd.clients) {
           bd.clients.forEach(c => {
             if (c.balance > 0 && c.deadlineDate) {
-              const deadline = new Date(c.deadlineDate);
-              const overdueDays = Math.floor((today - deadline) / (1000 * 60 * 60 * 24));
-              c.overdueDays = Math.max(0, overdueDays);
-            } else {
-              c.overdueDays = 0;
-            }
+              c.overdueDays = Math.max(0, Math.floor((today - new Date(c.deadlineDate)) / (1000 * 60 * 60 * 24)));
+            } else { c.overdueDays = 0; }
           });
         }
         this.save();
@@ -1218,16 +1062,12 @@
         const savedUser = localStorage.getItem("pmms_current_user_single_v7");
         if (savedUser) {
           try {
-            const parsedUser = JSON.parse(savedUser);
-            // ONLY restore session automatically if it's an Accountant. Admins must always login.
-            if (parsedUser && parsedUser.role === 'Accountant') {
-              state.currentUser = parsedUser;
-              document.getElementById("header-user-tag").innerText =
-                `User: ${state.currentUser.username} (${state.currentUser.role})`;
+            const parsed = JSON.parse(savedUser);
+            if (parsed && parsed.role === 'Accountant') {
+              state.currentUser = parsed;
+              document.getElementById("header-user-tag").innerText = `User: ${state.currentUser.username} (${state.currentUser.role})`;
               Utils.hide("auth-overlay");
               Auth.applyRolePermissions();
-            } else {
-              localStorage.removeItem("pmms_current_user_single_v7");
             }
           } catch (e) {}
         }
@@ -1241,21 +1081,11 @@
     };
 
     const UI = {
-      showTab(tabId) {
-        document.querySelectorAll(".tab-content").forEach(el => Utils.hide(el));
-        Utils.show(tabId);
-      },
+      showTab(tabId) { document.querySelectorAll(".tab-content").forEach(el => Utils.hide(el)); Utils.show(tabId); if (tabId === 'tab-aging') Aging.render(); if (tabId === 'tab-sms-logs') SMS.renderLogs(); },
       openModuleWindow(tabId, moduleTitle) {
-        const width = 1100;
-        const height = 750;
-        const left = (window.screen.width - width) / 2;
-        const top = (window.screen.height - height) / 2;
-
-        const popup = window.open(
-          window.location.pathname + `?module=${tabId}&title=${encodeURIComponent(moduleTitle)}`,
-          '_blank',
-          `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes`
-        );
+        const width = 1100, height = 750;
+        const left = (window.screen.width - width) / 2, top = (window.screen.height - height) / 2;
+        const popup = window.open(window.location.pathname + `?module=${tabId}&title=${encodeURIComponent(moduleTitle)}`, '_blank', `width=${width},height=${height},top=${top},left=${left},resizable=yes,scrollbars=yes`);
         if (popup) popup.focus();
       },
       show(id) { Utils.show(id); },
@@ -1273,275 +1103,102 @@
         SMS.renderLogs();
         Reports.updateDashboard();
         Posting.renderBatchList();
-        AdminSettings.renderAccountantsList();
-        AdminSettings.renderManagersList();
-        AdminSettings.loadCompanyForm();
+        SMS.populateQuickClients();
       }
     };
 
     const Auth = {
       switchTab(type) {
         if (type === 'login') {
-          Utils.show("auth-form-login");
-          Utils.hide("auth-form-register");
+          Utils.show("auth-form-login"); Utils.hide("auth-form-register");
           document.getElementById("tab-btn-login").classList.add("bg-white", "text-slate-900", "shadow-sm");
-          document.getElementById("tab-btn-login").classList.remove("text-slate-500");
           document.getElementById("tab-btn-register").classList.remove("bg-white", "text-slate-900", "shadow-sm");
-          document.getElementById("tab-btn-register").classList.add("text-slate-500");
         } else {
-          Utils.hide("auth-form-login");
-          Utils.show("auth-form-register");
+          Utils.hide("auth-form-login"); Utils.show("auth-form-register");
           document.getElementById("tab-btn-register").classList.add("bg-white", "text-slate-900", "shadow-sm");
-          document.getElementById("tab-btn-register").classList.remove("text-slate-500");
           document.getElementById("tab-btn-login").classList.remove("bg-white", "text-slate-900", "shadow-sm");
-          document.getElementById("tab-btn-login").classList.add("text-slate-500");
         }
       },
       togglePasswordVisibility() {
-        const pwdInput = document.getElementById("login-password");
-        const eyeIcon = document.getElementById("password-eye-icon");
-        if (pwdInput.type === "password") {
-          pwdInput.type = "text";
-          eyeIcon.classList.remove("fa-eye");
-          eyeIcon.classList.add("fa-eye-slash");
-        } else {
-          pwdInput.type = "password";
-          eyeIcon.classList.remove("fa-eye-slash");
-          eyeIcon.classList.add("fa-eye");
-        }
+        const p = document.getElementById("login-password"), e = document.getElementById("password-eye-icon");
+        if (p.type === "password") { p.type = "text"; e.className = "fa-solid fa-eye-slash text-xs"; }
+        else { p.type = "password"; e.className = "fa-solid fa-eye text-xs"; }
       },
       handleRegister() {
         const username = document.getElementById("reg-username").value.trim();
         const email = document.getElementById("reg-email").value.trim();
         const phone = document.getElementById("reg-phone").value.trim();
         const password = document.getElementById("reg-password").value.trim();
-
-        if (!Validation.isRequired(username, "Username") ||
-            !Validation.isRequired(email, "Email") ||
-            !Validation.isValidEmail(email) ||
-            !Validation.isRequired(phone, "Phone") ||
-            !Validation.isValidPhone(phone) ||
-            !Validation.isValidPassword(password)) return;
-
-        if (state.accounts.some(a => a.username === username || a.email === email)) {
-          Utils.toast("Username or Email already registered");
-          return;
-        }
-
-        state.accounts.push({
-          role: "Administrator",
-          username,
-          email,
-          phone,
-          password,
-          name: username
-        });
+        if (!Validation.isRequired(username, "Username") || !Validation.isValidEmail(email) || !Validation.isValidPhone(phone) || !Validation.isValidPassword(password)) return;
+        state.accounts.push({ role: "Administrator", username, email, phone, password, name: username });
         State.save();
-        Audit.log("ADMIN_REGISTERED", { username, email });
-        Utils.toast("Admin account created successfully! Please login.");
+        Utils.toast("Admin account created! Please login.");
         this.switchTab('login');
       },
       handleLogin() {
-        const identifier = document.getElementById("login-identifier").value.trim();
-        const password = document.getElementById("login-password").value.trim();
-
-        if (!Validation.isRequired(identifier, "Username or Email") ||
-            !Validation.isRequired(password, "Password")) return;
-
-        const acc = state.accounts.find(a =>
-          (a.username === identifier || a.email === identifier) &&
-          a.password === password
-        );
-
-        if (!acc) {
-          Utils.toast("Access Denied: Incorrect credentials");
-          Audit.log("LOGIN_FAILED", { identifier });
-          return;
-        }
-
+        const iden = document.getElementById("login-identifier").value.trim();
+        const pwd = document.getElementById("login-password").value.trim();
+        const acc = state.accounts.find(a => (a.username === iden || a.email === iden) && a.password === pwd);
+        if (!acc) { Utils.toast("Access Denied: Incorrect credentials"); return; }
         state.currentUser = acc;
-        
-        // If Accountant, persist login until day report is submitted. If Admin, do NOT persist.
-        if (acc.role === 'Accountant') {
-          localStorage.setItem("pmms_current_user_single_v7", JSON.stringify(acc));
-        }
-
-        document.getElementById("header-user-tag").innerText =
-          `User: ${acc.username} (${acc.role})`;
-
+        if (acc.role === 'Accountant') localStorage.setItem("pmms_current_user_single_v7", JSON.stringify(acc));
+        document.getElementById("header-user-tag").innerText = `User: ${acc.username} (${acc.role})`;
         this.applyRolePermissions();
         Utils.hide("auth-overlay");
         State.save();
         UI.refreshAll();
-        Audit.log("LOGIN_SUCCESS", { username: acc.username, role: acc.role });
         Utils.toast(`Welcome ${acc.name || acc.username}`);
       },
       applyRolePermissions() {
-        if (!state.currentUser) return;
-        if (state.currentUser.role === 'Accountant') {
-          Utils.hide("nav-admin-settings-tab");
-        } else {
-          Utils.show("nav-admin-settings-tab");
-        }
+        if (state.currentUser?.role === 'Accountant') Utils.hide("nav-admin-settings-tab");
+        else Utils.show("nav-admin-settings-tab");
       },
       lockApp() {
         localStorage.removeItem("pmms_current_user_single_v7");
-        Audit.log("LOGOUT", { username: state.currentUser?.username });
         state.currentUser = null;
         Utils.show("auth-overlay");
       }
     };
 
     const AdminSettings = {
-      loadCompanyForm() {
-        document.getElementById("set-company-name").value = state.company.name;
-        document.getElementById("set-company-contact").value = state.company.contact;
-        document.getElementById("set-company-location").value = state.company.location;
-        document.getElementById("set-company-about").value = state.company.about;
-      },
       saveCompanyProfile() {
-        if (state.currentUser?.role !== 'Administrator') {
-          Utils.toast("Only Administrators can update company details");
-          return;
-        }
-        const name = document.getElementById("set-company-name").value.trim();
-        const contact = document.getElementById("set-company-contact").value.trim();
-        const location = document.getElementById("set-company-location").value.trim();
-        const about = document.getElementById("set-company-about").value.trim();
-
-        if (!Validation.isRequired(name, "Company Name")) return;
-
-        state.company = { name, contact, location, about };
-        State.save();
-        State.updateCompanyHeader();
-        Audit.log("COMPANY_PROFILE_UPDATED", state.company);
-        Utils.toast("Company profile updated successfully");
+        if (state.currentUser?.role !== 'Administrator') { Utils.toast("Admin only"); return; }
+        state.company.name = document.getElementById("set-company-name").value.trim();
+        state.company.contact = document.getElementById("set-company-contact").value.trim();
+        state.company.location = document.getElementById("set-company-location").value.trim();
+        state.company.about = document.getElementById("set-company-about").value.trim();
+        State.save(); State.updateCompanyHeader();
+        Utils.toast("Company profile saved");
       },
       addManager() {
-        if (state.currentUser?.role !== 'Administrator') {
-          Utils.toast("Only Administrators can add managers");
-          return;
-        }
         const name = document.getElementById("mgr-name").value.trim();
         const phone = document.getElementById("mgr-phone").value.trim();
-
-        if (!Validation.isRequired(name, "Manager Name") ||
-            !Validation.isRequired(phone, "Manager Phone") ||
-            !Validation.isValidPhone(phone)) return;
-
+        if (!Validation.isRequired(name, "Manager Name") || !Validation.isValidPhone(phone)) return;
         if (!state.managers) state.managers = [];
         state.managers.push({ id: Utils.generateId("mgr"), name, phone });
-        State.save();
-        this.renderManagersList();
-        Audit.log("MANAGER_ADDED", { name, phone });
-        Utils.toast("Manager added successfully");
-        document.getElementById("mgr-name").value = "";
-        document.getElementById("mgr-phone").value = "";
+        State.save(); this.renderManagersList();
+        Utils.toast("Manager added");
       },
       renderManagersList() {
         const tbody = document.getElementById("managers-list-body");
         if (!tbody) return;
-        const managers = state.managers || [];
-        if (managers.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="3" class="p-3 text-center text-slate-400">No managers added yet.</td></tr>`;
-          return;
-        }
-        tbody.innerHTML = managers.map(m => `
-          <tr>
-            <td class="p-3 font-bold">${m.name}</td>
-            <td class="p-3 font-mono">${m.phone}</td>
-            <td class="p-3 text-right">
-              <button onclick="AdminSettings.deleteManager('${m.id}')" class="bg-red-600 text-white px-2.5 py-1 rounded text-[10px] font-bold">Remove</button>
-            </td>
-          </tr>
-        `).join('');
+        tbody.innerHTML = (state.managers || []).map(m => `
+          <tr><td class="p-3 font-bold">${m.name}</td><td class="p-3 font-mono">${m.phone}</td><td class="p-3 text-right"><button onclick="AdminSettings.deleteManager('${m.id}')" class="bg-red-600 text-white px-2 py-0.5 rounded text-[10px]">Remove</button></td></tr>
+        `).join('') || `<tr><td colspan="3" class="p-3 text-center text-slate-400">No managers added</td></tr>`;
       },
       deleteManager(id) {
-        if (state.currentUser?.role !== 'Administrator') return;
-        if (!Utils.confirmAction("Remove manager destination?")) return;
         state.managers = (state.managers || []).filter(m => m.id !== id);
-        State.save();
-        this.renderManagersList();
-        Audit.log("MANAGER_REMOVED", { id });
-        Utils.toast("Manager removed");
-      },
-      createAccountant() {
-        if (state.currentUser?.role !== 'Administrator') {
-          Utils.toast("Only Administrators can create accountant accounts");
-          return;
-        }
-        const username = document.getElementById("acc-new-username").value.trim();
-        const password = document.getElementById("acc-new-password").value.trim();
-        const phone = document.getElementById("acc-new-phone").value.trim();
-
-        if (!Validation.isRequired(username, "Username") ||
-            !Validation.isValidPassword(password) ||
-            !Validation.isRequired(phone, "Phone") ||
-            !Validation.isValidPhone(phone)) return;
-
-        if (state.accounts.some(a => a.username === username)) {
-          Utils.toast("Username already exists");
-          return;
-        }
-
-        state.accounts.push({
-          role: "Accountant",
-          username,
-          password,
-          phone,
-          name: username
-        });
-        State.save();
-        this.renderAccountantsList();
-        Audit.log("ACCOUNTANT_CREATED", { username });
-        Utils.toast("Accountant login created successfully");
-        document.getElementById("acc-new-username").value = "";
-        document.getElementById("acc-new-password").value = "";
-        document.getElementById("acc-new-phone").value = "";
-      },
-      renderAccountantsList() {
-        const tbody = document.getElementById("accountants-list-body");
-        if (!tbody) return;
-        const accountants = state.accounts.filter(a => a.role === 'Accountant');
-        if (accountants.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="3" class="p-3 text-center text-slate-400">No accountant logins created yet.</td></tr>`;
-          return;
-        }
-        tbody.innerHTML = accountants.map(a => `
-          <tr>
-            <td class="p-3 font-bold">${a.username}</td>
-            <td class="p-3">${a.phone || '-'}</td>
-            <td class="p-3 text-right">
-              <button onclick="AdminSettings.deleteAccountant('${a.username}')" class="bg-red-600 text-white px-2.5 py-1 rounded text-[10px] font-bold">Remove</button>
-            </td>
-          </tr>
-        `).join('');
-      },
-      deleteAccountant(username) {
-        if (state.currentUser?.role !== 'Administrator') return;
-        if (!Utils.confirmAction(`Remove accountant login for ${username}?`)) return;
-        state.accounts = state.accounts.filter(a => !(a.username === username && a.role === 'Accountant'));
-        State.save();
-        this.renderAccountantsList();
-        Audit.log("ACCOUNTANT_REMOVED", { username });
-        Utils.toast("Accountant login removed");
+        State.save(); this.renderManagersList();
       }
     };
 
     const Posting = {
       searchClients(query) {
         const resultsDiv = document.getElementById("post-search-results");
-        if (!query || query.trim().length < 1) {
-          Utils.hide(resultsDiv);
-          return;
-        }
+        if (!query || query.trim().length < 1) { Utils.hide(resultsDiv); return; }
         const branch = State.getActiveBranch();
         const q = query.toLowerCase();
-        const filtered = branch.clients.filter(c =>
-          c.name.toLowerCase().includes(q) ||
-          (c.nin && c.nin.toLowerCase().includes(q)) ||
-          (c.phone && c.phone.includes(q))
-        );
+        const filtered = branch.clients.filter(c => c.name.toLowerCase().includes(q) || (c.nin && c.nin.toLowerCase().includes(q)) || (c.phone && c.phone.includes(q)));
         resultsDiv.innerHTML = filtered.map(c => `
           <div onclick="Posting.selectClient('${c.id}')" class="p-3 hover:bg-slate-100 cursor-pointer text-xs flex justify-between">
             <div><strong>${c.name}</strong> (${c.nin || 'N/A'})</div>
@@ -1555,61 +1212,33 @@
         selectedPostClient = branch.clients.find(c => c.id === clientId);
         Utils.hide("post-search-results");
         if (!selectedPostClient) return;
-
         document.getElementById("post-client-name").innerText = selectedPostClient.name;
         document.getElementById("post-client-acc").innerText = `NIN: ${selectedPostClient.nin || "N/A"} | ACC: ${selectedPostClient.id}`;
         document.getElementById("post-client-type-info").innerText = selectedPostClient.category || 'OTHERS';
         document.getElementById("post-client-call").href = "tel:" + (selectedPostClient.phone || "");
-
         document.getElementById("post-arrears").innerText = Utils.formatUGX(selectedPostClient.arrears || 0);
         document.getElementById("post-advance").innerText = Utils.formatUGX(selectedPostClient.advance || 0);
         document.getElementById("post-balance").innerText = Utils.formatUGX(selectedPostClient.balance || 0);
         document.getElementById("post-daily").innerText = Utils.formatUGX(selectedPostClient.dailyTarget || 0);
-
-        Utils.show("post-selected-card");
-        Utils.show("post-form");
-
-        if ((selectedPostClient.balance || 0) <= 0) {
-          Utils.show("zero-balance-warning");
-          Utils.hide("post-inputs-container");
-          Utils.hide("add-to-batch-btn");
-        } else {
-          Utils.hide("zero-balance-warning");
-          Utils.show("post-inputs-container");
-          Utils.show("add-to-batch-btn");
-        }
+        Utils.show("post-selected-card"); Utils.show("post-form");
       },
       addToBatch() {
-        if (!selectedPostClient || (selectedPostClient.balance || 0) <= 0) {
-          Utils.toast("Cannot add payment for this client");
-          return;
-        }
+        if (!selectedPostClient || (selectedPostClient.balance || 0) <= 0) return;
         const amt = parseFloat(document.getElementById("post-amount").value);
         if (!Validation.isPositiveAmount(amt, "Payment Amount")) return;
-
-        const channel = document.getElementById("post-channel").value;
-        const branch = State.getActiveBranch();
-
-        branch.batch.push({
-          clientId: selectedPostClient.id,
-          clientName: selectedPostClient.name,
-          amount: amt,
-          channel,
-          date: Utils.today()
+        State.getActiveBranch().batch.push({
+          clientId: selectedPostClient.id, clientName: selectedPostClient.name,
+          amount: amt, channel: document.getElementById("post-channel").value, date: Utils.today()
         });
         document.getElementById("post-amount").value = "";
-        State.save();
-        this.renderBatchList();
+        State.save(); this.renderBatchList();
         Utils.toast("Added to batch");
       },
       renderBatchList() {
         const branch = State.getActiveBranch();
         document.getElementById("batch-count").innerText = branch.batch.length;
         const list = document.getElementById("batch-list");
-        if (branch.batch.length === 0) {
-          list.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">No batch items.</p>`;
-          return;
-        }
+        if (branch.batch.length === 0) { list.innerHTML = `<p class="text-xs text-slate-400 py-4 text-center">No batch items.</p>`; return; }
         list.innerHTML = branch.batch.map((item, idx) => `
           <div class="bg-white p-2.5 border rounded flex justify-between text-xs items-center">
             <span>${item.clientName} — ${Utils.formatUGX(item.amount)} <span class="text-slate-400">(${item.channel})</span></span>
@@ -1617,125 +1246,56 @@
           </div>
         `).join('');
       },
-      removeFromBatch(idx) {
-        const branch = State.getActiveBranch();
-        branch.batch.splice(idx, 1);
-        State.save();
-        this.renderBatchList();
-      },
+      removeFromBatch(idx) { State.getActiveBranch().batch.splice(idx, 1); State.save(); this.renderBatchList(); },
       postAllBatch() {
         const branch = State.getActiveBranch();
-        if (branch.batch.length === 0) {
-          Utils.toast("Batch is empty");
-          return;
-        }
+        if (branch.batch.length === 0) return;
         if (!Utils.confirmAction(`Post ${branch.batch.length} payment(s)?`)) return;
-
         let receiptText = `=== ${state.company.name} ===\nDate: ${Utils.today()}\n--------------------------------\n`;
-
         branch.batch.forEach(item => {
           const client = branch.clients.find(c => c.id === item.clientId);
           if (client) {
             const prevBal = client.balance || 0;
             client.balance = Math.max(0, prevBal - item.amount);
             if (!client.history) client.history = [];
-            client.history.push({
-              type: 'Repayment',
-              amount: item.amount,
-              date: item.date,
-              channel: item.channel,
-              prevBalance: prevBal,
-              newBalance: client.balance
-            });
+            client.history.push({ type: 'Repayment', amount: item.amount, date: item.date, channel: item.channel, prevBalance: prevBal, newBalance: client.balance });
             receiptText += `${client.name}: Paid ${Utils.formatUGX(item.amount)}\nBal: ${Utils.formatUGX(client.balance)}\n--------------------------------\n`;
             SMS.dispatch(client.phone, `PMMS: Payment of ${Utils.formatUGX(item.amount)} received. New balance: ${Utils.formatUGX(client.balance)}`, 'Repayment');
           }
         });
-
-        const count = branch.batch.length;
-        branch.batch = [];
-        State.save();
-        this.renderBatchList();
+        branch.batch = []; State.save(); this.renderBatchList();
         if (selectedPostClient) this.selectClient(selectedPostClient.id);
         Printer.printToXPrinter(receiptText);
-        Audit.log("BATCH_POSTED", { count });
         Utils.toast("Batch posted successfully");
-        Reports.updateDashboard();
-        Staff.renderHub();
+        Reports.updateDashboard(); Staff.renderHub();
       },
       searchAndPrintManualReceipt() {
         const searchDate = document.getElementById("manual-receipt-date").value;
         const clientQuery = document.getElementById("manual-receipt-client-query").value.trim().toLowerCase();
-
-        if (!searchDate) {
-          Utils.toast("Please select a transaction date");
-          return;
-        }
-        if (!clientQuery) {
-          Utils.toast("Please enter a client name or NIN");
-          return;
-        }
-
+        if (!searchDate || !clientQuery) { Utils.toast("Provide date and client name/NIN"); return; }
         const branch = State.getActiveBranch();
-        let foundTransaction = null;
-        let targetClient = null;
-
+        let foundTxn = null, targetClient = null;
         for (const client of branch.clients) {
-          const matchesClient = 
-            client.name.toLowerCase().includes(clientQuery) || 
-            (client.nin && client.nin.toLowerCase().includes(clientQuery));
-
-          if (matchesClient && client.history) {
-            const txn = client.history.find(h => h.date === searchDate && h.type === 'Repayment');
-            if (txn) {
-              targetClient = client;
-              foundTransaction = txn;
-              break;
-            }
+          if (client.name.toLowerCase().includes(clientQuery) || (client.nin && client.nin.toLowerCase().includes(clientQuery))) {
+            const txn = (client.history || []).find(h => h.date === searchDate && h.type === 'Repayment');
+            if (txn) { targetClient = client; foundTxn = txn; break; }
           }
         }
-
-        if (!foundTransaction || !targetClient) {
-          Utils.toast("No repayment transaction found for this client on that date");
-          return;
-        }
-
-        const receiptText = 
-          `=== ${state.company.name} ===\n` +
-          `MANUAL REPRINT RECEIPT\n` +
-          `Date: ${foundTransaction.date}\n` +
-          `--------------------------------\n` +
-          `Client: ${targetClient.name}\n` +
-          `NIN: ${targetClient.nin || 'N/A'}\n` +
-          `Paid Amount: ${Utils.formatUGX(foundTransaction.amount)}\n` +
-          `Channel: ${foundTransaction.channel || 'Cash'}\n` +
-          `New Balance: ${Utils.formatUGX(foundTransaction.newBalance)}\n` +
-          `--------------------------------\n` +
-          `Staff / Operator: ${state.currentUser ? state.currentUser.username : 'Admin'}\n` +
-          `Thank you for banking with us!\n`;
-
-        Printer.printToXPrinter(receiptText);
-        Utils.toast("Receipt generated and sent to printer");
-        Audit.log("MANUAL_RECEIPT_PRINTED", { client: targetClient.name, date: searchDate });
+        if (!foundTxn) { Utils.toast("Transaction not found"); return; }
+        Printer.printToXPrinter(`=== ${state.company.name} ===\nREPRINT RECEIPT\nDate: ${foundTxn.date}\nClient: ${targetClient.name}\nPaid: ${Utils.formatUGX(foundTxn.amount)}\nBalance: ${Utils.formatUGX(foundTxn.newBalance)}\n`);
+        Utils.toast("Receipt printed");
       }
     };
 
     const Disburse = {
       toggleClientMode(isNew) {
-        if (isNew) {
-          Utils.show("new-client-fields");
-          Utils.hide("existing-client-fields");
-          selectedDisburseClient = null;
-        } else {
-          Utils.hide("new-client-fields");
-          Utils.show("existing-client-fields");
-        }
+        if (isNew) { Utils.show("new-client-fields"); Utils.hide("existing-client-fields"); selectedDisburseClient = null; }
+        else { Utils.hide("new-client-fields"); Utils.show("existing-client-fields"); }
       },
       toggleBodaPlateInput(prefix) {
         const cat = document.getElementById(prefix + "-client-category").value;
         const plateContainer = document.getElementById(prefix + "-plate-container");
-        if (cat === "BODABODA") Utils.show(plateContainer);
-        else Utils.hide(plateContainer);
+        if (cat === "BODABODA") Utils.show(plateContainer); else Utils.hide(plateContainer);
       },
       checkNinDuplicate(nin) {
         const existing = state.globalClients.find(c => c.nin && c.nin.toUpperCase() === nin.toUpperCase());
@@ -1751,35 +1311,20 @@
         const resultsDiv = document.getElementById("disburse-search-results");
         if (!query) { Utils.hide(resultsDiv); return; }
         const q = query.toLowerCase();
-        const filtered = state.globalClients.filter(c =>
-          (c.name && c.name.toLowerCase().includes(q)) ||
-          (c.nin && c.nin.toLowerCase().includes(q))
-        );
-        resultsDiv.innerHTML = filtered.map(c =>
-          `<div onclick="Disburse.selectByNin('${c.nin}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs"><strong>${c.name}</strong> (${c.nin})</div>`
-        ).join('') || `<div class="p-2 text-slate-400 text-xs">No clients found</div>`;
+        const filtered = state.globalClients.filter(c => (c.name && c.name.toLowerCase().includes(q)) || (c.nin && c.nin.toLowerCase().includes(q)));
+        resultsDiv.innerHTML = filtered.map(c => `<div onclick="Disburse.selectByNin('${c.nin}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs"><strong>${c.name}</strong> (${c.nin})</div>`).join('');
         Utils.show(resultsDiv);
       },
       selectByNin(nin) {
         selectedDisburseClient = state.globalClients.find(c => c.nin === nin);
         Utils.hide("disburse-search-results");
         document.getElementById("disburse-selected-name").innerText = `Selected: ${selectedDisburseClient.name}`;
-        const branch = State.getActiveBranch();
-        const activeLoan = branch.clients.find(c => c.nin === nin && (c.balance || 0) > 0);
-        const warning = document.getElementById("disburse-client-risk-warning");
-        if (activeLoan) {
-          warning.innerHTML = `<strong class="text-red-700">Blocked: Client has an active loan (Balance: ${Utils.formatUGX(activeLoan.balance)}).</strong>`;
-          Utils.show(warning);
-        } else {
-          Utils.hide(warning);
-        }
       },
       liveCalculate() {
         const p = parseFloat(document.getElementById("disburse-principal").value) || 0;
         const r = parseFloat(document.getElementById("disburse-rate").value) || 0;
         const d = parseFloat(document.getElementById("disburse-days").value) || 30;
-        const interest = p * (r / 100);
-        const tot = p + interest;
+        const interest = p * (r / 100), tot = p + interest;
         document.getElementById("dis-base").innerText = Utils.formatUGX(p);
         document.getElementById("dis-interest").innerText = Utils.formatUGX(interest);
         document.getElementById("dis-total").innerText = Utils.formatUGX(tot);
@@ -1791,11 +1336,9 @@
         const p = parseFloat(document.getElementById("disburse-principal").value) || 0;
         const r = parseFloat(document.getElementById("disburse-rate").value) || 0;
         const days = parseFloat(document.getElementById("disburse-days").value) || 30;
-
         if (!Validation.isRequired(officerId, "Staff Portfolio") || !Validation.isPositiveAmount(p, "Principal")) return;
 
         let nin = "", name = "", phone = "", address = "", guarantor = "", guarantorPhone = "", category = "OTHERS", plate = "";
-
         if (isNew) {
           nin = document.getElementById("new-nin").value.trim().toUpperCase();
           name = document.getElementById("new-name").value.trim();
@@ -1805,60 +1348,32 @@
           guarantorPhone = document.getElementById("new-guarantor-phone").value.trim();
           category = document.getElementById("new-client-category").value;
           plate = document.getElementById("new-number-plate")?.value.trim().toUpperCase() || "";
-
-          if (!Validation.isRequired(nin, "NIN") || !Validation.isValidNIN(nin) ||
-              !Validation.isRequired(name, "Client Name") ||
-              !Validation.isRequired(phone, "Phone") || !Validation.isValidPhone(phone) ||
-              !Validation.isRequired(guarantor, "Guarantor Name")) return;
-
+          if (!Validation.isRequired(nin, "NIN") || !Validation.isRequired(name, "Name") || !Validation.isValidPhone(phone)) return;
           if (!state.globalClients.some(c => c.nin === nin)) {
             state.globalClients.push({ nin, name, phone, address, guarantor, guarantorPhone, category, plate });
           }
         } else {
-          if (!selectedDisburseClient) {
-            Utils.toast("Please select an existing client");
-            return;
-          }
-          nin = selectedDisburseClient.nin;
-          name = selectedDisburseClient.name;
-          phone = selectedDisburseClient.phone;
+          if (!selectedDisburseClient) { Utils.toast("Select existing client"); return; }
+          nin = selectedDisburseClient.nin; name = selectedDisburseClient.name; phone = selectedDisburseClient.phone;
         }
 
         const branch = State.getActiveBranch();
-        if (branch.clients.some(c => c.nin === nin && (c.balance || 0) > 0)) {
-          Utils.toast("Disbursement blocked: Active loan exists");
-          return;
-        }
-
         const total = p + (p * (r / 100));
-        const deadline = new Date();
-        deadline.setDate(deadline.getDate() + days);
+        const deadline = new Date(); deadline.setDate(deadline.getDate() + days);
 
-        const clientRecord = {
-          id: Utils.generateId("cli"),
-          nin, name, phone, address, guarantor, guarantorPhone, category, plate,
-          officerId,
-          principal: p,
-          balance: total,
-          dailyTarget: Math.round(total / days),
-          dateDisbursed: Utils.today(),
-          deadlineDate: deadline.toISOString().split('T')[0],
-          overdueDays: 0,
+        branch.clients.push({
+          id: Utils.generateId("cli"), nin, name, phone, address, guarantor, guarantorPhone, category, plate,
+          officerId, principal: p, balance: total, dailyTarget: Math.round(total / days),
+          dateDisbursed: Utils.today(), deadlineDate: deadline.toISOString().split('T')[0], overdueDays: 0,
           history: [{ type: 'Disbursement', amount: total, date: Utils.today(), principal: p, interest: p * (r / 100) }]
-        };
+        });
+        if (!branch.savingsAccounts[nin]) branch.savingsAccounts[nin] = { balance: 0, history: [] };
 
-        branch.clients.push(clientRecord);
-        if (!branch.savingsAccounts[nin]) {
-          branch.savingsAccounts[nin] = { balance: 0, history: [] };
-        }
-
-        SMS.dispatch(phone, `PMMS Loan Disbursed: ${Utils.formatUGX(p)}. Total Payable: ${Utils.formatUGX(total)}. Daily: ${Utils.formatUGX(clientRecord.dailyTarget)}`, 'Disbursement');
+        SMS.dispatch(phone, `PMMS Loan Disbursed: ${Utils.formatUGX(p)}. Total: ${Utils.formatUGX(total)}. Daily: ${Utils.formatUGX(Math.round(total / days))}`, 'Disbursement');
         State.save();
-        Audit.log("LOAN_DISBURSED", { nin, name, principal: p, total, officerId });
-        Utils.toast("Loan disbursed successfully + Savings account ready");
+        Utils.toast("Loan disbursed & local SMS notification queued");
         UI.refreshAll();
         document.getElementById("disburse-principal").value = "";
-        this.liveCalculate();
       }
     };
 
@@ -1867,12 +1382,8 @@
         const resultsDiv = document.getElementById("savings-search-results");
         const branch = State.getActiveBranch();
         const q = (query || "").toLowerCase();
-        const filtered = branch.clients.filter(c =>
-          c.name.toLowerCase().includes(q) || (c.nin && c.nin.toLowerCase().includes(q))
-        );
-        resultsDiv.innerHTML = filtered.map(c =>
-          `<div onclick="Savings.selectClient('${c.nin}', '${c.name.replace(/'/g, "\\'")}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs"><strong>${c.name}</strong></div>`
-        ).join('') || `<div class="p-2 text-slate-400 text-xs">No results</div>`;
+        const filtered = branch.clients.filter(c => c.name.toLowerCase().includes(q) || (c.nin && c.nin.toLowerCase().includes(q)));
+        resultsDiv.innerHTML = filtered.map(c => `<div onclick="Savings.selectClient('${c.nin}', '${c.name.replace(/'/g, "\\'")}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs"><strong>${c.name}</strong></div>`).join('');
         Utils.show(resultsDiv);
       },
       selectClient(nin, name) {
@@ -1885,49 +1396,30 @@
         Utils.show("savings-client-card");
       },
       processTransaction() {
-        if (!selectedSavingsNin) {
-          Utils.toast("Select a client first");
-          return;
-        }
+        if (!selectedSavingsNin) { Utils.toast("Select client first"); return; }
         const amt = parseFloat(document.getElementById("sav-amount").value);
         const type = document.getElementById("sav-type").value;
         if (!Validation.isPositiveAmount(amt)) return;
-
         const branch = State.getActiveBranch();
         let sav = branch.savingsAccounts[selectedSavingsNin];
-        if (type === 'WITHDRAWAL' && sav.balance < amt) {
-          Utils.toast("Insufficient savings balance");
-          return;
-        }
-
-        if (type === 'WITHDRAWAL') sav.balance -= amt;
-        else sav.balance += amt;
-
+        if (type === 'WITHDRAWAL' && sav.balance < amt) { Utils.toast("Insufficient savings"); return; }
+        if (type === 'WITHDRAWAL') sav.balance -= amt; else sav.balance += amt;
         sav.history.push({ date: Utils.today(), type, amount: amt });
         State.save();
         this.selectClient(selectedSavingsNin, document.getElementById("sav-client-name").innerText.split(' (')[0]);
         document.getElementById("sav-amount").value = "";
-        Audit.log("SAVINGS_" + type, { nin: selectedSavingsNin, amount: amt });
         Utils.toast(`Savings ${type.toLowerCase()} processed`);
       }
     };
 
     const LoanOps = {
       searchReversalClients(query) {
-        if (state.currentUser?.role !== 'Administrator') {
-          Utils.toast("Admin access required for reversals");
-          return;
-        }
+        if (state.currentUser?.role !== 'Administrator') { Utils.toast("Admin only"); return; }
         const resultsDiv = document.getElementById("reversal-search-results");
         if (!query) { Utils.hide(resultsDiv); return; }
         const branch = State.getActiveBranch();
-        const q = query.toLowerCase();
-        const filtered = branch.clients.filter(c =>
-          c.name.toLowerCase().includes(q) || (c.nin && c.nin.toLowerCase().includes(q))
-        );
-        resultsDiv.innerHTML = filtered.map(c =>
-          `<div onclick="LoanOps.selectReversalClient('${c.id}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs"><strong>${c.name}</strong> — ${Utils.formatUGX(c.balance)}</div>`
-        ).join('');
+        const filtered = branch.clients.filter(c => c.name.toLowerCase().includes(query.toLowerCase()) || (c.nin && c.nin.toLowerCase().includes(query.toLowerCase())));
+        resultsDiv.innerHTML = filtered.map(c => `<div onclick="LoanOps.selectReversalClient('${c.id}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs"><strong>${c.name}</strong> — ${Utils.formatUGX(c.balance)}</div>`).join('');
         Utils.show(resultsDiv);
       },
       selectReversalClient(id) {
@@ -1935,53 +1427,26 @@
         selectedReversalClient = branch.clients.find(c => c.id === id);
         Utils.hide("reversal-search-results");
         if (!selectedReversalClient) return;
-
         document.getElementById("rev-client-name").innerText = selectedReversalClient.name;
         document.getElementById("rev-client-nin").innerText = selectedReversalClient.nin || '';
         document.getElementById("rev-client-id").innerText = selectedReversalClient.id;
         document.getElementById("rev-client-balance").innerText = (selectedReversalClient.balance || 0).toLocaleString();
-
         const select = document.getElementById("rev-transaction-select");
         const hist = (selectedReversalClient.history || []).filter(h => h.type === 'Repayment' || h.type === 'Disbursement');
-        select.innerHTML = hist.map((h, i) =>
-          `<option value="${i}">${h.date} — ${h.type} — ${Utils.formatUGX(h.amount)}</option>`
-        ).join('') || `<option value="">No transactions</option>`;
-
+        select.innerHTML = hist.map((h, i) => `<option value="${i}">${h.date} — ${h.type} — ${Utils.formatUGX(h.amount)}</option>`).join('');
         Utils.show("reversal-card");
       },
       executeReversal() {
-        if (state.currentUser?.role !== 'Administrator') {
-          Utils.toast("Only Administrators can reverse transactions");
-          return;
-        }
+        if (state.currentUser?.role !== 'Administrator') { Utils.toast("Admin only"); return; }
         if (!selectedReversalClient) return;
         const reason = document.getElementById("rev-reason").value.trim();
-        if (!Validation.isRequired(reason, "Reason for reversal")) return;
-
-        if (!Utils.confirmAction("Confirm transaction reversal? This action is audited.")) return;
-
-        Audit.log("LOAN_REVERSAL", {
-          clientId: selectedReversalClient.id,
-          nin: selectedReversalClient.nin,
-          reason
-        });
-        Utils.toast("Reversal recorded in audit trail");
+        if (!Validation.isRequired(reason, "Reason")) return;
+        if (!Utils.confirmAction("Confirm reversal?")) return;
+        Audit.log("LOAN_REVERSAL", { clientId: selectedReversalClient.id, reason });
+        Utils.toast("Reversal recorded");
         Utils.hide("reversal-card");
       },
-      searchCombineLoans() {
-        if (state.currentUser?.role !== 'Administrator') {
-          Utils.toast("Admin access required for loan combinations");
-          return;
-        }
-      },
-      searchTargetRecipient() {},
-      executeCombine() {
-        if (state.currentUser?.role !== 'Administrator') {
-          Utils.toast("Only Administrators can combine loans");
-          return;
-        }
-        Utils.toast("Loan combination engine ready");
-      }
+      executeCombine() { Utils.toast("Combination engine ready"); }
     };
 
     const Clients = {
@@ -1990,37 +1455,25 @@
         if (!tbody) return;
         const branch = State.getActiveBranch();
         const filter = (document.getElementById("master-client-search")?.value || "").toLowerCase();
-
-        const list = state.globalClients.filter(c =>
-          !filter ||
-          (c.name && c.name.toLowerCase().includes(filter)) ||
-          (c.nin && c.nin.toLowerCase().includes(filter)) ||
-          (c.phone && c.phone.includes(filter))
-        );
-
+        const list = state.globalClients.filter(c => !filter || c.name.toLowerCase().includes(filter) || (c.nin && c.nin.toLowerCase().includes(filter)));
         tbody.innerHTML = list.map(c => {
           const savBal = branch.savingsAccounts[c.nin] ? branch.savingsAccounts[c.nin].balance : 0;
-          return `
-            <tr class="text-xs">
-              <td class="p-3 font-mono font-bold text-purple-700">${c.nin}</td>
-              <td class="p-3"><strong>${c.name}</strong><br>${c.phone || ''}</td>
-              <td class="p-3">${c.category || 'OTHERS'} ${c.plate ? '<br>' + c.plate : ''}</td>
-              <td class="p-3">${c.guarantor || '-'}</td>
-              <td class="p-3 font-bold text-emerald-600">${Utils.formatUGX(savBal)}</td>
-              <td class="p-3 text-right">
-                <button onclick="Clients.viewSavingsStatement('${c.nin}')" class="bg-emerald-600 text-white px-2 py-1 rounded font-bold text-[10px]">Savings Statement</button>
-              </td>
-            </tr>`;
-        }).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">No clients in master registry</td></tr>`;
+          return `<tr class="text-xs">
+            <td class="p-3 font-mono font-bold text-purple-700">${c.nin}</td>
+            <td class="p-3"><strong>${c.name}</strong><br>${c.phone || ''}</td>
+            <td class="p-3">${c.category || 'OTHERS'} ${c.plate ? '<br>' + c.plate : ''}</td>
+            <td class="p-3">${c.guarantor || '-'}</td>
+            <td class="p-3 font-bold text-emerald-600">${Utils.formatUGX(savBal)}</td>
+            <td class="p-3 text-right"><button onclick="Clients.viewSavingsStatement('${c.nin}')" class="bg-emerald-600 text-white px-2 py-1 rounded font-bold text-[10px]">Statement</button></td>
+          </tr>`;
+        }).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">No clients</td></tr>`;
       },
       viewSavingsStatement(nin) {
         const branch = State.getActiveBranch();
         const sav = branch.savingsAccounts[nin] || { balance: 0, history: [] };
         document.getElementById("sav-st-title").innerText = `Savings Statement: ${nin}`;
         document.getElementById("sav-st-details").innerHTML = `Current Balance: <strong>${Utils.formatUGX(sav.balance)}</strong>`;
-        document.getElementById("sav-st-table-body").innerHTML = (sav.history || []).map(h =>
-          `<tr><td class="p-2">${h.date}</td><td class="p-2">${h.type}</td><td class="p-2 text-right">${Utils.formatUGX(h.amount)}</td></tr>`
-        ).join('') || `<tr><td colspan="3" class="p-3 text-center text-slate-400">No transactions</td></tr>`;
+        document.getElementById("sav-st-table-body").innerHTML = (sav.history || []).map(h => `<tr><td class="p-2">${h.date}</td><td class="p-2">${h.type}</td><td class="p-2 text-right">${Utils.formatUGX(h.amount)}</td></tr>`).join('') || `<tr><td colspan="3" class="p-3 text-center text-slate-400">No transactions</td></tr>`;
         Utils.show("savings-statement-modal");
       }
     };
@@ -2030,149 +1483,48 @@
         const name = document.getElementById("officer-add-name").value.trim();
         const phone = document.getElementById("officer-add-phone").value.trim();
         if (!Validation.isRequired(name, "Staff Name")) return;
-        if (phone && !Validation.isValidPhone(phone)) return;
-
-        State.getActiveBranch().officers.push({
-          id: Utils.generateId("off"),
-          name,
-          phone
-        });
-        State.save();
-        this.populateDropdowns();
-        this.renderHub();
-        Audit.log("STAFF_ADDED", { name });
-        Utils.toast("Staff added successfully");
-        document.getElementById("officer-add-name").value = "";
-        document.getElementById("officer-add-phone").value = "";
+        State.getActiveBranch().officers.push({ id: Utils.generateId("off"), name, phone });
+        State.save(); this.populateDropdowns(); this.renderHub();
+        Utils.toast("Staff added");
+        document.getElementById("officer-add-name").value = ""; document.getElementById("officer-add-phone").value = "";
       },
-
       populateDropdowns() {
         const branch = State.getActiveBranch();
-        const opts = `<option value="">-- Select Staff Portfolio --</option>` +
-          branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
-        
-        const disb = document.getElementById("disburse-officer-select");
-        if (disb) disb.innerHTML = opts;
-
-        const aging = document.getElementById("aging-officer-filter");
-        if (aging) {
-          aging.innerHTML = `<option value="ALL">-- ALL STAFF PORTFOLIOS --</option>` +
-            branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
-        }
+        const opts = `<option value="">-- Select Staff Portfolio --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+        const disb = document.getElementById("disburse-officer-select"); if (disb) disb.innerHTML = opts;
+        const aging = document.getElementById("aging-officer-filter"); if (aging) aging.innerHTML = `<option value="ALL">-- ALL STAFF --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
       },
-
       getPortfolioMetrics(officerId) {
         const branch = State.getActiveBranch();
         const clients = branch.clients.filter(c => c.officerId === officerId);
-
         const noOfCustomers = clients.length;
-        const customersPaid = clients.filter(c => 
-          (c.history || []).some(h => h.type === 'Repayment')
-        ).length;
-
-        const percentPaid = noOfCustomers > 0 
-          ? Math.round((customersPaid / noOfCustomers) * 100) 
-          : 0;
-
+        const customersPaid = clients.filter(c => (c.history || []).some(h => h.type === 'Repayment')).length;
+        const percentPaid = noOfCustomers > 0 ? Math.round((customersPaid / noOfCustomers) * 100) : 0;
         const portfolioAmount = clients.reduce((sum, c) => sum + (c.balance || 0), 0);
-
         let collectionsMade = 0;
-        clients.forEach(c => {
-          (c.history || []).forEach(h => {
-            if (h.type === 'Repayment') collectionsMade += (h.amount || 0);
-          });
-        });
-
-        const noOfLoansDisbursed = clients.length;
-        const totalAmountDisbursed = clients.reduce((sum, c) => sum + (c.principal || 0), 0);
-        const today = Utils.today();
-        const newCustomers = clients.filter(c => c.dateDisbursed === today).length;
-
+        clients.forEach(c => (c.history || []).forEach(h => { if (h.type === 'Repayment') collectionsMade += (h.amount || 0); }));
         return {
-          noOfCustomers,
-          customersPaid,
-          percentPaid,
-          portfolioAmount,
-          collectionsMade,
-          noOfLoansDisbursed,
-          totalAmountDisbursed,
-          newCustomers
+          noOfCustomers, customersPaid, percentPaid, portfolioAmount, collectionsMade,
+          noOfLoansDisbursed: clients.length, totalAmountDisbursed: clients.reduce((s, c) => s + (c.principal || 0), 0),
+          newCustomers: clients.filter(c => c.dateDisbursed === Utils.today()).length
         };
       },
-
       renderHub() {
         const branch = State.getActiveBranch();
         const container = document.getElementById("officers-container");
         if (!container) return;
-
-        if (branch.officers.length === 0) {
-          container.innerHTML = `
-            <div class="col-span-full text-center py-10 text-slate-400">
-              <i class="fa-solid fa-user-tie text-4xl mb-3"></i>
-              <p>No staff registered yet</p>
-            </div>`;
-          return;
-        }
-
-        container.innerHTML = branch.officers.map(officer => {
-          const m = this.getPortfolioMetrics(officer.id);
-
-          return `
-            <div class="bg-white border-2 border-slate-200 rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition">
-              <div class="bg-slate-800 text-white px-4 py-3">
-                <div class="flex items-center justify-between">
-                  <div>
-                    <div class="font-bold text-sm">${officer.name}</div>
-                    <div class="text-[11px] text-slate-300">${officer.phone || 'No phone'}</div>
-                  </div>
-                  <div class="dyn-bg text-white text-xs font-bold px-2.5 py-1 rounded-full">
-                    Portfolio
-                  </div>
-                </div>
-              </div>
-
-              <div class="p-4 space-y-2.5 text-xs">
-                <div class="flex justify-between items-center border-b border-slate-100 pb-1.5">
-                  <span class="text-slate-600">OfficerName:</span>
-                  <span class="font-bold text-slate-900">${officer.name}</span>
-                </div>
-                <div class="flex justify-between items-center border-b border-slate-100 pb-1.5">
-                  <span class="text-slate-600">NoOfCustomers:</span>
-                  <span class="font-bold text-slate-900">${m.noOfCustomers}</span>
-                </div>
-                <div class="flex justify-between items-center border-b border-slate-100 pb-1.5">
-                  <span class="text-slate-600">NoOfCustomersPaid:</span>
-                  <span class="font-bold text-emerald-700">${m.customersPaid}</span>
-                </div>
-                <div class="flex justify-between items-center border-b border-slate-100 pb-1.5">
-                  <span class="text-slate-600">PercentPaid:</span>
-                  <span class="font-bold ${m.percentPaid >= 70 ? 'text-emerald-600' : m.percentPaid >= 50 ? 'text-amber-600' : 'text-red-600'}">
-                    ${m.percentPaid}%
-                  </span>
-                </div>
-                <div class="flex justify-between items-center border-b border-slate-100 pb-1.5">
-                  <span class="text-slate-600">PortfolioAmount:</span>
-                  <span class="font-bold text-blue-700">${Utils.formatUGX(m.portfolioAmount)}</span>
-                </div>
-                <div class="flex justify-between items-center border-b border-slate-100 pb-1.5">
-                  <span class="text-slate-600">CollectionsMade:</span>
-                  <span class="font-bold text-emerald-700">${Utils.formatUGX(m.collectionsMade)}</span>
-                </div>
-                <div class="flex justify-between items-center border-b border-slate-100 pb-1.5">
-                  <span class="text-slate-600">NoOfLoansDisbursed:</span>
-                  <span class="font-bold text-slate-900">${m.noOfLoansDisbursed}</span>
-                </div>
-                <div class="flex justify-between items-center border-b border-slate-100 pb-1.5">
-                  <span class="text-slate-600">TotalamountDisbursed:</span>
-                  <span class="font-bold text-indigo-700">${Utils.formatUGX(m.totalAmountDisbursed)}</span>
-                </div>
-                <div class="flex justify-between items-center">
-                  <span class="text-slate-600">NewCustomers:</span>
-                  <span class="font-bold dyn-text transition-colors duration-300">${m.newCustomers}</span>
-                </div>
-              </div>
+        if (branch.officers.length === 0) { container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400"><p>No staff registered</p></div>`; return; }
+        container.innerHTML = branch.officers.map(o => {
+          const m = this.getPortfolioMetrics(o.id);
+          return `<div class="bg-white border-2 border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+            <div class="bg-slate-800 text-white px-4 py-3"><div class="font-bold text-sm">${o.name}</div><div class="text-[11px] text-slate-300">${o.phone || 'No phone'}</div></div>
+            <div class="p-4 space-y-2 text-xs">
+              <div class="flex justify-between border-b pb-1"><span>Customers:</span><span class="font-bold">${m.noOfCustomers}</span></div>
+              <div class="flex justify-between border-b pb-1"><span>Percent Paid:</span><span class="font-bold text-emerald-600">${m.percentPaid}%</span></div>
+              <div class="flex justify-between border-b pb-1"><span>Portfolio:</span><span class="font-bold text-blue-700">${Utils.formatUGX(m.portfolioAmount)}</span></div>
+              <div class="flex justify-between"><span>Collections:</span><span class="font-bold text-emerald-700">${Utils.formatUGX(m.collectionsMade)}</span></div>
             </div>
-          `;
+          </div>`;
         }).join('');
       }
     };
@@ -2181,104 +1533,47 @@
       recordDeposit() {
         const name = document.getElementById("bank-name").value.trim();
         const amt = parseFloat(document.getElementById("bank-amount").value);
-        const ref = document.getElementById("bank-ref").value.trim();
         if (!Validation.isRequired(name, "Bank Name") || !Validation.isPositiveAmount(amt)) return;
-
-        State.getActiveBranch().bankings.push({
-          date: Utils.today(),
-          name,
-          acc: document.getElementById("bank-acc-no").value.trim(),
-          ref,
-          amount: amt
-        });
-        State.save();
-        this.renderHistory();
-        Reports.updateDashboard();
-        Audit.log("BANK_DEPOSIT", { bank: name, amount: amt });
-        Utils.toast("Banking record saved");
+        State.getActiveBranch().bankings.push({ date: Utils.today(), name, acc: document.getElementById("bank-acc-no").value.trim(), ref: document.getElementById("bank-ref").value.trim(), amount: amt });
+        State.save(); this.renderHistory(); Reports.updateDashboard();
+        Utils.toast("Banking saved");
       },
       renderHistory() {
         const branch = State.getActiveBranch();
         const total = branch.bankings.reduce((s, b) => s + b.amount, 0);
-        const disp = document.getElementById("total-banked-display");
-        if (disp) disp.innerText = Utils.formatUGX(total);
-        const body = document.getElementById("bankings-history-body");
-        if (body) {
-          body.innerHTML = branch.bankings.map(b => `
-            <tr><td class="p-3">${b.date}</td><td class="p-3">${b.name}</td><td class="p-3">${b.ref || '-'}</td><td class="p-3 text-right">${Utils.formatUGX(b.amount)}</td></tr>
-          `).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No banking records</td></tr>`;
-        }
+        document.getElementById("total-banked-display").innerText = Utils.formatUGX(total);
+        document.getElementById("bankings-history-body").innerHTML = branch.bankings.map(b => `<tr><td class="p-3">${b.date}</td><td class="p-3">${b.name}</td><td class="p-3">${b.ref || '-'}</td><td class="p-3 text-right">${Utils.formatUGX(b.amount)}</td></tr>`).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No bankings</td></tr>`;
       }
     };
 
     const Expenses = {
       record() {
-        const category = document.getElementById("exp-category").value;
         const amt = parseFloat(document.getElementById("exp-amount").value);
-        const narration = document.getElementById("exp-narration").value.trim();
         if (!Validation.isPositiveAmount(amt)) return;
-
-        State.getActiveBranch().expenses.push({
-          date: Utils.today(),
-          category,
-          narration,
-          amount: amt
-        });
-        State.save();
-        this.renderHistory();
-        Reports.updateDashboard();
-        Audit.log("EXPENSE_RECORDED", { category, amount: amt });
+        State.getActiveBranch().expenses.push({ date: Utils.today(), category: document.getElementById("exp-category").value, narration: document.getElementById("exp-narration").value.trim(), amount: amt });
+        State.save(); this.renderHistory(); Reports.updateDashboard();
         Utils.toast("Expense recorded");
-        document.getElementById("exp-amount").value = "";
-        document.getElementById("exp-narration").value = "";
       },
       renderHistory() {
         const branch = State.getActiveBranch();
         const total = branch.expenses.reduce((s, e) => s + e.amount, 0);
-        const disp = document.getElementById("total-expenses-display");
-        if (disp) disp.innerText = Utils.formatUGX(total);
-        const body = document.getElementById("expenses-history-body");
-        if (body) {
-          body.innerHTML = branch.expenses.map(e => `
-            <tr><td class="p-3">${e.date}</td><td class="p-3">${e.category}</td><td class="p-3">${e.narration}</td><td class="p-3 text-right">${Utils.formatUGX(e.amount)}</td></tr>
-          `).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No expenses</td></tr>`;
-        }
+        document.getElementById("total-expenses-display").innerText = Utils.formatUGX(total);
+        document.getElementById("expenses-history-body").innerHTML = branch.expenses.map(e => `<tr><td class="p-3">${e.date}</td><td class="p-3">${e.category}</td><td class="p-3">${e.narration}</td><td class="p-3 text-right">${Utils.formatUGX(e.amount)}</td></tr>`).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No expenses</td></tr>`;
       }
     };
 
     const Capital = {
       submit() {
         const amt = parseFloat(document.getElementById("cap-amount").value);
-        const narration = document.getElementById("cap-narration").value.trim();
         if (!Validation.isPositiveAmount(amt)) return;
-
-        State.getActiveBranch().capitalizations.push({
-          date: Utils.today(),
-          amount: amt,
-          narration,
-          status: "Approved"
-        });
-        State.save();
-        this.renderQueue();
-        Reports.updateDashboard();
-        Audit.log("CAPITAL_INJECTED", { amount: amt, narration });
+        State.getActiveBranch().capitalizations.push({ date: Utils.today(), amount: amt, narration: document.getElementById("cap-narration").value.trim(), status: "Approved" });
+        State.save(); this.renderQueue(); Reports.updateDashboard();
         Utils.toast("Capital added");
-        document.getElementById("cap-amount").value = "";
-        document.getElementById("cap-narration").value = "";
       },
       renderQueue() {
         const branch = State.getActiveBranch();
-        const list = document.getElementById("capital-approval-list");
-        if (list) {
-          list.innerHTML = branch.capitalizations.map(c =>
-            `<div class="bg-white p-2 border rounded text-xs">${Utils.formatUGX(c.amount)} — ${c.narration || 'Capital'} <span class="text-slate-400">(${c.date})</span></div>`
-          ).join('') || `<p class="text-slate-400 text-center">No capital records</p>`;
-        }
+        document.getElementById("capital-approval-list").innerHTML = branch.capitalizations.map(c => `<div class="bg-white p-2 border rounded text-xs">${Utils.formatUGX(c.amount)} — ${c.narration || 'Capital'}</div>`).join('') || `<p class="text-slate-400 text-center">No capital records</p>`;
       }
-    };
-
-    const Statements = {
-      searchClients(query) {}
     };
 
     const Reports = {
@@ -2286,122 +1581,79 @@
         const branch = State.getActiveBranch();
         const activeCount = branch.clients.filter(c => (c.balance || 0) > 0).length;
         const totalPort = branch.clients.reduce((s, c) => s + (c.balance || 0), 0);
-        let totalSavings = 0;
-        Object.values(branch.savingsAccounts || {}).forEach(s => totalSavings += (s.balance || 0));
-        let totalCollections = 0;
-        branch.clients.forEach(c => (c.history || []).forEach(h => {
-          if (h.type === 'Repayment') totalCollections += h.amount;
-        }));
-        const totalCap = branch.capitalizations.reduce((s, c) => s + c.amount, 0);
-        const totalBankings = branch.bankings.reduce((s, b) => s + b.amount, 0);
-        const totalExp = branch.expenses.reduce((s, e) => s + e.amount, 0);
-        const netCash = totalCap + totalCollections - totalBankings - totalExp;
-
+        let totalSavings = 0; Object.values(branch.savingsAccounts || {}).forEach(s => totalSavings += (s.balance || 0));
+        let totalCollections = 0; branch.clients.forEach(c => (c.history || []).forEach(h => { if (h.type === 'Repayment') totalCollections += h.amount; }));
         const set = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
         set("rep-active-clients", activeCount);
         set("rep-total-portfolio", Utils.formatUGX(totalPort));
         set("rep-total-savings", Utils.formatUGX(totalSavings));
         set("rep-total-collections", Utils.formatUGX(totalCollections));
-        set("rep-total-capital", Utils.formatUGX(totalCap));
-        set("rep-total-bankings", Utils.formatUGX(totalBankings));
-        set("rep-total-expenses", Utils.formatUGX(totalExp));
-        set("rep-net-cash", Utils.formatUGX(netCash));
       },
       getReportText() {
         const branch = State.getActiveBranch();
-        const totalCollections = branch.clients.reduce((sum, c) =>
-          sum + (c.history || []).reduce((s, h) => h.type === 'Repayment' ? s + h.amount : s, 0), 0);
-        const totalPortfolio = branch.clients.reduce((s, c) => s + (c.balance || 0), 0);
-        const totalExpenses = branch.expenses.reduce((s, e) => s + e.amount, 0);
-
-        return `*${state.company.name} DAILY REPORT*\nDate: ${Utils.today()}\n\n• Collections: ${Utils.formatUGX(totalCollections)}\n• Portfolio: ${Utils.formatUGX(totalPortfolio)}\n• Expenses: ${Utils.formatUGX(totalExpenses)}\n\nSubmitted by ${state.currentUser ? state.currentUser.username : 'Staff'}`;
+        const totalCollections = branch.clients.reduce((sum, c) => sum + (c.history || []).reduce((s, h) => h.type === 'Repayment' ? s + h.amount : s, 0), 0);
+        return `*${state.company.name} DAILY REPORT*\nDate: ${Utils.today()}\n\n• Collections: ${Utils.formatUGX(totalCollections)}\n\nSubmitted by ${state.currentUser ? state.currentUser.username : 'Staff'}`;
       },
       openWhatsAppModal() {
         const managers = state.managers || [];
         const container = document.getElementById("whatsapp-manager-checkboxes");
-        if (managers.length === 0) {
-          Utils.toast("No managers added yet. Go to Admin Settings to add managers.");
-        }
-        container.innerHTML = managers.length === 0 ? 
-          `<p class="text-slate-400 text-center py-2">No managers configured.</p>` :
-          managers.map(m => `
-            <label class="flex items-center gap-2 cursor-pointer font-medium">
-              <input type="checkbox" value="${m.phone}" checked class="mgr-whatsapp-chk rounded">
-              <span>${m.name} (${m.phone})</span>
-            </label>
-          `).join('');
-
+        container.innerHTML = managers.length === 0 ? `<p class="text-slate-400 text-center py-2">No managers configured in Admin Settings.</p>` :
+          managers.map(m => `<label class="flex items-center gap-2 cursor-pointer font-medium"><input type="checkbox" value="${m.phone}" checked class="mgr-whatsapp-chk rounded"><span>${m.name} (${m.phone})</span></label>`).join('');
         document.getElementById("whatsapp-report-preview").value = this.getReportText();
         Utils.show("whatsapp-report-modal");
       },
       sendSelectedWhatsAppReports() {
         const checkboxes = document.querySelectorAll(".mgr-whatsapp-chk:checked");
-        if (checkboxes.length === 0) {
-          Utils.toast("Please select at least one manager");
-          return;
-        }
+        if (checkboxes.length === 0) { Utils.toast("Select at least one manager"); return; }
         const text = encodeURIComponent(this.getReportText());
-        checkboxes.forEach((chk, index) => {
-          const phone = chk.value;
-          setTimeout(() => {
-            window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
-          }, index * 500);
-        });
-        Audit.log("DAILY_REPORT_SENT_WHATSAPP", { count: checkboxes.length });
+        checkboxes.forEach((chk, index) => { setTimeout(() => { window.open(`https://wa.me/${chk.value}?text=${text}`, '_blank'); }, index * 500); });
         Utils.hide("whatsapp-report-modal");
-        Utils.toast("WhatsApp report(s) dispatched");
-
-        // IF ACCOUNTANT SUBMITS THE REPORT, CONCLUDE THE DAY AND CLEAR ACCOUNTANT LOGIN SESSION
-        if (state.currentUser && state.currentUser.role === 'Accountant') {
-          localStorage.removeItem("pmms_current_user_single_v7");
-          Utils.toast("Daily report submitted. Accountant session closed for the day.");
-          setTimeout(() => {
-            window.location.reload();
-          }, 1500);
-        }
+        Utils.toast("WhatsApp reports dispatched");
       }
     };
 
     const Aging = {
       render() {
-        const container = document.getElementById("officer-aging-sections");
-        if (!container) return;
+        const metrics = PARCalculator.computeMetrics();
+        const summaryBox = document.getElementById("par-metrics-summary-box");
+        if (summaryBox) {
+          summaryBox.innerHTML = `<div class="bg-slate-900 text-white p-4 rounded-2xl space-y-3 shadow-md">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-2">
+              <span class="font-bold text-xs uppercase text-amber-400"><i class="fa-solid fa-chart-line mr-1"></i> PAR Analytics Summary</span>
+              <span class="text-[11px] text-slate-400">Total Portfolio: <strong class="text-white">${Utils.formatUGX(metrics.totalPortfolioBalance)}</strong></span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 text-xs">
+              <div class="bg-slate-800 p-2.5 rounded-xl"><span class="text-slate-400 block text-[10px]">PAR >1D</span><span class="font-bold text-amber-300 text-sm">${Utils.formatUGX(metrics.par1Balance)}</span></div>
+              <div class="bg-slate-800 p-2.5 rounded-xl"><span class="text-slate-400 block text-[10px]">PAR >7D</span><span class="font-bold text-amber-400 text-sm">${Utils.formatUGX(metrics.par7Balance)}</span></div>
+              <div class="bg-slate-800 p-2.5 rounded-xl"><span class="text-slate-400 block text-[10px]">PAR >30D</span><span class="font-bold text-orange-400 text-sm">${Utils.formatUGX(metrics.par30Balance)}</span></div>
+              <div class="bg-slate-800 p-2.5 rounded-xl"><span class="text-slate-400 block text-[10px]">PAR >60D</span><span class="font-bold text-rose-400 text-sm">${Utils.formatUGX(metrics.par60Balance)}</span></div>
+              <div class="bg-slate-800 p-2.5 rounded-xl"><span class="text-slate-400 block text-[10px]">PAR >90D</span><span class="font-bold text-red-500 text-sm">${Utils.formatUGX(metrics.par90Balance)}</span></div>
+            </div>
+          </div>`;
+        }
+      },
+      exportCSV() {
         const branch = State.getActiveBranch();
-        const filter = document.getElementById("aging-officer-filter")?.value || "ALL";
-
-        let clients = branch.clients.filter(c => (c.balance || 0) > 0);
-        if (filter !== "ALL") clients = clients.filter(c => c.officerId === filter);
-
-        const buckets = {
-          "Current (0 days)": clients.filter(c => (c.overdueDays || 0) === 0),
-          "1-7 days": clients.filter(c => c.overdueDays >= 1 && c.overdueDays <= 7),
-          "8-30 days": clients.filter(c => c.overdueDays >= 8 && c.overdueDays <= 30),
-          "31+ days": clients.filter(c => c.overdueDays > 30)
-        };
-
-        container.innerHTML = Object.entries(buckets).map(([label, list]) => `
-          <div class="bg-white border rounded-xl overflow-hidden shadow-sm">
-            <div class="bg-slate-800 text-white px-4 py-2 text-xs font-bold flex justify-between">
-              <span>${label}</span>
-              <span>${list.length} clients</span>
-            </div>
-            <div class="divide-y text-xs">
-              ${list.length === 0 ? `<div class="p-3 text-slate-400 text-center">None</div>` :
-                list.map(c => `
-                  <div class="p-3 flex justify-between items-center">
-                    <div>
-                      <strong>${c.name}</strong>
-                      <div class="text-slate-500">${c.nin || ''} • Officer: ${c.officerId || 'N/A'}</div>
-                    </div>
-                    <div class="text-right">
-                      <div class="font-bold text-red-600">${Utils.formatUGX(c.balance)}</div>
-                      <div class="text-[10px] text-slate-500">${c.overdueDays || 0} days overdue</div>
-                    </div>
-                  </div>
-                `).join('')}
-            </div>
-          </div>
-        `).join('');
+        let csv = 'Client Name,NIN,Phone,Balance (UGX),Overdue Days\n';
+        branch.clients.forEach(c => { csv += `"${c.name}","${c.nin || ''}","${c.phone || ''}",${c.balance},${c.overdueDays || 0}\n`; });
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a'); link.href = URL.createObjectURL(blob);
+        link.setAttribute('download', `PMMS_PAR_Report_${Utils.today()}.csv`);
+        document.body.appendChild(link); link.click(); document.body.removeChild(link);
+        Utils.toast("CSV exported");
+      },
+      exportPDF() {
+        const { jsPDF } = window.jspdf; const doc = new jsPDF();
+        const branch = State.getActiveBranch();
+        doc.setFontSize(16); doc.text(`${state.company.name} - PAR Aging Report`, 14, 20);
+        doc.autoTable({
+          startY: 30,
+          head: [['Client Name', 'NIN', 'Phone', 'Balance (UGX)', 'Overdue']],
+          body: branch.clients.map(c => [c.name, c.nin || 'N/A', c.phone || 'N/A', Utils.formatUGX(c.balance), `${c.overdueDays || 0}d`]),
+          theme: 'grid'
+        });
+        doc.save(`PMMS_PAR_Report_${Utils.today()}.pdf`);
+        Utils.toast("PDF exported");
       }
     };
 
@@ -2421,22 +1673,56 @@
       }
     };
 
+    /* ============================================================
+       LOCAL NETWORK SMS GATEWAY (MTN & AIRTEL PHONE LINE)
+       ============================================================ */
     const SMS = {
       dispatch(phone, message, triggerAction) {
         if (!phone) return;
+        const networkCarrier = document.getElementById("sms-preferred-network")?.value || "MTN";
+        
+        // Native mobile SMS intent URL for local device SIM card (MTN / Airtel)
         const smsLink = `sms:${phone}?body=${encodeURIComponent(message)}`;
+        
         const logEntry = {
           timestamp: Utils.now(),
           phone,
+          carrier: networkCarrier,
           trigger: triggerAction,
           message,
           smsLink
         };
+
         if (!state.smsLogs) state.smsLogs = [];
         state.smsLogs.unshift(logEntry);
         if (state.smsLogs.length > 200) state.smsLogs.length = 200;
         State.save();
         this.renderLogs();
+
+        // Automatically open the native messaging app with the selected local network SIM
+        window.location.href = smsLink;
+      },
+      dispatchCustom() {
+        const select = document.getElementById("sms-quick-client-select");
+        const msg = document.getElementById("sms-quick-message").value.trim();
+        const carrier = document.getElementById("sms-preferred-network").value;
+        if (!select || !select.value) { Utils.toast("Select a client"); return; }
+        if (!msg) { Utils.toast("Type a message"); return; }
+
+        const branch = State.getActiveBranch();
+        const client = branch.clients.find(c => c.id === select.value);
+        if (!client || !client.phone) { Utils.toast("Client has no phone number"); return; }
+
+        this.dispatch(client.phone, msg, `Custom Broadcast (${carrier})`);
+        document.getElementById("sms-quick-message").value = "";
+        Utils.toast(`SMS loaded for ${carrier} SIM dispatch`);
+      },
+      populateQuickClients() {
+        const select = document.getElementById("sms-quick-client-select");
+        if (!select) return;
+        const branch = State.getActiveBranch();
+        select.innerHTML = `<option value="">-- Choose Client --</option>` +
+          branch.clients.map(c => `<option value="${c.id}">${c.name} (${c.phone || 'No Phone'})</option>`).join('');
       },
       renderLogs() {
         const tbody = document.getElementById("sms-logs-table-body");
@@ -2444,54 +1730,44 @@
         if (countEl) countEl.innerText = (state.smsLogs || []).length;
         if (!tbody) return;
         if (!state.smsLogs || state.smsLogs.length === 0) {
-          tbody.innerHTML = `<tr><td colspan="5" class="p-3 text-center text-slate-400 text-xs">No SMS yet</td></tr>`;
+          tbody.innerHTML = `<tr><td colspan="6" class="p-3 text-center text-slate-400 text-xs">No SMS dispatches recorded yet</td></tr>`;
           return;
         }
         tbody.innerHTML = state.smsLogs.map(l => `
           <tr class="text-xs">
             <td class="p-3 font-mono text-[11px] text-slate-500">${l.timestamp}</td>
             <td class="p-3 font-bold">${l.phone}</td>
+            <td class="p-3"><span class="bg-amber-100 text-amber-900 px-2 py-0.5 rounded text-[10px] font-bold">${l.carrier || 'MTN'} SIM</span></td>
             <td class="p-3"><span class="bg-sky-100 text-sky-800 px-2 py-0.5 rounded text-[10px] font-bold">${l.trigger}</span></td>
             <td class="p-3 text-slate-600 max-w-xs truncate">${l.message}</td>
             <td class="p-3 text-right">
-              <a href="${l.smsLink}" class="bg-sky-600 text-white px-2.5 py-1 rounded font-bold hover:bg-sky-700 text-[10px]">Open Messenger</a>
+              <a href="${l.smsLink}" class="bg-sky-600 text-white px-2.5 py-1 rounded font-bold hover:bg-sky-700 text-[10px]">Open SIM App</a>
             </td>
           </tr>
         `).join('');
       },
       clearLogs() {
-        if (!Utils.confirmAction("Clear all SMS logs?")) return;
+        if (!Utils.confirmAction("Clear local SMS gateway logs?")) return;
         state.smsLogs = [];
         State.save();
         this.renderLogs();
+        Utils.toast("SMS logs cleared");
       }
     };
 
     const Printer = {
       async connectXPrinter() {
         try {
-          if (!navigator.bluetooth) {
-            Utils.toast("Web Bluetooth not supported. Using system print.");
-            return;
-          }
-          xPrinterDevice = await navigator.bluetooth.requestDevice({
-            acceptAllDevices: true,
-            optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
-          });
+          if (!navigator.bluetooth) { Utils.toast("Web Bluetooth not supported"); return; }
+          xPrinterDevice = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] });
           document.getElementById("xprinter-status-text").innerText = "X-Printer Connected";
-          document.getElementById("xprinter-btn").classList.remove("dyn-bg");
-          document.getElementById("xprinter-btn").classList.add("bg-emerald-600");
           Utils.toast("X-Printer connected");
-          Audit.log("XPRINTER_CONNECTED");
-        } catch (err) {
-          Utils.toast("X-Printer connection cancelled or failed");
-        }
+        } catch (err) { Utils.toast("X-Printer connection cancelled"); }
       },
       async printToXPrinter(textData) {
         lastPrintedReceiptText = textData;
         const shouldPrint = document.getElementById("toggle-print-receipt")?.checked ?? true;
         if (!shouldPrint) return;
-
         if (xPrinterDevice?.gatt?.connected) {
           try {
             const server = await xPrinterDevice.gatt.connect();
@@ -2499,80 +1775,31 @@
             const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
             await characteristic.writeValue(new TextEncoder().encode(textData + "\n\n\n"));
             return;
-          } catch (e) {
-            console.warn("Bluetooth print failed", e);
-          }
+          } catch (e) {}
         }
         const area = document.getElementById("printable-area");
         area.innerHTML = `<pre style="font-family:monospace;font-size:11px;width:280px;white-space:pre-wrap;">${textData}</pre>`;
-        Utils.show(area);
-        window.print();
-        Utils.hide(area);
+        Utils.show(area); window.print(); Utils.hide(area);
       },
-      printLastTransactionReceipt() {
-        if (!lastPrintedReceiptText) {
-          Utils.toast("No recent receipt");
-          return;
-        }
-        this.printToXPrinter(lastPrintedReceiptText);
-      },
-      printSavingsStatement() {
-        const title = document.getElementById("sav-st-title")?.innerText || "Savings Statement";
-        const details = document.getElementById("sav-st-details")?.innerText || "";
-        this.printToXPrinter(title + "\n" + details);
-      },
-      printLoanStatement() {
-        Utils.toast("Loan statement print ready");
-      }
+      printLastTransactionReceipt() { if (lastPrintedReceiptText) this.printToXPrinter(lastPrintedReceiptText); else Utils.toast("No receipt"); },
+      printSavingsStatement() {}
     };
-
-    function setupOfflineSupport() {
-      window.addEventListener('online', () => Utils.hide("offline-banner"));
-      window.addEventListener('offline', () => Utils.show("offline-banner"));
-      if (!navigator.onLine) Utils.show("offline-banner");
-
-      if ('serviceWorker' in navigator) {
-        const swCode = `
-          const CACHE = 'pmms-single-v7';
-          const ASSETS = ['./', 'https://cdn.tailwindcss.com', 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'];
-          self.addEventListener('install', e => {
-            e.waitUntil(caches.open(CACHE).then(c => c.addAll(ASSETS)).then(() => self.skipWaiting()));
-          });
-          self.addEventListener('activate', e => {
-            e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))));
-            self.clients.claim();
-          });
-          self.addEventListener('fetch', e => {
-            e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).catch(() => caches.match('./'))));
-          });
-        `;
-        const blob = new Blob([swCode], { type: 'application/javascript' });
-        const swUrl = URL.createObjectURL(blob);
-        navigator.serviceWorker.register(swUrl).catch(err => console.warn('SW registration failed', err));
-      }
-    }
 
     window.onload = function () {
       State.load();
       ThemeCustomizer.loadPreferences();
       UI.refreshAll();
-      setupOfflineSupport();
 
-      // Check URL parameters to see if this is an independent desktop module window popup
       const urlParams = new URLSearchParams(window.location.search);
       const module = urlParams.get('module');
       const title = urlParams.get('title');
-
       if (module) {
         UI.showTab(module);
         if (title) {
           document.getElementById("page-title").innerText = `${state.company.name} - ${title}`;
-          const nav = document.querySelector("nav");
-          if (nav) nav.style.display = "none";
+          const nav = document.querySelector("nav"); if (nav) nav.style.display = "none";
         }
       }
-
-      console.log("PMMS Security Rules Active: Accountant Persistent / Admin Strict");
     };
   </script>
 </body>

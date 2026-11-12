@@ -226,7 +226,7 @@
           <div>
             <label class="block text-xs font-semibold mb-1 text-slate-600">Search Active Client</label>
             <input type="text" id="post-search" oninput="Posting.searchClients(this.value)" placeholder="Search name, NIN, phone, or account..." class="w-full p-3 border rounded-xl bg-white text-sm focus:outline-none focus:ring-2 dyn-border shadow-sm">
-            <div id="post-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-48 overflow-y-auto hidden shadow-lg"></div>
+            <div id="post-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-56 overflow-y-auto hidden shadow-lg"></div>
           </div>
 
           <div id="post-selected-card" hidden class="bg-slate-800 text-white p-4 rounded-xl hidden text-sm space-y-2 shadow-md">
@@ -236,15 +236,18 @@
                 <div class="text-slate-300 text-xs" id="post-client-acc"></div>
                 <div class="dyn-text font-semibold text-xs transition-colors duration-300" id="post-client-type-info"></div>
               </div>
-              <a id="post-client-call" href="#" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 transition">
-                <i class="fa-solid fa-phone"></i> Call
-              </a>
+              <div class="flex items-center gap-2">
+                <span id="post-aging-badge" class="bg-slate-700 text-amber-300 px-2.5 py-1 rounded-full text-[11px] font-bold">0 Days</span>
+                <a id="post-client-call" href="#" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 transition">
+                  <i class="fa-solid fa-phone"></i> Call
+                </a>
+              </div>
             </div>
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-3 border-t border-slate-700 text-center">
+              <div class="bg-slate-700/50 p-1.5 rounded-lg"><span class="block text-[10px] text-slate-400">Daily Target</span><span id="post-daily" class="text-green-400 font-bold text-xs md:text-sm"></span></div>
               <div class="bg-slate-700/50 p-1.5 rounded-lg"><span class="block text-[10px] text-slate-400">Arrears</span><span id="post-arrears" class="text-red-400 font-bold text-xs md:text-sm"></span></div>
               <div class="bg-slate-700/50 p-1.5 rounded-lg"><span class="block text-[10px] text-slate-400">Advance</span><span id="post-advance" class="text-emerald-400 font-bold text-xs md:text-sm"></span></div>
-              <div class="bg-slate-700/50 p-1.5 rounded-lg"><span class="block text-[10px] text-slate-400">Balance</span><span id="post-balance" class="text-blue-400 font-bold text-xs md:text-sm"></span></div>
-              <div class="bg-slate-700/50 p-1.5 rounded-lg"><span class="block text-[10px] text-slate-400">Daily Target</span><span id="post-daily" class="text-green-400 font-bold text-xs md:text-sm"></span></div>
+              <div class="bg-slate-700/50 p-1.5 rounded-lg"><span class="block text-[10px] text-slate-400">Outstanding Bal</span><span id="post-balance" class="text-blue-400 font-bold text-xs md:text-sm"></span></div>
             </div>
           </div>
 
@@ -583,9 +586,12 @@
       <div id="savings-statement-modal" hidden class="bg-white border-2 border-emerald-600 p-5 rounded-2xl space-y-3 shadow-xl hidden">
         <div class="flex justify-between items-center border-b pb-2">
           <h3 class="font-bold text-emerald-900 text-base" id="sav-st-title">Savings Statement</h3>
-          <div class="flex gap-2">
-            <button onclick="Printer.printSavingsStatement()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold">
-              <i class="fa-solid fa-print"></i> Print Receipt
+          <div class="flex gap-2 flex-wrap">
+            <button onclick="SavingsStatementPDF.exportPDF(activeSavingsNin)" class="bg-purple-700 hover:bg-purple-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">
+              <i class="fa-solid fa-file-pdf"></i> Export PDF
+            </button>
+            <button onclick="SavingsThermalReceipt.printReceipt(activeSavingsNin)" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">
+              <i class="fa-solid fa-receipt"></i> Print Slip
             </button>
             <button onclick="UI.hide('savings-statement-modal')" class="bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold">Close</button>
           </div>
@@ -859,7 +865,7 @@
           <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
             <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> Daily Portfolio Aging & PAR Analytics
           </h2>
-          <p class="text-xs text-slate-500">Institutional Statement & Field Officer Portfolio Breakdowns with automatic Logo positioning.</p>
+          <p class="text-xs text-slate-500">Institutional Statement & Field Officer Portfolio Breakdowns with real-time arrears & aging calculations.</p>
         </div>
         <div class="flex flex-wrap items-center gap-2 w-full md:w-auto">
           <select id="aging-officer-filter" onchange="Aging.render()" class="bg-white border-2 border-slate-700 text-xs font-bold p-2.5 rounded-xl text-slate-800 shadow-sm focus:outline-none w-full md:w-48">
@@ -887,7 +893,7 @@
         <h2 class="text-lg font-bold text-red-700 flex items-center gap-2">
           <i class="fa-solid fa-triangle-exclamation"></i> Defaulters List (90+ Days Overdue)
         </h2>
-        <p class="text-xs text-slate-500">Active clients with active balances who have spent 90 days and above without paying.</p>
+        <p class="text-xs text-slate-500">Active clients with active balances who have spent 90 days and above in arrears/overdue.</p>
       </div>
       <div id="demand-list-container" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
     </section>
@@ -1094,7 +1100,7 @@
       </div>
       <div class="flex gap-2 pt-2">
         <button onclick="Reports.sendSelectedWhatsAppReports()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold transition shadow">Send to Selected Managers</button>
-        <button onclick="UI.hide('whatsapp-report-modal')" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold transition">Cancel</button>
+        <button onclick="UI.hide('whatsapp-report-modal')" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-lg font-bold transition">Cancel</button>
       </div>
     </div>
   </div>
@@ -1164,6 +1170,7 @@
 
     const PARCalculator = {
       computeMetrics() {
+        State.runDailyAging(); // Ensure real-time arrears, advances & aging days are current
         const branch = State.getActiveBranch();
         const activeLoans = (branch.clients || []).filter(c => (c.balance || 0) > 0);
         let totalPortfolioBalance = 0;
@@ -1183,13 +1190,6 @@
           totalArrearsBalance += (c.arrears || 0);
           
           const overdue = c.overdueDays || 0;
-
-          // Apply automated 30% penalty if overdue > 7 days and penalty not yet applied
-          if (overdue > 7 && !c.penaltyApplied) {
-            const penalty = (c.principal || principal) * 0.30;
-            c.balance += penalty;
-            c.penaltyApplied = true;
-          }
 
           if (overdue <= 7) {
             bucket0_7.count++;
@@ -1277,7 +1277,134 @@
       branchData: { clients: [], officers: [], bankings: [], expenses: [], capitalizations: [], batch: [], savingsAccounts: {} }
     };
 
-    let selectedPostClient = null, selectedDisburseClient = null, selectedReversalClient = null, lastPrintedReceiptText = "", xPrinterDevice = null, selectedSavingsNin = null, activeDocNin = null;
+    let selectedPostClient = null, selectedDisburseClient = null, selectedReversalClient = null, lastPrintedReceiptText = "", xPrinterDevice = null, selectedSavingsNin = null, activeDocNin = null, activeSavingsNin = null;
+
+    /* ============================================================
+       CUSTOM SAVINGS STATEMENT PDF & THERMAL RECEIPT ENGINES
+       ============================================================ */
+    const SavingsStatementPDF = {
+      exportPDF(nin) {
+        if (!nin) { Utils.toast("No client selected for PDF export"); return; }
+        const branch = State.getActiveBranch();
+        const globalClient = state.globalClients.find(c => c.nin === nin);
+        if (!globalClient) {
+          Utils.toast("Client profile not found");
+          return;
+        }
+        const sav = branch.savingsAccounts[nin] || { balance: 0, history: [] };
+
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('portrait', 'mm', 'a4');
+        let startY = 20;
+
+        if (state.company.logo) {
+          try {
+            doc.addImage(state.company.logo, 'JPEG', 14, 12, 18, 18);
+            doc.setFontSize(16);
+            doc.setTextColor(15, 23, 42);
+            doc.text(state.company.name, 36, 18);
+            doc.setFontSize(9);
+            doc.setTextColor(100, 116, 139);
+            doc.text(`Official Savings Account Statement | Generated: ${Utils.today()}`, 36, 24);
+            startY = 35;
+          } catch (e) {
+            startY = 20;
+          }
+        } else {
+          doc.setFontSize(16);
+          doc.text(state.company.name, 14, 18);
+          doc.setFontSize(9);
+          doc.text(`Official Savings Account Statement | Generated: ${Utils.today()}`, 14, 24);
+          startY = 30;
+        }
+
+        doc.setDrawColor(203, 213, 225);
+        doc.setFillColor(248, 250, 252);
+        doc.roundedRect(14, startY, 182, 22, 3, 3, 'FD');
+
+        doc.setFontSize(10);
+        doc.setTextColor(15, 23, 42);
+        doc.text(`Client Name: ${globalClient.name}`, 18, startY + 7);
+        doc.text(`National ID (NIN): ${globalClient.nin}`, 18, startY + 14);
+        doc.text(`Phone: ${globalClient.phone || 'N/A'}`, 110, startY + 7);
+        
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(5, 150, 105);
+        doc.text(`Current Savings Balance: ${Utils.formatUGX(sav.balance)}`, 110, startY + 14);
+        doc.setFont(undefined, 'normal');
+
+        startY += 28;
+
+        const tableRows = (sav.history || []).map((h, index) => [
+          index + 1,
+          h.date,
+          h.type,
+          Utils.formatUGX(h.amount)
+        ]);
+
+        doc.autoTable({
+          startY: startY,
+          head: [['S/N', 'Transaction Date', 'Transaction Type', 'Amount (UGX)']],
+          body: tableRows.length > 0 ? tableRows : [[{ content: 'No savings transactions recorded.', colSpan: 4, styles: { halign: 'center', textColor: [150, 150, 150] } }]],
+          theme: 'grid',
+          headStyles: { fillColor: [5, 150, 105], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+          bodyStyles: { fontSize: 9, textColor: [51, 65, 85] },
+          foot: [[
+            { content: 'Total Accumulated Savings:', colSpan: 3, styles: { halign: 'right', fontStyle: 'bold' } },
+            { content: Utils.formatUGX(sav.balance), styles: { fontStyle: 'bold', textColor: [5, 150, 105] } }
+          ]],
+          footStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontSize: 10 }
+        });
+
+        const finalY = doc.lastAutoTable.finalY + 15;
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text('This is a computer-generated institutional document from PMMS. Valid without physical signature.', 14, finalY);
+
+        doc.save(`Savings_Statement_${globalClient.nin}_${Utils.today()}.pdf`);
+        Utils.toast("Savings Statement PDF exported successfully!");
+      }
+    };
+
+    const SavingsThermalReceipt = {
+      printReceipt(nin, lastTxn = null) {
+        if (!nin) { Utils.toast("No client selected for printing"); return; }
+        const branch = State.getActiveBranch();
+        const globalClient = state.globalClients.find(c => c.nin === nin);
+        if (!globalClient) return;
+        const sav = branch.savingsAccounts[nin] || { balance: 0, history: [] };
+
+        const txn = lastTxn || (sav.history.length > 0 ? sav.history[sav.history.length - 1] : null);
+
+        let receiptText = 
+          `================================\n` +
+          `      ${state.company.name.toUpperCase()}\n` +
+          `     SAVINGS STATEMENT SLIP\n` +
+          `================================\n` +
+          `Date/Time : ${Utils.now()}\n` +
+          `Client    : ${globalClient.name}\n` +
+          `NIN       : ${globalClient.nin}\n` +
+          `Phone     : ${globalClient.phone || 'N/A'}\n` +
+          `--------------------------------\n`;
+
+        if (txn) {
+          receiptText += 
+            `Last Txn  : ${txn.type}\n` +
+            `Amount    : ${Utils.formatUGX(txn.amount)}\n` +
+            `--------------------------------\n`;
+        }
+
+        receiptText += 
+          `SAVINGS SUMMARY:\n` +
+          `Current Bal: ${Utils.formatUGX(sav.balance)}\n` +
+          `================================\n` +
+          `   Thank you for saving with us!\n` +
+          `    Powered by PMMS Terminal\n` +
+          `================================\n`;
+
+        Printer.printToXPrinter(receiptText);
+      }
+    };
 
     const ThemeCustomizer = {
       applyTheme(colorName) {
@@ -1324,15 +1451,72 @@
         DB.saveState(payload);
       },
       getActiveBranch() { return state.branchData; },
+      recalculateClientStatus(c, todayMid = null) {
+        if (!c) return;
+        if (!todayMid) {
+          todayMid = new Date();
+          todayMid.setHours(0, 0, 0, 0);
+        }
+
+        // Backfill initialBalance for legacy loan records if absent
+        if (typeof c.initialBalance !== 'number' || isNaN(c.initialBalance)) {
+          const disbTxn = (c.history || []).find(h => h.type === 'Disbursement');
+          const totalRepaidFromHist = (c.history || [])
+            .filter(h => h.type === 'Repayment')
+            .reduce((s, h) => s + (Number(h.amount) || 0), 0);
+          c.initialBalance = disbTxn ? Number(disbTxn.amount) : ((Number(c.balance) || 0) + totalRepaidFromHist);
+        }
+
+        if ((c.balance || 0) <= 0) {
+          c.arrears = 0;
+          c.advance = 0;
+          c.overdueDays = 0;
+          return;
+        }
+
+        const dailyTarget = Number(c.dailyTarget) || 0;
+        let daysElapsed = 0;
+        if (c.dateDisbursed) {
+          const parts = c.dateDisbursed.split('-');
+          const disbDate = parts.length === 3
+            ? new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+            : new Date(c.dateDisbursed);
+          disbDate.setHours(0, 0, 0, 0);
+          daysElapsed = Math.max(0, Math.floor((todayMid - disbDate) / (1000 * 60 * 60 * 24)));
+        }
+
+        // Base balance excluding any late penalty so shortfall math stays exact
+        const penaltyAmt = c.penaltyApplied ? ((c.principal || 0) * 0.30) : 0;
+        const baseBalance = Math.max(0, (c.balance || 0) - penaltyAmt);
+
+        const expectedCumulative = Math.min(c.initialBalance, daysElapsed * dailyTarget);
+        const actualPaid = Math.max(0, c.initialBalance - baseBalance);
+        const variance = expectedCumulative - actualPaid;
+
+        if (variance > 0) {
+          c.arrears = Math.round(variance);
+          c.advance = 0;
+          // Exact proportional delay in days (e.g., 1,000 shortfall on 4,000 target = 0.25 days)
+          c.overdueDays = dailyTarget > 0 ? Number((c.arrears / dailyTarget).toFixed(2)) : daysElapsed;
+        } else {
+          c.arrears = 0;
+          c.advance = Math.round(Math.abs(variance));
+          c.overdueDays = 0;
+        }
+
+        // Automated 30% penalty when overdue > 7 days
+        if (c.overdueDays > 7 && !c.penaltyApplied) {
+          const penalty = (c.principal || c.initialBalance) * 0.30;
+          c.balance = (c.balance || 0) + penalty;
+          c.penaltyApplied = true;
+        }
+      },
       runDailyAging() {
-        const today = new Date();
+        const todayMid = new Date();
+        todayMid.setHours(0, 0, 0, 0);
         const bd = state.branchData;
         if (bd && bd.clients) {
-          bd.clients.forEach(c => {
-            if (c.balance > 0 && c.deadlineDate) {
-              c.overdueDays = Math.max(0, Math.floor((today - new Date(c.deadlineDate)) / (1000 * 60 * 60 * 24)));
-            } else { c.overdueDays = 0; }
-          });
+          bd.clients.forEach(c => this.recalculateClientStatus(c, todayMid));
         }
         this.save();
       },
@@ -1367,7 +1551,6 @@
         document.querySelectorAll(".tab-content").forEach(el => Utils.hide(el));
         Utils.show(tabId);
 
-        // Highlight active tab button dynamically
         document.querySelectorAll(".nav-btn").forEach(btn => {
           btn.classList.remove("dyn-bg", "text-white", "shadow-md", "border-transparent");
           btn.classList.add("bg-slate-800", "border-slate-700");
@@ -1378,6 +1561,7 @@
           activeBtn.classList.add("dyn-bg", "text-white", "shadow-md", "border-transparent");
         }
 
+        if (tabId === 'tab-posting' && selectedPostClient) Posting.selectClient(selectedPostClient.id);
         if (tabId === 'tab-aging') Aging.render();
         if (tabId === 'tab-sms-logs') SMS.renderLogs();
         if (tabId === 'tab-unified-clients') Clients.renderMasterDirectory();
@@ -1595,7 +1779,7 @@
             const parsed = JSON.parse(e.target.result);
             if (parsed && parsed.branchData) {
               state = parsed;
-              State.save();
+              State.runDailyAging();
               UI.refreshAll();
               Utils.toast("System Snapshot successfully restored!");
             } else { Utils.toast("Invalid backup JSON format"); }
@@ -1611,11 +1795,29 @@
         if (!query || query.trim().length < 1) { Utils.hide(resultsDiv); return; }
         const branch = State.getActiveBranch();
         const q = query.toLowerCase();
-        const filtered = branch.clients.filter(c => c.name.toLowerCase().includes(q) || (c.nin && c.nin.toLowerCase().includes(q)) || (c.phone && c.phone.includes(q)));
+        const filtered = branch.clients.filter(c =>
+          c.name.toLowerCase().includes(q) ||
+          (c.nin && c.nin.toLowerCase().includes(q)) ||
+          (c.phone && c.phone.includes(q)) ||
+          (c.id && c.id.toLowerCase().includes(q))
+        );
+
+        // Recalculate each matching client in real time so search results immediately display exact Daily Target, Arrears & Balance
+        filtered.forEach(c => State.recalculateClientStatus(c));
+
         resultsDiv.innerHTML = filtered.map(c => `
-          <div onclick="Posting.selectClient('${c.id}')" class="p-3 hover:bg-slate-100 cursor-pointer text-xs flex justify-between">
-            <div><strong>${c.name}</strong> (${c.nin || 'N/A'})</div>
-            <span class="font-bold text-blue-600">${Utils.formatUGX(c.balance || 0)}</span>
+          <div onclick="Posting.selectClient('${c.id}')" class="p-3 hover:bg-slate-100 cursor-pointer text-xs space-y-1">
+            <div class="flex justify-between items-center">
+              <div><strong>${c.name}</strong> <span class="text-slate-500">(${c.nin || 'N/A'})</span></div>
+              <span class="text-[10px] font-bold px-2 py-0.5 rounded ${(c.overdueDays || 0) > 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}">
+                Aging: ${c.overdueDays || 0}d
+              </span>
+            </div>
+            <div class="grid grid-cols-3 gap-2 pt-1 text-[11px] bg-slate-50 p-1.5 rounded border border-slate-200">
+              <div><span class="text-slate-400">Daily Target:</span> <strong class="text-emerald-700">${Utils.formatUGX(c.dailyTarget || 0)}</strong></div>
+              <div><span class="text-slate-400">Arrears:</span> <strong class="text-red-600">${Utils.formatUGX(c.arrears || 0)}</strong></div>
+              <div class="text-right"><span class="text-slate-400">Balance:</span> <strong class="text-blue-700">${Utils.formatUGX(c.balance || 0)}</strong></div>
+            </div>
           </div>
         `).join('') || `<div class="p-3 text-slate-400 text-xs">No clients found</div>`;
         Utils.show(resultsDiv);
@@ -1625,14 +1827,38 @@
         selectedPostClient = branch.clients.find(c => c.id === clientId);
         Utils.hide("post-search-results");
         if (!selectedPostClient) return;
+
+        // Real-time recalculation of arrears, advance, and proportional aging days
+        State.recalculateClientStatus(selectedPostClient);
+
         document.getElementById("post-client-name").innerText = selectedPostClient.name;
         document.getElementById("post-client-acc").innerText = `NIN: ${selectedPostClient.nin || "N/A"} | ACC: ${selectedPostClient.id}`;
         document.getElementById("post-client-type-info").innerText = selectedPostClient.category || 'OTHERS';
         document.getElementById("post-client-call").href = "tel:" + (selectedPostClient.phone || "");
+        document.getElementById("post-daily").innerText = Utils.formatUGX(selectedPostClient.dailyTarget || 0);
         document.getElementById("post-arrears").innerText = Utils.formatUGX(selectedPostClient.arrears || 0);
         document.getElementById("post-advance").innerText = Utils.formatUGX(selectedPostClient.advance || 0);
         document.getElementById("post-balance").innerText = Utils.formatUGX(selectedPostClient.balance || 0);
-        document.getElementById("post-daily").innerText = Utils.formatUGX(selectedPostClient.dailyTarget || 0);
+
+        const agingBadge = document.getElementById("post-aging-badge");
+        if (agingBadge) {
+          const days = selectedPostClient.overdueDays || 0;
+          agingBadge.innerText = `Aging: ${days}d`;
+          agingBadge.className = days > 0
+            ? "bg-red-500/20 text-red-300 border border-red-500/40 px-2.5 py-1 rounded-full text-[11px] font-bold"
+            : "bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-1 rounded-full text-[11px] font-bold";
+        }
+
+        if ((selectedPostClient.balance || 0) <= 0) {
+          Utils.show("zero-balance-warning");
+          Utils.hide("post-inputs-container");
+          Utils.hide("add-to-batch-btn");
+        } else {
+          Utils.hide("zero-balance-warning");
+          Utils.show("post-inputs-container");
+          Utils.show("add-to-batch-btn");
+        }
+
         Utils.show("post-selected-card"); Utils.show("post-form");
       },
       addToBatch() {
@@ -1672,7 +1898,9 @@
             client.balance = Math.max(0, prevBal - item.amount);
             if (!client.history) client.history = [];
             client.history.push({ type: 'Repayment', amount: item.amount, date: item.date, channel: item.channel, prevBalance: prevBal, newBalance: client.balance });
-            receiptText += `${client.name}: Paid ${Utils.formatUGX(item.amount)}\nBal: ${Utils.formatUGX(client.balance)}\n--------------------------------\n`;
+            // Immediately recalculate arrears, advances, and proportional aging days after payment
+            State.recalculateClientStatus(client);
+            receiptText += `${client.name}: Paid ${Utils.formatUGX(item.amount)}\nBal: ${Utils.formatUGX(client.balance)} | Arrears: ${Utils.formatUGX(client.arrears)}\n--------------------------------\n`;
             SMS.dispatch(client.phone, `PMMS: Payment of ${Utils.formatUGX(item.amount)} received. New balance: ${Utils.formatUGX(client.balance)}`, 'Repayment');
           }
         });
@@ -1680,7 +1908,7 @@
         if (selectedPostClient) this.selectClient(selectedPostClient.id);
         Printer.printToXPrinter(receiptText);
         Utils.toast("Batch posted successfully");
-        Reports.updateDashboard(); Staff.renderHub(); DailyWorkspace.render();
+        Reports.updateDashboard(); Staff.renderHub(); DailyWorkspace.render(); Aging.render();
       },
       dispatchReceipt(channel) {
         const searchDate = document.getElementById("manual-receipt-date").value;
@@ -1870,7 +2098,8 @@
 
         branch.clients.push({
           id: Utils.generateId("cli"), nin, name, phone, address, guarantor, guarantorPhone, category, plate,
-          officerId, principal: p, balance: total, dailyTarget: Math.round(total / days),
+          officerId, principal: p, initialBalance: total, balance: total, dailyTarget: Math.round(total / days),
+          arrears: 0, advance: 0,
           dateDisbursed: Utils.today(), deadlineDate: deadline.toISOString().split('T')[0], overdueDays: 0,
           history: [{ type: 'Disbursement', amount: total, date: Utils.today(), principal: p, interest: p * (r / 100) }]
         });
@@ -2059,6 +2288,7 @@
         this.renderMasterDirectory();
       },
       viewSavingsStatement(nin) {
+        activeSavingsNin = nin;
         const branch = State.getActiveBranch();
         const sav = branch.savingsAccounts[nin] || { balance: 0, history: [] };
         document.getElementById("sav-st-title").innerText = `Savings Statement: ${nin}`;
@@ -2430,6 +2660,9 @@
 
           const rows = officerClients.length > 0 ? officerClients.map((c, idx) => {
             const isPenalized = c.penaltyApplied ? '<br><span class="text-[9px] bg-red-100 text-red-800 font-bold px-1 rounded">30% Penalty Applied</span>' : '';
+            const statusTag = (c.advance || 0) > 0
+              ? `<br><span class="text-[9px] bg-emerald-100 text-emerald-800 font-bold px-1 rounded">Adv: ${Utils.formatUGX(c.advance)}</span>`
+              : '';
             return `
               <tr class="hover:bg-slate-50 border-b text-xs">
                 <td class="p-3 font-medium">${idx + 1}</td>
@@ -2439,8 +2672,8 @@
                 <td class="p-3 font-mono text-[11px]">${c.deadlineDate || '-'}</td>
                 <td class="p-3 font-mono">${Utils.formatUGX(c.principal || 0)}</td>
                 <td class="p-3 font-mono font-bold text-blue-700">${Utils.formatUGX(c.balance || 0)} ${isPenalized}</td>
-                <td class="p-3 font-mono font-bold text-red-600">${Utils.formatUGX(c.arrears || 0)}</td>
-                <td class="p-3 font-bold ${ (c.overdueDays || 0) >= 90 ? 'text-red-600 bg-red-50' : 'text-emerald-600' }">${c.overdueDays || 0} Days</td>
+                <td class="p-3 font-mono font-bold text-red-600">${Utils.formatUGX(c.arrears || 0)} ${statusTag}</td>
+                <td class="p-3 font-bold ${ (c.overdueDays || 0) >= 90 ? 'text-red-600 bg-red-50' : ((c.overdueDays || 0) > 0 ? 'text-amber-700' : 'text-emerald-600') }">${c.overdueDays || 0} Days</td>
                 <td class="p-3 font-mono text-[11px]">${c.deadlineDate || '-'}</td>
               </tr>
             `;
@@ -2502,6 +2735,7 @@
         }).join('');
       },
       printOfficerStatement(officerId) {
+        State.runDailyAging();
         const branch = State.getActiveBranch();
         const officer = branch.officers.find(o => o.id === officerId);
         if (!officer) return;
@@ -2522,6 +2756,7 @@
       },
       sendOfficerWhatsApp(officerId, phone) {
         if (!phone) { Utils.toast("Officer phone number not registered in Staff Hub"); return; }
+        State.runDailyAging();
         const branch = State.getActiveBranch();
         const officer = branch.officers.find(o => o.id === officerId);
         if (!officer) return;
@@ -2533,6 +2768,7 @@
         window.open(`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`, '_blank');
       },
       exportCSV() {
+        State.runDailyAging();
         const branch = State.getActiveBranch();
         let csv = 'S/N,Customer Name,Customer Phone,Guarantor Name,Guarantor Phone,Disburse Date,Due Date,Loan Disbursed,Outstanding Balance,Arrears,Aging Days,Penalty Applied\n';
         branch.clients.forEach((c, i) => {
@@ -2545,6 +2781,7 @@
         Utils.toast("CSV exported");
       },
       exportPDF() {
+        State.runDailyAging();
         const { jsPDF } = window.jspdf; const doc = new jsPDF('landscape');
         const branch = State.getActiveBranch();
         
@@ -2577,6 +2814,7 @@
 
     const Defaulters = {
       render() {
+        State.runDailyAging();
         const branch = State.getActiveBranch();
         const container = document.getElementById("demand-list-container");
         if (!container) return;
@@ -2585,7 +2823,7 @@
           <div class="bg-white p-3 border-l-4 border-red-500 rounded-lg text-xs shadow-sm space-y-1">
             <div class="font-bold text-sm text-slate-900">${c.name}</div>
             <div class="text-slate-500">${c.phone || ''} • NIN: ${c.nin || 'N/A'}</div>
-            <div class="font-bold text-red-600">Balance: ${Utils.formatUGX(c.balance)} • Overdue: ${c.overdueDays || 0} days (90+ Days Defaulter)</div>
+            <div class="font-bold text-red-600">Balance: ${Utils.formatUGX(c.balance)} • Arrears: ${Utils.formatUGX(c.arrears || 0)} • Overdue: ${c.overdueDays || 0} days (90+ Days Defaulter)</div>
           </div>
         `).join('') || `<p class="text-slate-400 col-span-full text-center py-6">No 90+ days defaulters recorded.</p>`;
       }
@@ -2724,6 +2962,7 @@
         try {
           const parsed = JSON.parse(e.newValue);
           state = parsed;
+          State.runDailyAging();
           UI.refreshAll();
           Utils.toast("Data synchronized across device!");
         } catch(err) {}

@@ -188,6 +188,7 @@
       <button id="nav-btn-tab-posting" onclick="UI.showTab('tab-posting')" class="nav-btn dyn-bg text-white border-transparent px-3.5 py-2 rounded-xl font-bold text-xs shadow-md transition flex items-center gap-1.5"><i class="fa-solid fa-cash-register mr-1"></i> Posting</button>
       <button id="nav-btn-tab-disburse" onclick="UI.showTab('tab-disburse')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs shadow-sm transition flex items-center gap-1.5"><i class="fa-solid fa-hand-holding-dollar mr-1"></i> Disburse</button>
       <button id="nav-btn-tab-savings" onclick="UI.showTab('tab-savings')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs shadow-sm transition flex items-center gap-1.5"><i class="fa-solid fa-piggy-bank mr-1"></i> Savings</button>
+      <button id="nav-btn-tab-treasury" onclick="UI.showTab('tab-treasury')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs shadow-sm transition flex items-center gap-1.5"><i class="fa-solid fa-vault mr-1"></i> Treasury / Cash</button>
       <button id="nav-btn-tab-loan-ops" onclick="UI.showTab('tab-loan-ops')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-indigo-400 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs shadow-sm transition flex items-center gap-1.5"><i class="fa-solid fa-sliders mr-1"></i> Loan Ops</button>
       <button id="nav-btn-tab-unified-clients" onclick="UI.showTab('tab-unified-clients')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-purple-400 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs shadow-sm transition flex items-center gap-1.5"><i class="fa-solid fa-id-card mr-1"></i> Clients & Docs</button>
       <button id="nav-btn-tab-daily-workspace" onclick="UI.showTab('tab-daily-workspace')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs shadow-sm transition flex items-center gap-1.5"><i class="fa-solid fa-calendar-day mr-1"></i> Daily Workspace</button>
@@ -417,14 +418,29 @@
         </div>
       </div>
 
-      <div>
-        <label class="block text-xs font-semibold mb-1 text-slate-600">New Cash Disbursement Amount (UGX)</label>
-        <input type="number" id="disburse-principal" min="1" oninput="Disburse.liveCalculate()" placeholder="Enter Amount" class="w-full p-3 border rounded-xl bg-white text-sm font-bold shadow-sm">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-slate-600">New Cash Disbursement (UGX) *</label>
+          <input type="number" id="disburse-principal" min="1" oninput="Disburse.liveCalculate()" placeholder="Enter Amount" class="w-full p-3 border rounded-xl bg-white text-sm font-bold shadow-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-slate-600">Processing Fee (UGX)</label>
+          <input type="number" id="disburse-processing-fee" min="0" value="0" oninput="Disburse.liveCalculate()" placeholder="0" class="w-full p-3 border rounded-xl bg-white text-sm font-bold shadow-sm">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold mb-1 text-slate-600">Disbursement Channel</label>
+          <select id="disburse-channel" class="w-full p-3 border rounded-xl bg-white text-sm font-bold shadow-sm">
+            <option value="Cash">Cash at Hand</option>
+            <option value="MTN Mobile Money">MTN Mobile Money</option>
+            <option value="Airtel Mobile Money">Airtel Mobile Money</option>
+          </select>
+        </div>
       </div>
 
       <div class="bg-white border p-4 rounded-xl text-xs space-y-2 shadow-sm">
         <div class="flex justify-between"><span>New Cash Principal:</span> <span id="dis-base" class="font-bold">UGX 0</span></div>
         <div class="flex justify-between dyn-text transition-colors duration-300"><span>Calculated Interest:</span> <span id="dis-interest" class="font-bold">UGX 0</span></div>
+        <div class="flex justify-between text-emerald-700"><span>Processing Fee (Cash In):</span> <span id="dis-fee" class="font-bold">UGX 0</span></div>
         <hr>
         <div class="flex justify-between font-bold text-sm text-slate-800"><span>Total Loan Payable:</span> <span id="dis-total">UGX 0</span></div>
         <div class="flex justify-between font-bold text-green-700"><span>Daily Target:</span> <span id="dis-daily">UGX 0</span></div>
@@ -451,12 +467,22 @@
             <div class="font-bold text-emerald-900 text-sm" id="sav-client-name"></div>
             <div class="text-emerald-700 font-bold">Current Savings Balance: UGX <span id="sav-client-balance">0</span></div>
           </div>
-          <div>
-            <label class="block text-slate-600 font-semibold mb-1">Transaction Type</label>
-            <select id="sav-type" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
-              <option value="DEPOSIT">Savings Deposit (+)</option>
-              <option value="WITHDRAWAL">Savings Withdrawal (-)</option>
-            </select>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div>
+              <label class="block text-slate-600 font-semibold mb-1">Transaction Type</label>
+              <select id="sav-type" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
+                <option value="DEPOSIT">Savings Deposit (+)</option>
+                <option value="WITHDRAWAL">Savings Withdrawal (-)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-600 font-semibold mb-1">Channel</label>
+              <select id="sav-channel" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
+                <option value="Cash">Cash at Hand</option>
+                <option value="MTN Mobile Money">MTN Mobile Money</option>
+                <option value="Airtel Mobile Money">Airtel Mobile Money</option>
+              </select>
+            </div>
           </div>
           <div>
             <label class="block text-slate-600 font-semibold mb-1">Amount (UGX)</label>
@@ -472,6 +498,110 @@
           <div id="savings-activity-list" class="space-y-2 max-h-[300px] overflow-y-auto">
             <p class="text-slate-400 text-center py-4">No savings transactions yet.</p>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB: TREASURY / CASH & MOBILE MONEY BALANCES -->
+    <section id="tab-treasury" hidden class="tab-content space-y-4 hidden max-w-5xl mx-auto">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b pb-2 gap-2">
+        <div>
+          <h2 class="text-base md:text-lg font-bold text-slate-800 flex items-center gap-2">
+            <i class="fa-solid fa-vault text-amber-500"></i> Treasury: Cash at Hand & Mobile Money Balances
+          </h2>
+          <p class="text-xs text-slate-500">Live branch liquidity across Cash at Hand, Airtel Money, and MTN MoMo (All Cash-Ins added; Expenses, Disbursements & Savings Withdrawals deducted).</p>
+        </div>
+        <button onclick="UI.triggerQuickPrint()" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">
+          <i class="fa-solid fa-print"></i> Print Treasury
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white border-2 border-emerald-500 p-5 rounded-2xl shadow-sm space-y-1">
+          <div class="flex justify-between items-center text-emerald-700">
+            <span class="text-xs font-bold uppercase tracking-wider">Cash at Hand</span>
+            <i class="fa-solid fa-money-bill-wave text-lg"></i>
+          </div>
+          <div id="treasury-cash-hand" class="text-xl md:text-2xl font-black text-slate-900">UGX 0</div>
+          <p class="text-[11px] text-slate-500">Physical till / office cash</p>
+        </div>
+
+        <div class="bg-white border-2 border-red-500 p-5 rounded-2xl shadow-sm space-y-1">
+          <div class="flex justify-between items-center text-red-600">
+            <span class="text-xs font-bold uppercase tracking-wider">Amount on Airtel</span>
+            <i class="fa-solid fa-mobile-screen-button text-lg"></i>
+          </div>
+          <div id="treasury-airtel" class="text-xl md:text-2xl font-black text-slate-900">UGX 0</div>
+          <p class="text-[11px] text-slate-500">Airtel Money merchant float</p>
+        </div>
+
+        <div class="bg-white border-2 border-amber-400 p-5 rounded-2xl shadow-sm space-y-1">
+          <div class="flex justify-between items-center text-amber-600">
+            <span class="text-xs font-bold uppercase tracking-wider">Amount on MTN</span>
+            <i class="fa-solid fa-mobile-screen-button text-lg"></i>
+          </div>
+          <div id="treasury-mtn" class="text-xl md:text-2xl font-black text-slate-900">UGX 0</div>
+          <p class="text-[11px] text-slate-500">MTN MoMo merchant float</p>
+        </div>
+
+        <div class="bg-slate-900 text-white border-2 border-slate-800 p-5 rounded-2xl shadow-md space-y-1">
+          <div class="flex justify-between items-center text-teal-400">
+            <span class="text-xs font-bold uppercase tracking-wider">Total Amount</span>
+            <i class="fa-solid fa-sack-dollar text-lg"></i>
+          </div>
+          <div id="treasury-total" class="text-xl md:text-2xl font-black text-white">UGX 0</div>
+          <p class="text-[11px] text-slate-400">Combined liquid capital</p>
+        </div>
+      </div>
+
+      <!-- Channel Breakdown Table & Inter-Wallet Transfer -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div class="bg-white border p-4 rounded-xl shadow-sm space-y-3 text-xs lg:col-span-1">
+          <h3 class="font-bold text-slate-800 border-b pb-2 text-sm flex items-center gap-1.5">
+            <i class="fa-solid fa-right-left dyn-text"></i> Internal Float / Cash Transfer
+          </h3>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">From Wallet</label>
+            <select id="transfer-from" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
+              <option value="Cash">Cash at Hand</option>
+              <option value="Airtel Mobile Money">Amount on Airtel</option>
+              <option value="MTN Mobile Money">Amount on MTN</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">To Wallet</label>
+            <select id="transfer-to" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
+              <option value="MTN Mobile Money">Amount on MTN</option>
+              <option value="Airtel Mobile Money">Amount on Airtel</option>
+              <option value="Cash">Cash at Hand</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Amount (UGX)</label>
+            <input type="number" id="transfer-amount" min="1" placeholder="Enter amount" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-600 mb-1">Reference / Note</label>
+            <input type="text" id="transfer-note" placeholder="e.g. Float top-up / Cash withdrawal" class="w-full p-2.5 border rounded-lg bg-slate-50">
+          </div>
+          <button onclick="Treasury.recordTransfer()" class="w-full dyn-bg text-white py-2.5 rounded-lg font-bold shadow transition">
+            Execute Wallet Transfer
+          </button>
+        </div>
+
+        <div class="bg-white border rounded-xl overflow-x-auto shadow-sm lg:col-span-2">
+          <div class="p-3 border-b bg-slate-50 font-bold text-xs text-slate-800">Wallet-by-Wallet Capital Flow Breakdown</div>
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-800 text-white text-[11px]">
+                <th class="p-3">Account / Wallet</th>
+                <th class="p-3 text-right text-emerald-300">Total Cash-In (+)</th>
+                <th class="p-3 text-right text-rose-300">Total Cash-Out (-)</th>
+                <th class="p-3 text-right">Net Available Balance</th>
+              </tr>
+            </thead>
+            <tbody id="treasury-breakdown-body" class="divide-y text-slate-700"></tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -667,14 +797,14 @@
       </div>
     </section>
 
-    <!-- TAB: STAFF HUB -->
+    <!-- TAB: STAFF HUB (WITH ADMIN EDIT STAFF NAME & PHONE) -->
     <section id="tab-officers" hidden class="tab-content space-y-4 hidden">
       <div class="flex justify-between items-center border-b pb-2">
         <div>
           <h2 class="text-base md:text-lg font-bold text-slate-800">
             <i class="fa-solid fa-user-tie dyn-text transition-colors duration-300"></i> Staff Hub & Portfolios
           </h2>
-          <p class="text-xs text-slate-500">Officer performance & portfolio statistics</p>
+          <p class="text-xs text-slate-500">Officer performance, portfolio statistics & staff profile management</p>
         </div>
         <button onclick="UI.triggerQuickPrint()" class="dyn-bg text-white px-3 py-1.5 rounded-lg text-xs font-bold shadow">
           <i class="fa-solid fa-print"></i> Print Metrics
@@ -709,6 +839,14 @@
             <input type="text" id="bank-acc-no" placeholder="Acc Number" class="w-full p-2.5 border rounded-lg bg-slate-50">
             <input type="number" id="bank-amount" min="1" placeholder="Amount (UGX)" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
             <input type="text" id="bank-ref" placeholder="Deposit Slip #" class="w-full p-2.5 border rounded-lg bg-slate-50">
+            <div>
+              <label class="block text-[10px] font-semibold text-slate-600 mb-1">Source Wallet Deducted</label>
+              <select id="bank-channel" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
+                <option value="Cash">Cash at Hand</option>
+                <option value="MTN Mobile Money">MTN Mobile Money</option>
+                <option value="Airtel Mobile Money">Airtel Mobile Money</option>
+              </select>
+            </div>
           </div>
           <button onclick="Banking.recordDeposit()" class="w-full bg-blue-700 hover:bg-blue-800 text-white py-2.5 rounded-lg font-bold transition shadow">Save Banking Record</button>
         </div>
@@ -761,6 +899,14 @@
               <input type="number" id="exp-amount" min="1" placeholder="Amount" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
             </div>
             <div>
+              <label class="block text-slate-600 font-semibold mb-1">Paid From Wallet</label>
+              <select id="exp-channel" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
+                <option value="Cash">Cash at Hand</option>
+                <option value="MTN Mobile Money">MTN Mobile Money</option>
+                <option value="Airtel Mobile Money">Airtel Mobile Money</option>
+              </select>
+            </div>
+            <div>
               <label class="block text-slate-600 font-semibold mb-1">Description / Paid To</label>
               <input type="text" id="exp-narration" placeholder="Details..." class="w-full p-2.5 border rounded-lg bg-slate-50">
             </div>
@@ -781,6 +927,7 @@
                 <tr class="bg-slate-800 text-white text-[11px]">
                   <th class="p-3">Date</th>
                   <th class="p-3">Category</th>
+                  <th class="p-3">Channel</th>
                   <th class="p-3">Description</th>
                   <th class="p-3 text-right">Amount (UGX)</th>
                 </tr>
@@ -800,9 +947,19 @@
 
       <div class="bg-white p-4 border rounded-xl space-y-3 text-xs shadow-sm">
         <h3 class="font-bold text-slate-800 border-b pb-2 text-sm">Request / Add Capital Injection</h3>
-        <div>
-          <label class="block text-slate-600 font-semibold mb-1">Capital Amount (UGX)</label>
-          <input type="number" id="cap-amount" min="1" placeholder="Enter Amount" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold text-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-slate-600 font-semibold mb-1">Capital Amount (UGX)</label>
+            <input type="number" id="cap-amount" min="1" placeholder="Enter Amount" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold text-sm">
+          </div>
+          <div>
+            <label class="block text-slate-600 font-semibold mb-1">Destination Wallet</label>
+            <select id="cap-channel" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold text-sm">
+              <option value="Cash">Cash at Hand</option>
+              <option value="MTN Mobile Money">MTN Mobile Money</option>
+              <option value="Airtel Mobile Money">Airtel Mobile Money</option>
+            </select>
+          </div>
         </div>
         <div>
           <label class="block text-slate-600 font-semibold mb-1">Source / Funding Narration</label>
@@ -821,38 +978,100 @@
       </div>
     </section>
 
-    <!-- TAB: REPORTS -->
+    <!-- TAB: REPORTS (STRUCTURED 17-POINT DAILY & CUMULATIVE CLOSING REPORT) -->
     <section id="tab-reports" hidden class="tab-content space-y-6 hidden">
-      <div class="flex justify-between items-center border-b pb-2">
-        <h2 class="text-lg font-bold text-slate-900">Organized Summaries & Daily Closing Report</h2>
-        <div class="flex gap-2">
-          <button onclick="Reports.openWhatsAppModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow flex items-center gap-1">
+      <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-3 gap-3">
+        <div>
+          <h2 class="text-lg font-bold text-slate-900">Organized Financial & Closing Report</h2>
+          <p class="text-xs text-slate-500">Complete daily cash reconciliation, collections breakdown, portfolio balances, and capital movement.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <input type="date" id="report-date-filter" onchange="Reports.updateDashboard()" class="p-2 border rounded-lg text-xs bg-white font-bold shadow-sm">
+          <button onclick="Reports.openWhatsAppModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-2 rounded-lg font-bold shadow flex items-center gap-1">
             <i class="fa-brands fa-whatsapp"></i> Submit Daily Report
           </button>
-          <button onclick="UI.triggerQuickPrint()" class="bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg font-bold shadow"><i class="fa-solid fa-print"></i> Print Summary</button>
+          <button onclick="UI.triggerQuickPrint()" class="bg-slate-800 text-white text-xs px-3 py-2 rounded-lg font-bold shadow"><i class="fa-solid fa-print"></i> Print Report</button>
         </div>
       </div>
 
-      <div class="bg-slate-800 text-white p-5 rounded-2xl space-y-4 shadow-lg">
-        <h3 class="text-xs font-bold uppercase tracking-wider dyn-text transition-colors duration-300 border-b border-slate-700 pb-2">
-          <i class="fa-solid fa-chart-pie mr-1"></i> General Summary
-        </h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
-          <div class="bg-slate-700/60 p-3 rounded-xl border border-slate-600/50">
-            <span class="text-slate-400 block text-[10px]">Total Active Clients</span>
-            <span id="rep-active-clients" class="text-lg font-bold text-emerald-400">0</span>
+      <!-- Structured 17-Item Financial Statement Card -->
+      <div class="bg-white border-2 border-slate-200 rounded-2xl shadow-md overflow-hidden max-w-4xl mx-auto">
+        <div class="bg-slate-900 text-white px-5 py-4 flex justify-between items-center">
+          <div>
+            <h3 class="font-black text-sm md:text-base uppercase tracking-wider dyn-text">Daily Operations & Cash Reconciliation Statement</h3>
+            <p class="text-[11px] text-slate-400">Report Date: <strong id="rep-display-date" class="text-white"></strong> | Currency: UGX</p>
           </div>
-          <div class="bg-slate-700/60 p-3 rounded-xl border border-slate-600/50">
-            <span class="text-slate-400 block text-[10px]">Total Portfolio Outstandings</span>
-            <span id="rep-total-portfolio" class="text-lg font-bold text-amber-400">UGX 0</span>
+          <span class="bg-slate-800 border border-slate-700 px-3 py-1 rounded-full text-xs font-bold text-emerald-400">Live Ledger</span>
+        </div>
+
+        <div class="divide-y text-xs md:text-sm">
+          <div class="flex justify-between items-center px-5 py-3 bg-slate-50 font-bold text-slate-900">
+            <span>1. Opening Cash Balance</span>
+            <span id="rep-opening-cash" class="font-mono text-slate-900">UGX 0</span>
           </div>
-          <div class="bg-slate-700/60 p-3 rounded-xl border border-slate-600/50">
-            <span class="text-slate-400 block text-[10px]">Total Client Savings</span>
-            <span id="rep-total-savings" class="text-lg font-bold text-teal-300">UGX 0</span>
+          <div class="flex justify-between items-center px-5 py-2.5 hover:bg-slate-50">
+            <span class="text-slate-700">2. Number of Total Active Clients</span>
+            <span id="rep-active-clients" class="font-mono font-bold text-slate-900">0</span>
           </div>
-          <div class="bg-slate-700/60 p-3 rounded-xl border border-slate-600/50">
-            <span class="text-slate-400 block text-[10px]">Total Repayments Collected</span>
-            <span id="rep-total-collections" class="text-lg font-bold text-green-400">UGX 0</span>
+          <div class="flex justify-between items-center px-5 py-2.5 hover:bg-slate-50">
+            <span class="text-slate-700">3. Number of Paid Clients</span>
+            <span id="rep-paid-clients" class="font-mono font-bold text-emerald-700">0</span>
+          </div>
+          <div class="flex justify-between items-center px-5 py-2.5 hover:bg-slate-50 bg-emerald-50/40">
+            <span class="font-bold text-slate-800">4. Total Collection</span>
+            <span id="rep-total-collections" class="font-mono font-bold text-emerald-700">UGX 0</span>
+          </div>
+          <div class="flex justify-between items-center px-5 py-2.5 hover:bg-slate-50">
+            <span class="text-slate-700">5. Collection Rate</span>
+            <span id="rep-collection-rate" class="font-mono font-bold text-blue-700">0.0%</span>
+          </div>
+          <div class="flex justify-between items-center px-5 py-2.5 hover:bg-slate-50">
+            <span class="text-slate-700">6. Total Saving (Deposits / Net Savings)</span>
+            <span id="rep-total-savings" class="font-mono font-bold text-teal-700">UGX 0</span>
+          </div>
+          <div class="flex justify-between items-center px-5 py-2.5 hover:bg-slate-50">
+            <span class="text-slate-700">7. Total Loans Disbursed (Count)</span>
+            <span id="rep-loans-disbursed-count" class="font-mono font-bold text-indigo-700">0</span>
+          </div>
+          <div class="flex justify-between items-center px-5 py-2.5 hover:bg-slate-50">
+            <span class="text-slate-700">8. Total Amount Disbursed</span>
+            <span id="rep-amount-disbursed" class="font-mono font-bold text-indigo-700">UGX 0</span>
+          </div>
+          <div class="flex justify-between items-center px-5 py-2.5 hover:bg-slate-50">
+            <span class="text-slate-700">9. Total Expenses</span>
+            <span id="rep-total-expenses" class="font-mono font-bold text-rose-600">UGX 0</span>
+          </div>
+          <div class="flex justify-between items-center px-5 py-2.5 hover:bg-slate-50">
+            <span class="text-slate-700">10. Principal Collected</span>
+            <span id="rep-principal-collected" class="font-mono font-bold text-slate-800">UGX 0</span>
+          </div>
+          <div class="flex justify-between items-center px-5 py-2.5 hover:bg-slate-50">
+            <span class="text-slate-700">11. Interest Collected</span>
+            <span id="rep-interest-collected" class="font-mono font-bold text-slate-800">UGX 0</span>
+          </div>
+          <div class="flex justify-between items-center px-5 py-2.5 hover:bg-slate-50">
+            <span class="text-slate-700">12. Processing Fee</span>
+            <span id="rep-processing-fee" class="font-mono font-bold text-emerald-700">UGX 0</span>
+          </div>
+          <div class="flex justify-between items-center px-5 py-2.5 hover:bg-slate-50 bg-amber-50/40">
+            <span class="font-bold text-slate-800">13. Total Loan Portfolio</span>
+            <span id="rep-total-portfolio" class="font-mono font-bold text-amber-700">UGX 0</span>
+          </div>
+          <div class="flex justify-between items-center px-5 py-2.5 hover:bg-slate-50">
+            <span class="text-slate-700">14. Principal Balance</span>
+            <span id="rep-principal-balance" class="font-mono font-bold text-slate-800">UGX 0</span>
+          </div>
+          <div class="flex justify-between items-center px-5 py-2.5 hover:bg-slate-50">
+            <span class="text-slate-700">15. Interest Balance</span>
+            <span id="rep-interest-balance" class="font-mono font-bold text-slate-800">UGX 0</span>
+          </div>
+          <div class="flex justify-between items-center px-5 py-2.5 hover:bg-slate-50">
+            <span class="text-slate-700">16. Saving Withdraws</span>
+            <span id="rep-saving-withdraws" class="font-mono font-bold text-rose-600">UGX 0</span>
+          </div>
+          <div class="flex justify-between items-center px-5 py-4 bg-slate-900 text-white font-black text-sm md:text-base">
+            <span class="text-teal-300">17. Closing Cash Balance (Net Capital Available)</span>
+            <span id="rep-closing-cash" class="font-mono text-emerald-400">UGX 0</span>
           </div>
         </div>
       </div>
@@ -980,6 +1199,46 @@
         </div>
       </div>
 
+      <!-- Editable Post-Payment Client SMS/Receipt Template -->
+      <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
+        <h3 class="font-bold text-slate-800 text-sm border-b pb-2 flex items-center justify-between">
+          <span><i class="fa-solid fa-comment-dots dyn-text mr-1"></i> Edit Post-Payment Client Confirmation Message</span>
+          <span class="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono">Tags: {company}, {name}, {amount}, {balance}, {arrears}, {date}</span>
+        </h3>
+        <p class="text-xs text-slate-600">
+          Customize the automated SMS / confirmation message sent to clients immediately after posting a loan repayment.
+        </p>
+        <div>
+          <textarea id="set-payment-sms-template" rows="3" class="w-full p-3 border rounded-xl bg-slate-50 text-xs font-mono focus:outline-none focus:ring-2 dyn-border" placeholder="e.g. {company}: Dear {name}, payment of {amount} received on {date}. New balance: {balance}."></textarea>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="AdminSettings.savePaymentTemplate()" class="dyn-bg text-white px-4 py-2.5 rounded-xl text-xs font-bold shadow">Save Payment Message Template</button>
+          <button onclick="AdminSettings.resetPaymentTemplate()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 px-4 py-2.5 rounded-xl text-xs font-bold">Reset Default</button>
+        </div>
+      </div>
+
+      <!-- Edit Staff Names & Phone Numbers -->
+      <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
+        <h3 class="font-bold text-slate-800 text-sm border-b pb-2 flex items-center gap-2">
+          <i class="fa-solid fa-user-pen dyn-text"></i> Edit Staff Names & Phone Numbers
+        </h3>
+        <p class="text-xs text-slate-600">
+          Update registered field officers and staff names or phone numbers directly. Changes reflect across all portfolios immediately.
+        </p>
+        <div class="border rounded-xl overflow-x-auto">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-800 text-white text-[11px]">
+                <th class="p-3">Staff Full Name</th>
+                <th class="p-3">Phone Number (WhatsApp/SMS)</th>
+                <th class="p-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="admin-staff-list-body" class="divide-y text-slate-700"></tbody>
+          </table>
+        </div>
+      </div>
+
       <!-- Gmail Data Backup & Snapshot Engine -->
       <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
         <h3 class="font-bold text-slate-800 text-sm border-b pb-2 flex items-center gap-2">
@@ -1083,6 +1342,31 @@
 
   </main>
 
+  <!-- EDIT STAFF MODAL -->
+  <div id="edit-staff-modal" hidden class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 hidden">
+    <div class="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl text-xs">
+      <div class="flex justify-between items-center border-b pb-2">
+        <h3 class="font-bold text-slate-900 text-sm flex items-center gap-1.5">
+          <i class="fa-solid fa-user-pen dyn-text"></i> Edit Staff Profile
+        </h3>
+        <button onclick="UI.hide('edit-staff-modal')" class="text-slate-400 hover:text-slate-700 font-bold text-sm">✕</button>
+      </div>
+      <input type="hidden" id="edit-staff-id">
+      <div>
+        <label class="block font-semibold text-slate-600 mb-1">Staff Full Name *</label>
+        <input type="text" id="edit-staff-name" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
+      </div>
+      <div>
+        <label class="block font-semibold text-slate-600 mb-1">Phone Number (WhatsApp/SMS)</label>
+        <input type="tel" id="edit-staff-phone" class="w-full p-2.5 border rounded-lg bg-slate-50 font-mono">
+      </div>
+      <div class="flex gap-2 pt-2">
+        <button onclick="Staff.saveEditedOfficer()" class="flex-1 dyn-bg text-white py-2.5 rounded-xl font-bold shadow">Save Changes</button>
+        <button onclick="UI.hide('edit-staff-modal')" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl font-bold">Cancel</button>
+      </div>
+    </div>
+  </div>
+
   <!-- WHATSAPP REPORT MODAL -->
   <div id="whatsapp-report-modal" hidden class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 hidden">
     <div class="bg-white rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl text-xs">
@@ -1096,7 +1380,7 @@
       <div id="whatsapp-manager-checkboxes" class="space-y-2 max-h-40 overflow-y-auto border p-3 rounded-xl bg-slate-50"></div>
       <div>
         <label class="block font-semibold text-slate-600 mb-1">Report Preview:</label>
-        <textarea id="whatsapp-report-preview" readonly class="w-full h-32 p-2.5 border rounded-xl bg-slate-100 font-mono text-[11px]"></textarea>
+        <textarea id="whatsapp-report-preview" readonly class="w-full h-48 p-2.5 border rounded-xl bg-slate-100 font-mono text-[11px]"></textarea>
       </div>
       <div class="flex gap-2 pt-2">
         <button onclick="Reports.sendSelectedWhatsAppReports()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold transition shadow">Send to Selected Managers</button>
@@ -1235,7 +1519,7 @@
         document.body.appendChild(t);
         setTimeout(() => t.remove(), duration);
       },
-      formatUGX(n) { return 'UGX ' + (Number(n) || 0).toLocaleString(); },
+      formatUGX(n) { return 'UGX ' + Math.round(Number(n) || 0).toLocaleString(); },
       today() { return new Date().toISOString().split('T')[0]; },
       now() { return new Date().toISOString().replace('T', ' ').substring(0, 19); },
       generateId(prefix = 'id') { return prefix + '-' + Date.now() + '-' + Math.floor(Math.random() * 1000); },
@@ -1264,6 +1548,8 @@
       }
     };
 
+    const DEFAULT_PAYMENT_SMS_TEMPLATE = "{company}: Payment of {amount} received from {name} on {date}. New balance: {balance}. Arrears: {arrears}. Thank you.";
+
     let state = {
       accounts: [
         { role: "Administrator", username: "admin", email: "admin@pmms.com", phone: "0770000000", password: "password123", name: "System Admin" },
@@ -1273,8 +1559,9 @@
       currentUser: null,
       deviceSessions: {},
       company: { name: "PMMS Central Microfinance", contact: "admin@pmms.com | 0770000000", location: "Kampala, Uganda", about: "Enterprise Microfinance & Branch Network Manager", logo: "" },
+      paymentSmsTemplate: DEFAULT_PAYMENT_SMS_TEMPLATE,
       managers: [], globalClients: [], smsLogs: [], auditLogs: [], clientDocuments: {},
-      branchData: { clients: [], officers: [], bankings: [], expenses: [], capitalizations: [], batch: [], savingsAccounts: {} }
+      branchData: { clients: [], officers: [], bankings: [], expenses: [], capitalizations: [], walletTransfers: [], batch: [], savingsAccounts: {} }
     };
 
     let selectedPostClient = null, selectedDisburseClient = null, selectedReversalClient = null, lastPrintedReceiptText = "", xPrinterDevice = null, selectedSavingsNin = null, activeDocNin = null, activeSavingsNin = null;
@@ -1439,6 +1726,8 @@
           try {
             const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
             state = { ...state, ...parsed };
+            if (!state.branchData.walletTransfers) state.branchData.walletTransfers = [];
+            if (!state.paymentSmsTemplate) state.paymentSmsTemplate = DEFAULT_PAYMENT_SMS_TEMPLATE;
           } catch (e) {}
         }
         this.runDailyAging();
@@ -1458,7 +1747,6 @@
           todayMid.setHours(0, 0, 0, 0);
         }
 
-        // Backfill initialBalance for legacy loan records if absent
         if (typeof c.initialBalance !== 'number' || isNaN(c.initialBalance)) {
           const disbTxn = (c.history || []).find(h => h.type === 'Disbursement');
           const totalRepaidFromHist = (c.history || [])
@@ -1485,7 +1773,6 @@
           daysElapsed = Math.max(0, Math.floor((todayMid - disbDate) / (1000 * 60 * 60 * 24)));
         }
 
-        // Base balance excluding any late penalty so shortfall math stays exact
         const penaltyAmt = c.penaltyApplied ? ((c.principal || 0) * 0.30) : 0;
         const baseBalance = Math.max(0, (c.balance || 0) - penaltyAmt);
 
@@ -1496,7 +1783,6 @@
         if (variance > 0) {
           c.arrears = Math.round(variance);
           c.advance = 0;
-          // Exact proportional delay in days (e.g., 1,000 shortfall on 4,000 target = 0.25 days)
           c.overdueDays = dailyTarget > 0 ? Number((c.arrears / dailyTarget).toFixed(2)) : daysElapsed;
         } else {
           c.arrears = 0;
@@ -1504,7 +1790,6 @@
           c.overdueDays = 0;
         }
 
-        // Automated 30% penalty when overdue > 7 days
         if (c.overdueDays > 7 && !c.penaltyApplied) {
           const penalty = (c.principal || c.initialBalance) * 0.30;
           c.balance = (c.balance || 0) + penalty;
@@ -1562,10 +1847,13 @@
         }
 
         if (tabId === 'tab-posting' && selectedPostClient) Posting.selectClient(selectedPostClient.id);
+        if (tabId === 'tab-treasury') Treasury.render();
+        if (tabId === 'tab-reports') Reports.updateDashboard();
         if (tabId === 'tab-aging') Aging.render();
         if (tabId === 'tab-sms-logs') SMS.renderLogs();
         if (tabId === 'tab-unified-clients') Clients.renderMasterDirectory();
         if (tabId === 'tab-daily-workspace') DailyWorkspace.render();
+        if (tabId === 'tab-admin-settings') AdminSettings.loadSettingsUI();
       },
       show(id) { Utils.show(id); },
       hide(id) { Utils.hide(id); },
@@ -1580,10 +1868,12 @@
         Aging.render();
         Clients.renderMasterDirectory();
         SMS.renderLogs();
+        Treasury.render();
         Reports.updateDashboard();
         Posting.renderBatchList();
         SMS.populateQuickClients();
         DailyWorkspace.render();
+        AdminSettings.loadSettingsUI();
       }
     };
 
@@ -1707,6 +1997,55 @@
     };
 
     const AdminSettings = {
+      loadSettingsUI() {
+        const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+        setVal("set-company-name", state.company.name);
+        setVal("set-company-contact", state.company.contact);
+        setVal("set-company-location", state.company.location);
+        setVal("set-company-about", state.company.about);
+        setVal("set-payment-sms-template", state.paymentSmsTemplate || DEFAULT_PAYMENT_SMS_TEMPLATE);
+        this.renderManagersList();
+        this.renderStaffList();
+      },
+      savePaymentTemplate() {
+        if (state.currentUser?.role !== 'Administrator') { Utils.toast("Administrator access required"); return; }
+        const tpl = document.getElementById("set-payment-sms-template").value.trim();
+        if (!Validation.isRequired(tpl, "Payment confirmation message")) return;
+        state.paymentSmsTemplate = tpl;
+        State.save();
+        Audit.log("EDIT_PAYMENT_SMS_TEMPLATE", tpl);
+        Utils.toast("Post-payment client confirmation message updated!");
+      },
+      resetPaymentTemplate() {
+        if (state.currentUser?.role !== 'Administrator') { Utils.toast("Administrator access required"); return; }
+        state.paymentSmsTemplate = DEFAULT_PAYMENT_SMS_TEMPLATE;
+        document.getElementById("set-payment-sms-template").value = DEFAULT_PAYMENT_SMS_TEMPLATE;
+        State.save();
+        Utils.toast("Payment message reset to default");
+      },
+      renderStaffList() {
+        const tbody = document.getElementById("admin-staff-list-body");
+        if (!tbody) return;
+        const officers = State.getActiveBranch().officers || [];
+        if (officers.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="3" class="p-3 text-center text-slate-400">No staff registered yet. Add staff in the Staff Hub tab.</td></tr>`;
+          return;
+        }
+        tbody.innerHTML = officers.map(o => `
+          <tr>
+            <td class="p-3 font-bold text-slate-900">${o.name}</td>
+            <td class="p-3 font-mono text-slate-700">${o.phone || 'Not Set'}</td>
+            <td class="p-3 text-right flex justify-end gap-1.5">
+              <button onclick="Staff.openEditModal('${o.id}')" class="dyn-bg text-white px-2.5 py-1 rounded font-bold text-[10px] shadow">
+                <i class="fa-solid fa-pen"></i> Edit
+              </button>
+              <button onclick="Staff.deleteOfficer('${o.id}')" class="bg-red-600 text-white px-2.5 py-1 rounded font-bold text-[10px]">
+                Remove
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      },
       handleLogoUpload(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -1789,6 +2128,146 @@
       }
     };
 
+    /* ============================================================
+       TREASURY & CAPITAL ENGINE (CASH AT HAND, AIRTEL, MTN)
+       Rule: All Cash-Ins added to capital; Expenses, Disbursements,
+             and Savings Withdrawals deducted from capital.
+       ============================================================ */
+    const Treasury = {
+      normalizeWallet(channel) {
+        const ch = (channel || 'Cash').toLowerCase();
+        if (ch.includes('airtel')) return 'Airtel Mobile Money';
+        if (ch.includes('mtn')) return 'MTN Mobile Money';
+        return 'Cash';
+      },
+      computeBalances(upToDate = null) {
+        const branch = State.getActiveBranch();
+        const wallets = {
+          'Cash': { in: 0, out: 0, net: 0 },
+          'Airtel Mobile Money': { in: 0, out: 0, net: 0 },
+          'MTN Mobile Money': { in: 0, out: 0, net: 0 }
+        };
+
+        const addIn = (wallet, amt, date) => {
+          if (upToDate && date && date > upToDate) return;
+          const w = this.normalizeWallet(wallet);
+          wallets[w].in += Number(amt) || 0;
+        };
+        const addOut = (wallet, amt, date) => {
+          if (upToDate && date && date > upToDate) return;
+          const w = this.normalizeWallet(wallet);
+          wallets[w].out += Number(amt) || 0;
+        };
+
+        // 1. Capital Injections -> Cash In
+        (branch.capitalizations || []).forEach(cap => {
+          if (!cap.status || cap.status === 'Approved') {
+            addIn(cap.channel || 'Cash', cap.amount, cap.date);
+          }
+        });
+
+        // 2. Loan Repayments (Cash In), Processing Fees (Cash In), Loan Disbursements (Cash Out)
+        (branch.clients || []).forEach(c => {
+          const disbChannel = c.disburseChannel || 'Cash';
+          addOut(disbChannel, c.principal || 0, c.dateDisbursed);
+          if ((c.processingFee || 0) > 0) {
+            addIn(disbChannel, c.processingFee, c.dateDisbursed);
+          }
+          (c.history || []).forEach(h => {
+            if (h.type === 'Repayment') {
+              addIn(h.channel || 'Cash', h.amount, h.date);
+            }
+          });
+        });
+
+        // 3. Savings Deposits (Cash In) & Savings Withdrawals (Cash Out)
+        Object.values(branch.savingsAccounts || {}).forEach(sav => {
+          (sav.history || []).forEach(sh => {
+            if (sh.type === 'DEPOSIT') {
+              addIn(sh.channel || 'Cash', sh.amount, sh.date);
+            } else if (sh.type === 'WITHDRAWAL') {
+              addOut(sh.channel || 'Cash', sh.amount, sh.date);
+            }
+          });
+        });
+
+        // 4. Expenses -> Cash Out
+        (branch.expenses || []).forEach(e => {
+          addOut(e.channel || 'Cash', e.amount, e.date);
+        });
+
+        // 5. Internal Wallet Transfers
+        (branch.walletTransfers || []).forEach(tr => {
+          addOut(tr.from, tr.amount, tr.date);
+          addIn(tr.to, tr.amount, tr.date);
+        });
+
+        Object.keys(wallets).forEach(k => {
+          wallets[k].net = wallets[k].in - wallets[k].out;
+        });
+
+        const total = wallets['Cash'].net + wallets['Airtel Mobile Money'].net + wallets['MTN Mobile Money'].net;
+        return { wallets, total };
+      },
+      recordTransfer() {
+        const from = document.getElementById("transfer-from").value;
+        const to = document.getElementById("transfer-to").value;
+        const amt = parseFloat(document.getElementById("transfer-amount").value);
+        const note = document.getElementById("transfer-note").value.trim();
+
+        if (from === to) { Utils.toast("Select two different wallets to transfer between"); return; }
+        if (!Validation.isPositiveAmount(amt, "Transfer Amount")) return;
+
+        const branch = State.getActiveBranch();
+        if (!branch.walletTransfers) branch.walletTransfers = [];
+        branch.walletTransfers.push({
+          id: Utils.generateId("trf"),
+          date: Utils.today(),
+          from, to, amount: amt, note
+        });
+        State.save();
+        document.getElementById("transfer-amount").value = "";
+        document.getElementById("transfer-note").value = "";
+        this.render();
+        DailyWorkspace.render();
+        Utils.toast(`Transferred ${Utils.formatUGX(amt)} from ${from} to ${to}`);
+      },
+      render() {
+        const { wallets, total } = this.computeBalances();
+        const set = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+        set("treasury-cash-hand", Utils.formatUGX(wallets['Cash'].net));
+        set("treasury-airtel", Utils.formatUGX(wallets['Airtel Mobile Money'].net));
+        set("treasury-mtn", Utils.formatUGX(wallets['MTN Mobile Money'].net));
+        set("treasury-total", Utils.formatUGX(total));
+
+        const tbody = document.getElementById("treasury-breakdown-body");
+        if (!tbody) return;
+        const rows = [
+          { label: "Cash at Hand", key: "Cash", color: "text-emerald-700" },
+          { label: "Amount on Airtel", key: "Airtel Mobile Money", color: "text-red-600" },
+          { label: "Amount on MTN", key: "MTN Mobile Money", color: "text-amber-600" }
+        ];
+        tbody.innerHTML = rows.map(r => {
+          const w = wallets[r.key];
+          return `
+            <tr class="hover:bg-slate-50">
+              <td class="p-3 font-bold ${r.color}">${r.label}</td>
+              <td class="p-3 text-right font-mono text-emerald-700">${Utils.formatUGX(w.in)}</td>
+              <td class="p-3 text-right font-mono text-rose-600">${Utils.formatUGX(w.out)}</td>
+              <td class="p-3 text-right font-mono font-black text-slate-900">${Utils.formatUGX(w.net)}</td>
+            </tr>
+          `;
+        }).join('') + `
+          <tr class="bg-slate-100 font-black text-slate-900 border-t-2">
+            <td class="p-3">TOTAL LIQUID CAPITAL</td>
+            <td class="p-3 text-right font-mono text-emerald-700">${Utils.formatUGX(wallets['Cash'].in + wallets['Airtel Mobile Money'].in + wallets['MTN Mobile Money'].in)}</td>
+            <td class="p-3 text-right font-mono text-rose-600">${Utils.formatUGX(wallets['Cash'].out + wallets['Airtel Mobile Money'].out + wallets['MTN Mobile Money'].out)}</td>
+            <td class="p-3 text-right font-mono text-blue-700">${Utils.formatUGX(total)}</td>
+          </tr>
+        `;
+      }
+    };
+
     const Posting = {
       searchClients(query) {
         const resultsDiv = document.getElementById("post-search-results");
@@ -1802,7 +2281,6 @@
           (c.id && c.id.toLowerCase().includes(q))
         );
 
-        // Recalculate each matching client in real time so search results immediately display exact Daily Target, Arrears & Balance
         filtered.forEach(c => State.recalculateClientStatus(c));
 
         resultsDiv.innerHTML = filtered.map(c => `
@@ -1828,7 +2306,6 @@
         Utils.hide("post-search-results");
         if (!selectedPostClient) return;
 
-        // Real-time recalculation of arrears, advance, and proportional aging days
         State.recalculateClientStatus(selectedPostClient);
 
         document.getElementById("post-client-name").innerText = selectedPostClient.name;
@@ -1886,6 +2363,16 @@
         `).join('');
       },
       removeFromBatch(idx) { State.getActiveBranch().batch.splice(idx, 1); State.save(); this.renderBatchList(); },
+      formatPaymentConfirmationMessage(client, amount, date) {
+        const tpl = state.paymentSmsTemplate || DEFAULT_PAYMENT_SMS_TEMPLATE;
+        return tpl
+          .replace(/{company}/g, state.company.name)
+          .replace(/{name}/g, client.name)
+          .replace(/{amount}/g, Utils.formatUGX(amount))
+          .replace(/{balance}/g, Utils.formatUGX(client.balance || 0))
+          .replace(/{arrears}/g, Utils.formatUGX(client.arrears || 0))
+          .replace(/{date}/g, date || Utils.today());
+      },
       postAllBatch() {
         const branch = State.getActiveBranch();
         if (branch.batch.length === 0) return;
@@ -1895,20 +2382,35 @@
           const client = branch.clients.find(c => c.id === item.clientId);
           if (client) {
             const prevBal = client.balance || 0;
+            // Calculate proportional Principal vs Interest split for the payment
+            const initialTot = client.initialBalance || prevBal || item.amount;
+            const principalRatio = initialTot > 0 ? Math.min(1, (client.principal || 0) / initialTot) : 1;
+            const principalPaid = Math.round(item.amount * principalRatio);
+            const interestPaid = Math.max(0, item.amount - principalPaid);
+
             client.balance = Math.max(0, prevBal - item.amount);
             if (!client.history) client.history = [];
-            client.history.push({ type: 'Repayment', amount: item.amount, date: item.date, channel: item.channel, prevBalance: prevBal, newBalance: client.balance });
-            // Immediately recalculate arrears, advances, and proportional aging days after payment
+            client.history.push({
+              type: 'Repayment',
+              amount: item.amount,
+              principalComponent: principalPaid,
+              interestComponent: interestPaid,
+              date: item.date,
+              channel: item.channel,
+              prevBalance: prevBal,
+              newBalance: client.balance
+            });
             State.recalculateClientStatus(client);
             receiptText += `${client.name}: Paid ${Utils.formatUGX(item.amount)}\nBal: ${Utils.formatUGX(client.balance)} | Arrears: ${Utils.formatUGX(client.arrears)}\n--------------------------------\n`;
-            SMS.dispatch(client.phone, `PMMS: Payment of ${Utils.formatUGX(item.amount)} received. New balance: ${Utils.formatUGX(client.balance)}`, 'Repayment');
+            const confirmMsg = this.formatPaymentConfirmationMessage(client, item.amount, item.date);
+            SMS.dispatch(client.phone, confirmMsg, 'Repayment');
           }
         });
         branch.batch = []; State.save(); this.renderBatchList();
         if (selectedPostClient) this.selectClient(selectedPostClient.id);
         Printer.printToXPrinter(receiptText);
         Utils.toast("Batch posted successfully");
-        Reports.updateDashboard(); Staff.renderHub(); DailyWorkspace.render(); Aging.render();
+        Treasury.render(); Reports.updateDashboard(); Staff.renderHub(); DailyWorkspace.render(); Aging.render();
       },
       dispatchReceipt(channel) {
         const searchDate = document.getElementById("manual-receipt-date").value;
@@ -1924,7 +2426,7 @@
         }
         if (!foundTxn) { Utils.toast("Transaction not found"); return; }
         
-        const receiptMsg = `${state.company.name} REPAYMENT RECEIPT\nDate: ${foundTxn.date}\nClient: ${targetClient.name}\nPaid: ${Utils.formatUGX(foundTxn.amount)}\nBalance: ${Utils.formatUGX(foundTxn.newBalance)}`;
+        const receiptMsg = this.formatPaymentConfirmationMessage(targetClient, foundTxn.amount, foundTxn.date);
 
         if (channel === 'PRINT') Printer.printToXPrinter(receiptMsg);
         else if (channel === 'WHATSAPP') window.open(`https://wa.me/${targetClient.phone}?text=${encodeURIComponent(receiptMsg)}`, '_blank');
@@ -2048,9 +2550,12 @@
         const p = parseFloat(document.getElementById("disburse-principal").value) || 0;
         const r = parseFloat(document.getElementById("disburse-rate").value) || 0;
         const d = parseFloat(document.getElementById("disburse-days").value) || 30;
+        const fee = parseFloat(document.getElementById("disburse-processing-fee")?.value) || 0;
         const interest = p * (r / 100), tot = p + interest;
         document.getElementById("dis-base").innerText = Utils.formatUGX(p);
         document.getElementById("dis-interest").innerText = Utils.formatUGX(interest);
+        const feeEl = document.getElementById("dis-fee");
+        if (feeEl) feeEl.innerText = Utils.formatUGX(fee);
         document.getElementById("dis-total").innerText = Utils.formatUGX(tot);
         document.getElementById("dis-daily").innerText = Utils.formatUGX(Math.round(tot / d));
       },
@@ -2060,6 +2565,8 @@
         const p = parseFloat(document.getElementById("disburse-principal").value) || 0;
         const r = parseFloat(document.getElementById("disburse-rate").value) || 0;
         const days = parseFloat(document.getElementById("disburse-days").value) || 30;
+        const processingFee = parseFloat(document.getElementById("disburse-processing-fee")?.value) || 0;
+        const disburseChannel = document.getElementById("disburse-channel")?.value || "Cash";
         if (!Validation.isRequired(officerId, "Staff Portfolio") || !Validation.isPositiveAmount(p, "Principal")) return;
 
         let nin = "", name = "", phone = "", address = "", guarantor = "", guarantorPhone = "", category = "OTHERS", plate = "";
@@ -2093,23 +2600,26 @@
           if (gCount >= 4) { Utils.toast("Disbursement Blocked: Guarantor reaches maximum exposure limit (4 clients)"); return; }
         }
 
-        const total = p + (p * (r / 100));
+        const interestAmt = p * (r / 100);
+        const total = p + interestAmt;
         const deadline = new Date(); deadline.setDate(deadline.getDate() + days);
 
         branch.clients.push({
           id: Utils.generateId("cli"), nin, name, phone, address, guarantor, guarantorPhone, category, plate,
-          officerId, principal: p, initialBalance: total, balance: total, dailyTarget: Math.round(total / days),
+          officerId, principal: p, interestAmount: interestAmt, processingFee, disburseChannel,
+          initialBalance: total, balance: total, dailyTarget: Math.round(total / days),
           arrears: 0, advance: 0,
           dateDisbursed: Utils.today(), deadlineDate: deadline.toISOString().split('T')[0], overdueDays: 0,
-          history: [{ type: 'Disbursement', amount: total, date: Utils.today(), principal: p, interest: p * (r / 100) }]
+          history: [{ type: 'Disbursement', amount: total, date: Utils.today(), principal: p, interest: interestAmt, processingFee, channel: disburseChannel }]
         });
         if (!branch.savingsAccounts[nin]) branch.savingsAccounts[nin] = { balance: 0, history: [] };
 
         SMS.dispatch(phone, `PMMS Loan Disbursed: ${Utils.formatUGX(p)}. Total: ${Utils.formatUGX(total)}. Daily: ${Utils.formatUGX(Math.round(total / days))}`, 'Disbursement');
         State.save();
-        Utils.toast("Loan disbursed & local SMS notification queued");
+        Utils.toast("Loan disbursed & deducted from " + disburseChannel);
         UI.refreshAll();
         document.getElementById("disburse-principal").value = "";
+        if (document.getElementById("disburse-processing-fee")) document.getElementById("disburse-processing-fee").value = "0";
       }
     };
 
@@ -2135,17 +2645,18 @@
         if (!selectedSavingsNin) { Utils.toast("Select client first"); return; }
         const amt = parseFloat(document.getElementById("sav-amount").value);
         const type = document.getElementById("sav-type").value;
+        const channel = document.getElementById("sav-channel")?.value || "Cash";
         if (!Validation.isPositiveAmount(amt)) return;
         const branch = State.getActiveBranch();
         let sav = branch.savingsAccounts[selectedSavingsNin];
         if (type === 'WITHDRAWAL' && sav.balance < amt) { Utils.toast("Insufficient savings"); return; }
         if (type === 'WITHDRAWAL') sav.balance -= amt; else sav.balance += amt;
-        sav.history.push({ date: Utils.today(), type, amount: amt });
+        sav.history.push({ date: Utils.today(), type, amount: amt, channel });
         State.save();
         this.selectClient(selectedSavingsNin, document.getElementById("sav-client-name").innerText.split(' (')[0]);
         document.getElementById("sav-amount").value = "";
-        Utils.toast(`Savings ${type.toLowerCase()} processed`);
-        DailyWorkspace.render();
+        Utils.toast(`Savings ${type.toLowerCase()} processed (${channel})`);
+        Treasury.render(); Reports.updateDashboard(); DailyWorkspace.render();
       }
     };
 
@@ -2320,8 +2831,8 @@
             activities.push({
               type: 'Disbursement',
               source: c.name + ` (${c.nin || 'N/A'})`,
-              narration: `New Loan Principal Disbursed`,
-              detail: `Tenure: ${c.deadlineDate ? 'Active' : '30d'} | Officer ID: ${c.officerId || '-'}`,
+              narration: `New Loan Principal Disbursed${(c.processingFee || 0) > 0 ? ' (Fee: ' + Utils.formatUGX(c.processingFee) + ')' : ''}`,
+              detail: `Channel: ${c.disburseChannel || 'Cash'} | Officer ID: ${c.officerId || '-'}`,
               amount: c.principal || 0
             });
           }
@@ -2350,7 +2861,7 @@
                 type: `Savings ${sh.type}`,
                 source: clientName + ` (${nin})`,
                 narration: `Savings ${sh.type} Transaction`,
-                detail: `Client Savings Account`,
+                detail: `Channel: ${sh.channel || 'Cash'}`,
                 amount: sh.amount || 0
               });
             }
@@ -2363,7 +2874,7 @@
               type: 'Expense',
               source: e.category,
               narration: e.narration || 'Operational Expense',
-              detail: `Branch Expense`,
+              detail: `Channel: ${e.channel || 'Cash'}`,
               amount: e.amount || 0
             });
           }
@@ -2387,7 +2898,7 @@
               type: 'Capital Injection',
               source: 'Shareholder / Funding',
               narration: cap.narration || 'Capital Addition',
-              detail: cap.status || 'Approved',
+              detail: `Wallet: ${cap.channel || 'Cash'}`,
               amount: cap.amount || 0
             });
           }
@@ -2443,9 +2954,50 @@
         const phone = document.getElementById("officer-add-phone").value.trim();
         if (!Validation.isRequired(name, "Staff Name")) return;
         State.getActiveBranch().officers.push({ id: Utils.generateId("off"), name, phone });
-        State.save(); this.populateDropdowns(); this.renderHub();
+        State.save(); this.populateDropdowns(); this.renderHub(); AdminSettings.renderStaffList();
         Utils.toast("Staff added");
         document.getElementById("officer-add-name").value = ""; document.getElementById("officer-add-phone").value = "";
+      },
+      openEditModal(officerId) {
+        if (state.currentUser?.role !== 'Administrator') { Utils.toast("Administrator access required to edit staff"); return; }
+        const officer = (State.getActiveBranch().officers || []).find(o => o.id === officerId);
+        if (!officer) return;
+        document.getElementById("edit-staff-id").value = officer.id;
+        document.getElementById("edit-staff-name").value = officer.name || '';
+        document.getElementById("edit-staff-phone").value = officer.phone || '';
+        Utils.show("edit-staff-modal");
+      },
+      saveEditedOfficer() {
+        if (state.currentUser?.role !== 'Administrator') { Utils.toast("Administrator access required"); return; }
+        const id = document.getElementById("edit-staff-id").value;
+        const name = document.getElementById("edit-staff-name").value.trim();
+        const phone = document.getElementById("edit-staff-phone").value.trim();
+        if (!Validation.isRequired(name, "Staff Name")) return;
+
+        const officer = (State.getActiveBranch().officers || []).find(o => o.id === id);
+        if (!officer) return;
+        officer.name = name;
+        officer.phone = phone;
+        State.save();
+        Audit.log("EDIT_STAFF_PROFILE", { id, name, phone });
+        this.populateDropdowns();
+        this.renderHub();
+        AdminSettings.renderStaffList();
+        Clients.renderMasterDirectory();
+        Aging.render();
+        Utils.hide("edit-staff-modal");
+        Utils.toast("Staff name & phone number updated!");
+      },
+      deleteOfficer(officerId) {
+        if (state.currentUser?.role !== 'Administrator') { Utils.toast("Administrator access required"); return; }
+        if (!Utils.confirmAction("Remove this staff member?")) return;
+        const branch = State.getActiveBranch();
+        branch.officers = (branch.officers || []).filter(o => o.id !== officerId);
+        State.save();
+        this.populateDropdowns();
+        this.renderHub();
+        AdminSettings.renderStaffList();
+        Utils.toast("Staff member removed");
       },
       populateDropdowns() {
         const branch = State.getActiveBranch();
@@ -2473,10 +3025,17 @@
         const container = document.getElementById("officers-container");
         if (!container) return;
         if (branch.officers.length === 0) { container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400"><p>No staff registered</p></div>`; return; }
+        const isAdmin = state.currentUser?.role === 'Administrator';
         container.innerHTML = branch.officers.map(o => {
           const m = this.getPortfolioMetrics(o.id);
           return `<div class="bg-white border-2 border-slate-200 rounded-2xl shadow-sm overflow-hidden">
-            <div class="bg-slate-800 text-white px-4 py-3"><div class="font-bold text-sm">${o.name}</div><div class="text-[11px] text-slate-300">${o.phone || 'No phone'}</div></div>
+            <div class="bg-slate-800 text-white px-4 py-3 flex justify-between items-start">
+              <div>
+                <div class="font-bold text-sm">${o.name}</div>
+                <div class="text-[11px] text-slate-300">${o.phone || 'No phone'}</div>
+              </div>
+              ${isAdmin ? `<button onclick="Staff.openEditModal('${o.id}')" class="bg-slate-700 hover:bg-slate-600 text-white px-2.5 py-1 rounded text-[10px] font-bold"><i class="fa-solid fa-pen"></i> Edit</button>` : ''}
+            </div>
             <div class="p-4 space-y-2 text-xs">
               <div class="flex justify-between border-b pb-1"><span>Customers:</span><span class="font-bold">${m.noOfCustomers}</span></div>
               <div class="flex justify-between border-b pb-1"><span>Percent Paid:</span><span class="font-bold text-emerald-600">${m.percentPaid}%</span></div>
@@ -2492,8 +3051,9 @@
       recordDeposit() {
         const name = document.getElementById("bank-name").value.trim();
         const amt = parseFloat(document.getElementById("bank-amount").value);
+        const channel = document.getElementById("bank-channel")?.value || "Cash";
         if (!Validation.isRequired(name, "Bank Name") || !Validation.isPositiveAmount(amt)) return;
-        State.getActiveBranch().bankings.push({ date: Utils.today(), name, acc: document.getElementById("bank-acc-no").value.trim(), ref: document.getElementById("bank-ref").value.trim(), amount: amt });
+        State.getActiveBranch().bankings.push({ date: Utils.today(), name, acc: document.getElementById("bank-acc-no").value.trim(), ref: document.getElementById("bank-ref").value.trim(), channel, amount: amt });
         State.save(); this.renderHistory(); Reports.updateDashboard(); DailyWorkspace.render();
         Utils.toast("Banking saved");
       },
@@ -2508,16 +3068,19 @@
     const Expenses = {
       record() {
         const amt = parseFloat(document.getElementById("exp-amount").value);
+        const channel = document.getElementById("exp-channel")?.value || "Cash";
         if (!Validation.isPositiveAmount(amt)) return;
-        State.getActiveBranch().expenses.push({ date: Utils.today(), category: document.getElementById("exp-category").value, narration: document.getElementById("exp-narration").value.trim(), amount: amt });
-        State.save(); this.renderHistory(); Reports.updateDashboard(); DailyWorkspace.render();
-        Utils.toast("Expense recorded");
+        State.getActiveBranch().expenses.push({ date: Utils.today(), category: document.getElementById("exp-category").value, channel, narration: document.getElementById("exp-narration").value.trim(), amount: amt });
+        State.save(); this.renderHistory(); Treasury.render(); Reports.updateDashboard(); DailyWorkspace.render();
+        document.getElementById("exp-amount").value = "";
+        document.getElementById("exp-narration").value = "";
+        Utils.toast("Expense recorded & deducted from " + channel);
       },
       renderHistory() {
         const branch = State.getActiveBranch();
         const total = branch.expenses.reduce((s, e) => s + e.amount, 0);
         document.getElementById("total-expenses-display").innerText = Utils.formatUGX(total);
-        document.getElementById("expenses-history-body").innerHTML = branch.expenses.map(e => `<tr><td class="p-3">${e.date}</td><td class="p-3">${e.category}</td><td class="p-3">${e.narration}</td><td class="p-3 text-right">${Utils.formatUGX(e.amount)}</td></tr>`).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No expenses</td></tr>`;
+        document.getElementById("expenses-history-body").innerHTML = branch.expenses.map(e => `<tr><td class="p-3">${e.date}</td><td class="p-3">${e.category}</td><td class="p-3 font-mono text-[11px]">${e.channel || 'Cash'}</td><td class="p-3">${e.narration}</td><td class="p-3 text-right">${Utils.formatUGX(e.amount)}</td></tr>`).join('') || `<tr><td colspan="5" class="p-3 text-center text-slate-400">No expenses</td></tr>`;
       }
     };
 
@@ -2525,34 +3088,175 @@
       submit() {
         if (!['Administrator', 'Manager'].includes(state.currentUser?.role)) { Utils.toast("Admin/Manager permission required"); return; }
         const amt = parseFloat(document.getElementById("cap-amount").value);
+        const channel = document.getElementById("cap-channel")?.value || "Cash";
         if (!Validation.isPositiveAmount(amt)) return;
-        State.getActiveBranch().capitalizations.push({ date: Utils.today(), amount: amt, narration: document.getElementById("cap-narration").value.trim(), status: "Approved" });
-        State.save(); this.renderQueue(); Reports.updateDashboard(); DailyWorkspace.render();
-        Utils.toast("Capital added");
+        State.getActiveBranch().capitalizations.push({ date: Utils.today(), amount: amt, channel, narration: document.getElementById("cap-narration").value.trim(), status: "Approved" });
+        State.save(); this.renderQueue(); Treasury.render(); Reports.updateDashboard(); DailyWorkspace.render();
+        document.getElementById("cap-amount").value = "";
+        document.getElementById("cap-narration").value = "";
+        Utils.toast("Capital added to " + channel);
       },
       renderQueue() {
         const branch = State.getActiveBranch();
-        document.getElementById("capital-approval-list").innerHTML = branch.capitalizations.map(c => `<div class="bg-white p-2 border rounded text-xs">${Utils.formatUGX(c.amount)} — ${c.narration || 'Capital'}</div>`).join('') || `<p class="text-slate-400 text-center">No capital records</p>`;
+        document.getElementById("capital-approval-list").innerHTML = branch.capitalizations.map(c => `<div class="bg-white p-2 border rounded text-xs flex justify-between"><span><strong>${Utils.formatUGX(c.amount)}</strong> — ${c.narration || 'Capital'}</span><span class="text-slate-500 font-mono">${c.channel || 'Cash'} (${c.date})</span></div>`).join('') || `<p class="text-slate-400 text-center">No capital records</p>`;
       }
     };
 
     const Reports = {
-      updateDashboard() {
+      computeDailyReportMetrics(targetDate) {
         const branch = State.getActiveBranch();
-        const activeCount = branch.clients.filter(c => (c.balance || 0) > 0).length;
-        const totalPort = branch.clients.reduce((s, c) => s + (c.balance || 0), 0);
-        let totalSavings = 0; Object.values(branch.savingsAccounts || {}).forEach(s => totalSavings += (s.balance || 0));
-        let totalCollections = 0; branch.clients.forEach(c => (c.history || []).forEach(h => { if (h.type === 'Repayment') totalCollections += h.amount; }));
+        const prevDateObj = new Date(targetDate);
+        prevDateObj.setDate(prevDateObj.getDate() - 1);
+        const prevDateStr = prevDateObj.toISOString().split('T')[0];
+
+        // 1. Opening Cash Balance (Cumulative Net Liquid Capital before targetDate)
+        const openingCash = Treasury.computeBalances(prevDateStr).total;
+
+        // 2. Number of Total Active Clients
+        const activeClientsList = (branch.clients || []).filter(c => (c.balance || 0) > 0);
+        const totalActiveClients = activeClientsList.length;
+
+        // 3. Number of Paid Clients & 4. Total Collection & 10. Principal Collected & 11. Interest Collected (on targetDate)
+        const paidClientIds = new Set();
+        let totalCollection = 0;
+        let principalCollected = 0;
+        let interestCollected = 0;
+
+        (branch.clients || []).forEach(c => {
+          const initialTot = c.initialBalance || ((c.principal || 0) + (c.interestAmount || 0)) || 1;
+          const principalRatio = initialTot > 0 ? Math.min(1, (c.principal || 0) / initialTot) : 1;
+
+          (c.history || []).forEach(h => {
+            if (h.type === 'Repayment' && h.date === targetDate) {
+              paidClientIds.add(c.id);
+              const amt = Number(h.amount) || 0;
+              totalCollection += amt;
+              const pPart = typeof h.principalComponent === 'number' ? h.principalComponent : Math.round(amt * principalRatio);
+              const iPart = typeof h.interestComponent === 'number' ? h.interestComponent : Math.max(0, amt - pPart);
+              principalCollected += pPart;
+              interestCollected += iPart;
+            }
+          });
+        });
+        const paidClientsCount = paidClientIds.size;
+
+        // 5. Collection Rate (% of active clients who paid on targetDate)
+        const collectionRate = totalActiveClients > 0 ? ((paidClientsCount / totalActiveClients) * 100).toFixed(1) + '%' : '0.0%';
+
+        // 6. Total Saving (Total savings deposits on targetDate) & 16. Saving Withdraws (on targetDate)
+        let totalSaving = 0;
+        let savingWithdraws = 0;
+        Object.values(branch.savingsAccounts || {}).forEach(sav => {
+          (sav.history || []).forEach(sh => {
+            if (sh.date === targetDate) {
+              if (sh.type === 'DEPOSIT') totalSaving += (Number(sh.amount) || 0);
+              if (sh.type === 'WITHDRAWAL') savingWithdraws += (Number(sh.amount) || 0);
+            }
+          });
+        });
+
+        // 7. Total Loans Disbursed, 8. Total Amount Disbursed, 12. Processing Fee (on targetDate)
+        const loansDisbursedToday = (branch.clients || []).filter(c => c.dateDisbursed === targetDate);
+        const totalLoansDisbursedCount = loansDisbursedToday.length;
+        const totalAmountDisbursed = loansDisbursedToday.reduce((s, c) => s + (Number(c.principal) || 0), 0);
+        const processingFeeTotal = loansDisbursedToday.reduce((s, c) => s + (Number(c.processingFee) || 0), 0);
+
+        // 9. Total Expenses (on targetDate)
+        const totalExpenses = (branch.expenses || [])
+          .filter(e => e.date === targetDate)
+          .reduce((s, e) => s + (Number(e.amount) || 0), 0);
+
+        // 13. Total Loan Portfolio, 14. Principal Balance, 15. Interest Balance
+        let totalLoanPortfolio = 0;
+        let principalBalance = 0;
+        let interestBalance = 0;
+        activeClientsList.forEach(c => {
+          const bal = Number(c.balance) || 0;
+          totalLoanPortfolio += bal;
+          const initialTot = c.initialBalance || bal || 1;
+          const principalRatio = initialTot > 0 ? Math.min(1, (c.principal || 0) / initialTot) : 1;
+          const pBal = Math.round(bal * principalRatio);
+          const iBal = Math.max(0, bal - pBal);
+          principalBalance += pBal;
+          interestBalance += iBal;
+        });
+
+        // 17. Closing Cash Balance (Cumulative Net Liquid Capital up to targetDate)
+        const closingCash = Treasury.computeBalances(targetDate).total;
+
+        return {
+          targetDate,
+          openingCash,
+          totalActiveClients,
+          paidClientsCount,
+          totalCollection,
+          collectionRate,
+          totalSaving,
+          totalLoansDisbursedCount,
+          totalAmountDisbursed,
+          totalExpenses,
+          principalCollected,
+          interestCollected,
+          processingFeeTotal,
+          totalLoanPortfolio,
+          principalBalance,
+          interestBalance,
+          savingWithdraws,
+          closingCash
+        };
+      },
+      updateDashboard() {
+        const dateInput = document.getElementById("report-date-filter");
+        if (dateInput && !dateInput.value) dateInput.value = Utils.today();
+        const targetDate = dateInput ? dateInput.value : Utils.today();
+
+        const m = this.computeDailyReportMetrics(targetDate);
         const set = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
-        set("rep-active-clients", activeCount);
-        set("rep-total-portfolio", Utils.formatUGX(totalPort));
-        set("rep-total-savings", Utils.formatUGX(totalSavings));
-        set("rep-total-collections", Utils.formatUGX(totalCollections));
+
+        set("rep-display-date", m.targetDate);
+        set("rep-opening-cash", Utils.formatUGX(m.openingCash));
+        set("rep-active-clients", m.totalActiveClients);
+        set("rep-paid-clients", m.paidClientsCount);
+        set("rep-total-collections", Utils.formatUGX(m.totalCollection));
+        set("rep-collection-rate", m.collectionRate);
+        set("rep-total-savings", Utils.formatUGX(m.totalSaving));
+        set("rep-loans-disbursed-count", m.totalLoansDisbursedCount);
+        set("rep-amount-disbursed", Utils.formatUGX(m.totalAmountDisbursed));
+        set("rep-total-expenses", Utils.formatUGX(m.totalExpenses));
+        set("rep-principal-collected", Utils.formatUGX(m.principalCollected));
+        set("rep-interest-collected", Utils.formatUGX(m.interestCollected));
+        set("rep-processing-fee", Utils.formatUGX(m.processingFeeTotal));
+        set("rep-total-portfolio", Utils.formatUGX(m.totalLoanPortfolio));
+        set("rep-principal-balance", Utils.formatUGX(m.principalBalance));
+        set("rep-interest-balance", Utils.formatUGX(m.interestBalance));
+        set("rep-saving-withdraws", Utils.formatUGX(m.savingWithdraws));
+        set("rep-closing-cash", Utils.formatUGX(m.closingCash));
       },
       getReportText() {
-        const branch = State.getActiveBranch();
-        const totalCollections = branch.clients.reduce((sum, c) => sum + (c.history || []).reduce((s, h) => h.type === 'Repayment' ? s + h.amount : s, 0), 0);
-        return `*${state.company.name} DAILY REPORT*\nDate: ${Utils.today()}\n\n• Collections: ${Utils.formatUGX(totalCollections)}\n\nSubmitted by ${state.currentUser ? state.currentUser.username : 'Staff'}`;
+        const dateInput = document.getElementById("report-date-filter");
+        const targetDate = (dateInput && dateInput.value) ? dateInput.value : Utils.today();
+        const m = this.computeDailyReportMetrics(targetDate);
+
+        return `*${state.company.name.toUpperCase()} - DAILY REPORT*\n` +
+          `Date: ${m.targetDate}\n\n` +
+          `• Opening cash balance: ${Utils.formatUGX(m.openingCash)}\n` +
+          `• Number of total active clients: ${m.totalActiveClients}\n` +
+          `• Number of paid clients: ${m.paidClientsCount}\n` +
+          `• Total collection: ${Utils.formatUGX(m.totalCollection)}\n` +
+          `• Collection rate: ${m.collectionRate}\n` +
+          `• Total saving: ${Utils.formatUGX(m.totalSaving)}\n` +
+          `• Total loans disbursed: ${m.totalLoansDisbursedCount}\n` +
+          `• Total amount disbursed: ${Utils.formatUGX(m.totalAmountDisbursed)}\n` +
+          `• Total expenses: ${Utils.formatUGX(m.totalExpenses)}\n` +
+          `• Principal collected: ${Utils.formatUGX(m.principalCollected)}\n` +
+          `• Interest collected: ${Utils.formatUGX(m.interestCollected)}\n` +
+          `• Processing fee: ${Utils.formatUGX(m.processingFeeTotal)}\n` +
+          `• Total loan portfolio: ${Utils.formatUGX(m.totalLoanPortfolio)}\n` +
+          `• Principal balance: ${Utils.formatUGX(m.principalBalance)}\n` +
+          `• Interest balance: ${Utils.formatUGX(m.interestBalance)}\n` +
+          `• Saving withdraws: ${Utils.formatUGX(m.savingWithdraws)}\n` +
+          `• Closing Cash balance: ${Utils.formatUGX(m.closingCash)}\n\n` +
+          `Submitted by: ${state.currentUser ? state.currentUser.username : 'Staff'}`;
       },
       openWhatsAppModal() {
         const managers = state.managers || [];

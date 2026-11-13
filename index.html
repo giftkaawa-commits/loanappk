@@ -1227,7 +1227,6 @@
       confirmAction(msg) {
         return window.confirm(msg);
       },
-      // Performance: debounce
       debounce(fn, delay = 280) {
         let timer;
         return function (...args) {
@@ -1237,7 +1236,6 @@
       }
     };
 
-    // Throttled save to reduce localStorage / IndexedDB pressure
     let _saveTimer = null;
     const State = {
       async load() {
@@ -1259,7 +1257,6 @@
         this.restoreSession();
       },
       save() {
-        // Throttle writes
         if (_saveTimer) clearTimeout(_saveTimer);
         _saveTimer = setTimeout(() => {
           const payload = JSON.stringify(state);
@@ -1330,7 +1327,7 @@
         if (savedUser) {
           try {
             state.currentUser = JSON.parse(savedUser);
-            document.getElementById("header-user-tag").innerText = `User: \( {state.currentUser.username} ( \){state.currentUser.role})`;
+            document.getElementById("header-user-tag").innerText = `User: ${state.currentUser.username} (${state.currentUser.role})`;
             Utils.hide("auth-overlay");
             Auth.applyRolePermissions();
           } catch (e) {}
@@ -1439,7 +1436,6 @@
         } else {
           state.cashPosition.airtel -= amount;
         }
-        // Automatically add withdrawn money to Cash at Hand
         state.cashPosition.cash += amount;
 
         const branch = State.getActiveBranch();
@@ -1530,7 +1526,7 @@
     };
 
     // ============================================================
-    // AUTH (with uniqueness + email verification)
+    // AUTH
     // ============================================================
     const Auth = {
       switchTab(type) {
@@ -1570,7 +1566,6 @@
             !Validation.isValidPhone(phone) ||
             !Validation.isValidPassword(password)) return;
 
-        // Uniqueness checks – username, email and phone cannot be reused
         const existsUsername = state.accounts.some(a => a.username.toLowerCase() === username.toLowerCase());
         const existsEmail = state.accounts.some(a => (a.email || '').toLowerCase() === email);
         const existsPhone = state.accounts.some(a => a.phone === phone);
@@ -1588,7 +1583,6 @@
           return;
         }
 
-        // Generate 6-digit verification code
         const code = String(Math.floor(100000 + Math.random() * 900000));
 
         state.pendingRegistration = {
@@ -1596,10 +1590,8 @@
         };
         State.save();
 
-        // Simulate sending code to Gmail (client-side demo – code is shown via toast)
         Utils.toast(`Verification code sent to ${email}: ${code}`, 8000);
 
-        // Switch to verification form
         Utils.hide("auth-form-register");
         Utils.show("auth-form-verify");
         document.getElementById("reg-verify-code").value = "";
@@ -1619,7 +1611,6 @@
           return;
         }
 
-        // Final uniqueness safety check
         if (state.accounts.some(a => a.username.toLowerCase() === pending.username.toLowerCase() ||
                                     (a.email || '').toLowerCase() === pending.email ||
                                     a.phone === pending.phone)) {
@@ -1676,7 +1667,7 @@
         }
         state.currentUser = acc;
         localStorage.setItem("pmms_current_user_v10", JSON.stringify(acc));
-        document.getElementById("header-user-tag").innerText = `User: \( {acc.username} ( \){acc.role})`;
+        document.getElementById("header-user-tag").innerText = `User: ${acc.username} (${acc.role})`;
         this.applyRolePermissions();
         Utils.hide("auth-overlay");
         State.save();
@@ -1817,7 +1808,7 @@
         const jsonStr = JSON.stringify(state, null, 2);
         const subject = encodeURIComponent(`[PMMS BACKUP] ${state.company.name} - ${Utils.today()}`);
         const body = encodeURIComponent(`PMMS Backup\nDate: ${Utils.now()}\n\n` + jsonStr);
-        window.location.href = `mailto:\( {email}?subject= \){subject}&body=${body}`;
+        window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
         Utils.toast("Opening email client");
       },
       exportJSON() {
@@ -1875,7 +1866,7 @@
         resultsDiv.innerHTML = filtered.map(c => `
           <div onclick="Posting.selectClient('${c.id}')" class="p-3 hover:bg-slate-100 cursor-pointer text-xs space-y-1">
             <div class="flex justify-between items-center">
-              <div><strong>\( {c.name}</strong> <span class="text-slate-500">( \){c.nin || 'N/A'})</span></div>
+              <div><strong>${c.name}</strong> <span class="text-slate-500">(${c.nin || 'N/A'})</span></div>
               <span class="text-[10px] font-bold px-2 py-0.5 rounded ${(c.overdueDays || 0) > 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}">
                 ${c.overdueDays || 0}d
               </span>
@@ -1948,7 +1939,7 @@
         }
         list.innerHTML = branch.batch.map((item, idx) => `
           <div class="bg-white p-2.5 border rounded flex justify-between text-xs items-center">
-            <span>${item.clientName} — \( {Utils.formatUGX(item.amount)} <span class="text-slate-400">( \){item.channel})</span></span>
+            <span>${item.clientName} — ${Utils.formatUGX(item.amount)} <span class="text-slate-400">(${item.channel})</span></span>
             <button onclick="Posting.removeFromBatch(${idx})" class="text-red-500 font-bold px-2">Remove</button>
           </div>
         `).join('');
@@ -2016,7 +2007,7 @@
         );
         resultsDiv.innerHTML = filtered.map(c => `
           <div onclick="Posting.selectReceiptClient('${c.id}')" class="p-2.5 hover:bg-slate-100 cursor-pointer text-xs">
-            <strong>\( {c.name}</strong> <span class="text-slate-500">( \){c.nin || 'N/A'})</span>
+            <strong>${c.name}</strong> <span class="text-slate-500">(${c.nin || 'N/A'})</span>
           </div>
         `).join('') || `<div class="p-3 text-slate-400 text-xs">No matches</div>`;
         Utils.show(resultsDiv);
@@ -2047,7 +2038,7 @@
         }
         const receiptMsg = `${state.company.name} REPAYMENT RECEIPT\nDate: ${txn.date}\nClient: ${selectedReceiptClient.name}\nPaid: ${Utils.formatUGX(txn.amount)}\nBalance: ${Utils.formatUGX(txn.newBalance)}`;
         if (channel === 'PRINT') Printer.printToXPrinter(receiptMsg);
-        else if (channel === 'WHATSAPP') window.open(`https://wa.me/\( {selectedReceiptClient.phone}?text= \){encodeURIComponent(receiptMsg)}`, '_blank');
+        else if (channel === 'WHATSAPP') window.open(`https://wa.me/${selectedReceiptClient.phone}?text=${encodeURIComponent(receiptMsg)}`, '_blank');
         else if (channel === 'SMS') SMS.dispatch(selectedReceiptClient.phone, receiptMsg, 'Manual Receipt');
       }
     };
@@ -2090,12 +2081,12 @@
         const msgEl = document.getElementById("guarantor-exposure-msg");
         const submitBtn = document.getElementById("disburse-submit-btn");
         if (count >= 4) {
-          msgEl.innerHTML = `Guarantor <strong>\( {guarantorName}</strong> already guarantees <strong> \){count}</strong> active clients. Maximum is 4.`;
+          msgEl.innerHTML = `Guarantor <strong>${guarantorName}</strong> already guarantees <strong>${count}</strong> active clients. Maximum is 4.`;
           Utils.show(alertDiv);
           submitBtn.disabled = true;
           submitBtn.classList.add("opacity-50", "cursor-not-allowed");
         } else if (count >= 2) {
-          msgEl.innerHTML = `Guarantor <strong>\( {guarantorName}</strong> currently guarantees <strong> \){count}</strong> active clients.`;
+          msgEl.innerHTML = `Guarantor <strong>${guarantorName}</strong> currently guarantees <strong>${count}</strong> active clients.`;
           Utils.show(alertDiv);
           submitBtn.disabled = false;
           submitBtn.classList.remove("opacity-50", "cursor-not-allowed");
@@ -2113,7 +2104,7 @@
         const warnBox = document.getElementById("disburse-active-loan-warning");
         const submitBtn = document.getElementById("disburse-submit-btn");
         if (activeLoan) {
-          document.getElementById("disburse-active-loan-msg").innerHTML = `NIN <strong>\( {nin}</strong> has active balance of <strong> \){Utils.formatUGX(activeLoan.balance)}</strong>. Must be zero.`;
+          document.getElementById("disburse-active-loan-msg").innerHTML = `NIN <strong>${nin}</strong> has active balance of <strong>${Utils.formatUGX(activeLoan.balance)}</strong>. Must be zero.`;
           Utils.show(warnBox);
           submitBtn.disabled = true;
           submitBtn.classList.add("opacity-50", "cursor-not-allowed");
@@ -2145,7 +2136,7 @@
         );
         resultsDiv.innerHTML = filtered.map(c => `
           <div onclick="Disburse.selectByNin('${c.nin}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs">
-            <strong>\( {c.name}</strong> ( \){c.nin})
+            <strong>${c.name}</strong> (${c.nin})
           </div>
         `).join('');
         Utils.show(resultsDiv);
@@ -2173,7 +2164,7 @@
           const count = this.checkGuarantorExposure(selectedDisburseClient.guarantor);
           const warnDiv = document.getElementById("disburse-guarantor-exposure-existing");
           if (count >= 4) {
-            warnDiv.innerText = `Guarantor (\( {selectedDisburseClient.guarantor}) is at maximum exposure ( \){count} clients)`;
+            warnDiv.innerText = `Guarantor (${selectedDisburseClient.guarantor}) is at maximum exposure (${count} clients)`;
             Utils.show(warnDiv);
           } else Utils.hide(warnDiv);
         }
@@ -2282,7 +2273,7 @@
           c.name.toLowerCase().includes(q) || (c.nin && c.nin.toLowerCase().includes(q))
         );
         resultsDiv.innerHTML = filtered.map(c => `
-          <div onclick="Savings.selectClient('\( {c.nin}', ' \){c.name.replace(/'/g, "\\'")}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs">
+          <div onclick="Savings.selectClient('${c.nin}', '${c.name.replace(/'/g, "\\'")}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs">
             <strong>${c.name}</strong>
           </div>
         `).join('');
@@ -2294,7 +2285,7 @@
         Utils.hide("savings-search-results");
         const branch = State.getActiveBranch();
         if (!branch.savingsAccounts[nin]) branch.savingsAccounts[nin] = { balance: 0, history: [] };
-        document.getElementById("sav-client-name").innerText = `\( {name} ( \){nin})`;
+        document.getElementById("sav-client-name").innerText = `${name} (${nin})`;
         document.getElementById("sav-client-balance").innerText = (branch.savingsAccounts[nin].balance || 0).toLocaleString();
         Utils.show("savings-client-card");
       },
@@ -2369,7 +2360,7 @@
         document.getElementById("rev-client-balance").innerText = (selectedReversalClient.balance || 0).toLocaleString();
         const select = document.getElementById("rev-transaction-select");
         const hist = (selectedReversalClient.history || []).filter(h => h.type === 'Repayment' || h.type === 'Disbursement');
-        select.innerHTML = hist.map((h, i) => `<option value="\( {i}"> \){h.date} — ${h.type} — ${Utils.formatUGX(h.amount)}</option>`).join('');
+        select.innerHTML = hist.map((h, i) => `<option value="${i}">${h.date} — ${h.type} — ${Utils.formatUGX(h.amount)}</option>`).join('');
         Utils.show("reversal-card");
       },
       executeReversal() {
@@ -2433,18 +2424,18 @@
           const currentOfficerId = activeLoan ? activeLoan.officerId : '';
           const officerDropdown = `<select onchange="Clients.reassignOfficer('${c.nin}', this.value)" class="p-1.5 border rounded text-xs bg-slate-50 font-bold">
             <option value="">-- Assign --</option>` +
-            branch.officers.map(o => `<option value="${o.id}" \( {currentOfficerId === o.id ? 'selected' : ''}> \){o.name}</option>`).join('') +
+            branch.officers.map(o => `<option value="${o.id}" ${currentOfficerId === o.id ? 'selected' : ''}>${o.name}</option>`).join('') +
           `</select>`;
           return `<tr class="text-xs">
             <td class="p-3 font-mono font-bold text-purple-700">${c.nin}</td>
-            <td class="p-3"><strong>\( {c.name}</strong><br> \){c.phone || ''}</td>
-            <td class="p-3">${c.guarantor || '-'}<br><span class="text-[10px] \( {gCount >= 4 ? 'bg-red-200 text-red-900 font-bold px-1 rounded' : 'text-slate-400'}"> \){gCount} active</span></td>
+            <td class="p-3"><strong>${c.name}</strong><br>${c.phone || ''}</td>
+            <td class="p-3">${c.guarantor || '-'}<br><span class="text-[10px] ${gCount >= 4 ? 'bg-red-200 text-red-900 font-bold px-1 rounded' : 'text-slate-400'}">${gCount} active</span></td>
             <td class="p-3">${c.category || 'OTHERS'} ${c.plate ? '<br>' + c.plate : ''}</td>
             <td class="p-3">${officerDropdown}</td>
             <td class="p-3 font-bold text-emerald-600">${Utils.formatUGX(savBal)}</td>
             <td class="p-3 font-bold text-purple-700">${docs.length}</td>
             <td class="p-3 text-right flex gap-1 justify-end">
-              <button onclick="Clients.openDocModal('\( {c.nin}', ' \){c.name.replace(/'/g, "\\'")}')" class="bg-purple-700 text-white px-2 py-1 rounded font-bold text-[10px]">Docs</button>
+              <button onclick="Clients.openDocModal('${c.nin}', '${c.name.replace(/'/g, "\\'")}')" class="bg-purple-700 text-white px-2 py-1 rounded font-bold text-[10px]">Docs</button>
             </td>
           </tr>`;
         }).join('') || `<tr><td colspan="8" class="p-4 text-center text-slate-400">No clients</td></tr>`;
@@ -2466,7 +2457,7 @@
       },
       openDocModal(nin, name) {
         activeDocNin = nin;
-        document.getElementById("doc-modal-client-info").innerText = `Client: \( {name} ( \){nin})`;
+        document.getElementById("doc-modal-client-info").innerText = `Client: ${name} (${nin})`;
         this.renderDocList();
         Utils.show("document-modal");
       },
@@ -2479,9 +2470,9 @@
         }
         listDiv.innerHTML = docs.map((d, i) => `
           <div class="p-2 border rounded bg-white flex justify-between items-center text-xs">
-            <div><strong>\( {d.label}</strong><br><span class="text-[10px] text-slate-400"> \){d.date}</span></div>
+            <div><strong>${d.label}</strong><br><span class="text-[10px] text-slate-400">${d.date}</span></div>
             <div class="flex gap-2">
-              <a href="\( {d.data}" download=" \){d.label}" class="text-blue-600 font-bold">Download</a>
+              <a href="${d.data}" download="${d.label}" class="text-blue-600 font-bold">Download</a>
               <button onclick="Clients.deleteDoc(${i})" class="text-red-500 font-bold">Delete</button>
             </div>
           </div>
@@ -2657,7 +2648,7 @@
           else if (a.type === 'MM Withdrawal') badge = 'bg-cyan-100 text-cyan-900 font-bold';
           return `
             <tr class="hover:bg-slate-50 text-xs">
-              <td class="p-3"><span class="px-2 py-1 rounded text-[10px] \( {badge}"> \){a.type}</span></td>
+              <td class="p-3"><span class="px-2 py-1 rounded text-[10px] ${badge}">${a.type}</span></td>
               <td class="p-3 font-bold">${a.source}</td>
               <td class="p-3">${a.narration}</td>
               <td class="p-3 text-slate-500 text-[10px]">${a.detail}</td>
@@ -2693,12 +2684,12 @@
       populateDropdowns() {
         const branch = State.getActiveBranch();
         const opts = `<option value="">-- Select Staff --</option>` +
-          branch.officers.map(o => `<option value="\( {o.id}"> \){o.name}</option>`).join('');
+          branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
         const disb = document.getElementById("disburse-officer-select");
         if (disb) disb.innerHTML = opts;
         const aging = document.getElementById("aging-officer-filter");
         if (aging) aging.innerHTML = `<option value="ALL">-- ALL STAFF --</option>` +
-          branch.officers.map(o => `<option value="\( {o.id}"> \){o.name}</option>`).join('');
+          branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
       },
       getPortfolioMetrics(officerId) {
         const branch = State.getActiveBranch();
@@ -2728,8 +2719,8 @@
             <div class="bg-white border-2 border-slate-200 rounded-2xl shadow-sm overflow-hidden">
               <div class="bg-slate-800 text-white px-4 py-3 flex justify-between items-start">
                 <div>
-                  <div class="font-bold text-sm" id="staff-name-\( {o.id}"> \){o.name}</div>
-                  <div class="text-[11px] text-slate-300" id="staff-phone-\( {o.id}"> \){o.phone || 'No phone'}</div>
+                  <div class="font-bold text-sm" id="staff-name-${o.id}">${o.name}</div>
+                  <div class="text-[11px] text-slate-300" id="staff-phone-${o.id}">${o.phone || 'No phone'}</div>
                 </div>
                 ${isAdmin ? `
                   <button onclick="Staff.editOfficer('${o.id}')" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded">
@@ -2835,7 +2826,6 @@
 
     const Capital = {
       submit() {
-        // Only Administrator can add capital
         if (state.currentUser?.role !== 'Administrator') {
           Utils.toast("Access Denied: Only Administrators can add capital.");
           return;
@@ -2843,14 +2833,13 @@
         const amt = parseFloat(document.getElementById("cap-amount").value);
         if (!Validation.isPositiveAmount(amt)) return;
 
-        // Capital is added DIRECTLY to Cash at Hand (no other adjustments)
         State.getActiveBranch().capitalizations.push({
           date: Utils.today(),
           amount: amt,
           narration: document.getElementById("cap-narration").value.trim(),
           status: "Approved"
         });
-        CashPosition.add('cash', amt);   // ← direct addition to cash
+        CashPosition.add('cash', amt);
         State.save();
         this.renderQueue();
         Reports.updateDashboard();
@@ -2864,7 +2853,7 @@
         const branch = State.getActiveBranch();
         document.getElementById("capital-approval-list").innerHTML = branch.capitalizations.map(c => `
           <div class="bg-white p-2 border rounded text-xs">
-            ${Utils.formatUGX(c.amount)} — \( {c.narration || 'Capital'} ( \){c.date})
+            ${Utils.formatUGX(c.amount)} — ${c.narration || 'Capital'} (${c.date})
           </div>
         `).join('') || `<p class="text-slate-400 text-center">No capital records</p>`;
       }
@@ -3066,7 +3055,7 @@
           : managers.map(m => `
             <label class="flex items-center gap-2 cursor-pointer font-medium">
               <input type="checkbox" value="${m.phone}" checked class="mgr-whatsapp-chk rounded">
-              <span>\( {m.name} ( \){m.phone})</span>
+              <span>${m.name} (${m.phone})</span>
             </label>
           `).join('');
         document.getElementById("whatsapp-report-preview").value = this.getReportText();
@@ -3081,7 +3070,7 @@
         const text = encodeURIComponent(this.getReportText());
         checkboxes.forEach((chk, index) => {
           setTimeout(() => {
-            window.open(`https://wa.me/\( {chk.value}?text= \){text}`, '_blank');
+            window.open(`https://wa.me/${chk.value}?text=${text}`, '_blank');
           }, index * 500);
         });
         Utils.hide("whatsapp-report-modal");
@@ -3134,17 +3123,17 @@
           const rows = clients.length > 0 ? clients.map((c, idx) => `
             <tr class="hover:bg-slate-50 border-b text-xs">
               <td class="p-3">${idx + 1}</td>
-              <td class="p-3"><strong>\( {c.name}</strong><br><span class="text-slate-500 text-[10px]"> \){c.phone || ''}</span></td>
+              <td class="p-3"><strong>${c.name}</strong><br><span class="text-slate-500 text-[10px]">${c.phone || ''}</span></td>
               <td class="p-3">${c.guarantor || '-'}</td>
               <td class="p-3 font-mono">${Utils.formatUGX(c.principal || 0)}</td>
               <td class="p-3 font-mono font-bold text-blue-700">${Utils.formatUGX(c.balance || 0)}</td>
               <td class="p-3 font-mono font-bold text-red-600">${Utils.formatUGX(c.arrears || 0)}</td>
-              <td class="p-3 font-bold \( {(c.overdueDays || 0) >= 90 ? 'text-red-600' : (c.overdueDays || 0) > 0 ? 'text-amber-700' : 'text-emerald-600'}"> \){c.overdueDays || 0}d</td>
+              <td class="p-3 font-bold ${(c.overdueDays || 0) >= 90 ? 'text-red-600' : (c.overdueDays || 0) > 0 ? 'text-amber-700' : 'text-emerald-600'}">${c.overdueDays || 0}d</td>
             </tr>
           `).join('') : `<tr><td colspan="7" class="p-4 text-center text-slate-400">No clients</td></tr>`;
           return `
             <div class="bg-white border rounded-2xl shadow-sm overflow-hidden p-4 space-y-3">
-              <div class="font-bold text-sm">\( {officer.name} ( \){officer.phone || 'No phone'})</div>
+              <div class="font-bold text-sm">${officer.name} (${officer.phone || 'No phone'})</div>
               <div class="overflow-x-auto border rounded-xl">
                 <table class="w-full text-left border-collapse text-xs">
                   <thead>
@@ -3170,7 +3159,7 @@
         const branch = State.getActiveBranch();
         let csv = 'Name,Phone,Guarantor,Principal,Balance,Arrears,Aging Days\n';
         branch.clients.forEach(c => {
-          csv += `"\( {c.name}"," \){c.phone || ''}","\( {c.guarantor || ''}", \){c.principal || 0},\( {c.balance || 0}, \){c.arrears || 0},${c.overdueDays || 0}\n`;
+          csv += `"${c.name}","${c.phone || ''}","${c.guarantor || ''}",${c.principal || 0},${c.balance || 0},${c.arrears || 0},${c.overdueDays || 0}\n`;
         });
         const blob = new Blob([csv], { type: 'text/csv' });
         const link = document.createElement('a');
@@ -3185,7 +3174,7 @@
         const doc = new jsPDF('landscape');
         const branch = State.getActiveBranch();
         doc.setFontSize(14);
-        doc.text(`\( {state.company.name} - Aging Report ( \){Utils.today()})`, 14, 20);
+        doc.text(`${state.company.name} - Aging Report (${Utils.today()})`, 14, 20);
         doc.autoTable({
           startY: 28,
           head: [['Name', 'Phone', 'Guarantor', 'Principal', 'Balance', 'Arrears', 'Aging']],
@@ -3230,7 +3219,7 @@
       dispatch(phone, message, triggerAction) {
         if (!phone) return;
         const networkCarrier = document.getElementById("sms-preferred-network")?.value || "MTN";
-        const smsLink = `sms:\( {phone}?body= \){encodeURIComponent(message)}`;
+        const smsLink = `sms:${phone}?body=${encodeURIComponent(message)}`;
         const logEntry = {
           timestamp: Utils.now(),
           phone,
@@ -3288,7 +3277,7 @@
         if (!select) return;
         const branch = State.getActiveBranch();
         select.innerHTML = `<option value="">-- Choose Client --</option>` +
-          branch.clients.map(c => `<option value="\( {c.id}"> \){c.name} (${c.phone || 'No Phone'})</option>`).join('');
+          branch.clients.map(c => `<option value="${c.id}">${c.name} (${c.phone || 'No Phone'})</option>`).join('');
       },
       renderLogs() {
         const tbody = document.getElementById("sms-logs-table-body");
@@ -3424,4 +3413,4 @@
     };
   </script>
 </body>
-  </html>
+</html>

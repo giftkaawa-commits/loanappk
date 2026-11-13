@@ -69,6 +69,7 @@
         <button id="tab-btn-register" onclick="Auth.switchTab('register')" class="w-1/2 py-2 rounded-lg text-slate-500">REGISTER USER</button>
       </div>
       
+      <!-- LOGIN FORM -->
       <div id="auth-form-login" class="space-y-3 text-left">
         <div>
           <label class="block text-[11px] font-bold text-slate-600 mb-1">Username or Email</label>
@@ -91,9 +92,10 @@
         </button>
       </div>
 
+      <!-- REGISTER FORM -->
       <div id="auth-form-register" hidden class="space-y-3 text-left hidden">
         <div class="bg-slate-50 border dyn-border p-2.5 rounded-xl text-[11px] text-slate-900 font-semibold">
-          <i class="fa-solid fa-circle-info mr-1 dyn-text"></i> Register with Role-Based Access.
+          <i class="fa-solid fa-circle-info mr-1 dyn-text"></i> Register with Role-Based Access. Gmail will receive a verification code.
         </div>
         <div>
           <label class="block text-[10px] text-slate-600 font-semibold mb-1">System Role *</label>
@@ -110,7 +112,7 @@
           <input type="text" id="reg-username" placeholder="Choose username" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
         </div>
         <div>
-          <label class="block text-[10px] text-slate-600 font-semibold mb-1">Email *</label>
+          <label class="block text-[10px] text-slate-600 font-semibold mb-1">Email (Gmail) *</label>
           <input type="email" id="reg-email" placeholder="user@gmail.com" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
         </div>
         <div>
@@ -121,7 +123,20 @@
           <label class="block text-[10px] text-slate-600 font-semibold mb-1">Password (min 6) *</label>
           <input type="password" id="reg-password" placeholder="••••••••" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
         </div>
-        <button onclick="Auth.handleRegister()" class="w-full dyn-bg text-white py-2.5 rounded-xl font-bold text-xs shadow">REGISTER USER</button>
+        <button onclick="Auth.handleRegister()" class="w-full dyn-bg text-white py-2.5 rounded-xl font-bold text-xs shadow">SEND VERIFICATION CODE</button>
+      </div>
+
+      <!-- EMAIL VERIFICATION FORM -->
+      <div id="auth-form-verify" hidden class="space-y-3 text-left hidden">
+        <div class="bg-emerald-50 border border-emerald-300 p-2.5 rounded-xl text-[11px] text-emerald-900 font-semibold">
+          <i class="fa-solid fa-envelope-circle-check mr-1"></i> A 6-digit verification code was sent to your Gmail.
+        </div>
+        <div>
+          <label class="block text-[10px] text-slate-600 font-semibold mb-1">Enter Verification Code *</label>
+          <input type="text" id="reg-verify-code" placeholder="e.g. 482913" maxlength="6" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50 font-bold tracking-widest text-center text-lg">
+        </div>
+        <button onclick="Auth.completeRegistration()" class="w-full dyn-bg text-white py-2.5 rounded-xl font-bold text-xs shadow">VERIFY & CREATE ACCOUNT</button>
+        <button onclick="Auth.cancelVerification()" class="w-full bg-slate-200 text-slate-700 py-2 rounded-xl font-bold text-xs">Cancel</button>
       </div>
     </div>
   </div>
@@ -221,7 +236,7 @@
         <div class="space-y-4">
           <div>
             <label class="block text-xs font-semibold mb-1 text-slate-600">Search Active Client</label>
-            <input type="text" id="post-search" oninput="Posting.searchClients(this.value)" placeholder="Name, NIN, phone or account..." class="w-full p-3 border rounded-xl bg-white text-sm focus:outline-none focus:ring-2 dyn-border shadow-sm">
+            <input type="text" id="post-search" oninput="Posting.searchClientsDebounced(this.value)" placeholder="Name, NIN, phone or account..." class="w-full p-3 border rounded-xl bg-white text-sm focus:outline-none focus:ring-2 dyn-border shadow-sm">
             <div id="post-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-56 overflow-y-auto hidden shadow-lg"></div>
           </div>
 
@@ -281,7 +296,7 @@
               </div>
               <div>
                 <label class="block font-semibold text-slate-600 mb-1">Search Client (Name / NIN)</label>
-                <input type="text" id="manual-receipt-client-query" oninput="Posting.searchReceiptClients(this.value)" placeholder="Type name or NIN..." class="w-full p-2.5 border rounded-lg bg-slate-50">
+                <input type="text" id="manual-receipt-client-query" oninput="Posting.searchReceiptClientsDebounced(this.value)" placeholder="Type name or NIN..." class="w-full p-2.5 border rounded-lg bg-slate-50">
                 <div id="manual-receipt-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-lg"></div>
               </div>
             </div>
@@ -391,7 +406,7 @@
 
       <div id="existing-client-fields">
         <label class="block text-xs font-semibold mb-1 text-slate-600">Search Client</label>
-        <input type="text" id="disburse-search" oninput="Disburse.searchClients(this.value)" placeholder="Search registered client..." class="w-full p-3 border rounded-xl bg-white text-sm shadow-sm">
+        <input type="text" id="disburse-search" oninput="Disburse.searchClientsDebounced(this.value)" placeholder="Search registered client..." class="w-full p-3 border rounded-xl bg-white text-sm shadow-sm">
         <div id="disburse-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
         <div id="disburse-selected-name" class="text-xs font-bold text-green-700 mt-2"></div>
         <div id="disburse-guarantor-exposure-existing" hidden class="hidden mt-2 p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 font-bold"></div>
@@ -435,7 +450,7 @@
           <h3 class="font-bold text-slate-800 text-sm border-b pb-2">Deposit / Withdraw</h3>
           <div>
             <label class="block text-slate-600 font-semibold mb-1">Search Client</label>
-            <input type="text" id="savings-search-input" oninput="Savings.searchClients(this.value)" placeholder="Name or NIN..." class="w-full p-2.5 border rounded-lg bg-slate-50">
+            <input type="text" id="savings-search-input" oninput="Savings.searchClientsDebounced(this.value)" placeholder="Name or NIN..." class="w-full p-2.5 border rounded-lg bg-slate-50">
             <div id="savings-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-32 overflow-y-auto hidden"></div>
           </div>
           <div id="savings-client-card" hidden class="bg-emerald-50 p-3 rounded-xl border border-emerald-200 space-y-1">
@@ -548,7 +563,7 @@
           </div>
           <div>
             <label class="block text-xs font-semibold mb-1">Search Client</label>
-            <input type="text" id="reversal-search" oninput="LoanOps.searchReversalClients(this.value)" placeholder="Name, NIN..." class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
+            <input type="text" id="reversal-search" oninput="LoanOps.searchReversalClientsDebounced(this.value)" placeholder="Name, NIN..." class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
             <div id="reversal-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-36 overflow-y-auto hidden shadow-md"></div>
           </div>
           <div id="reversal-card" hidden class="space-y-3 hidden bg-slate-50 p-3.5 rounded-xl border mt-3">
@@ -602,7 +617,7 @@
         </button>
       </div>
 
-      <input type="text" id="master-client-search" oninput="Clients.renderMasterDirectory()" placeholder="Filter by Name, NIN, Phone, Guarantor..." class="w-full p-2.5 border rounded-xl bg-white text-xs shadow-sm">
+      <input type="text" id="master-client-search" oninput="Clients.renderMasterDirectoryDebounced()" placeholder="Filter by Name, NIN, Phone, Guarantor..." class="w-full p-2.5 border rounded-xl bg-white text-xs shadow-sm">
 
       <div class="bg-white border rounded-xl overflow-x-auto shadow-sm">
         <table class="w-full text-left border-collapse text-xs">
@@ -656,7 +671,7 @@
         </div>
       </div>
 
-      <input type="text" id="daily-workspace-search" oninput="DailyWorkspace.render()" placeholder="Search activities..." class="w-full p-2.5 border rounded-lg text-xs bg-slate-50">
+      <input type="text" id="daily-workspace-search" oninput="DailyWorkspace.renderDebounced()" placeholder="Search activities..." class="w-full p-2.5 border rounded-lg text-xs bg-slate-50">
 
       <div class="bg-white border rounded-xl overflow-x-auto shadow-sm">
         <table class="w-full text-left border-collapse text-xs">
@@ -1160,7 +1175,8 @@
         mmWithdrawals: [],
         batch: [],
         savingsAccounts: {}
-      }
+      },
+      pendingRegistration: null
     };
 
     let selectedPostClient = null;
@@ -1174,7 +1190,7 @@
     let selectedReceiptClient = null;
 
     // ============================================================
-    // UTILITIES
+    // UTILITIES + PERFORMANCE HELPERS
     // ============================================================
     const Utils = {
       show(el) {
@@ -1210,63 +1226,19 @@
       },
       confirmAction(msg) {
         return window.confirm(msg);
+      },
+      // Performance: debounce
+      debounce(fn, delay = 280) {
+        let timer;
+        return function (...args) {
+          clearTimeout(timer);
+          timer = setTimeout(() => fn.apply(this, args), delay);
+        };
       }
     };
 
-    const Validation = {
-      isRequired(val, fieldName) {
-        if (!val || String(val).trim() === '') {
-          Utils.toast(`${fieldName} is required`);
-          return false;
-        }
-        return true;
-      },
-      isPositiveAmount(val, fieldName = 'Amount') {
-        const n = parseFloat(val);
-        if (isNaN(n) || n <= 0) {
-          Utils.toast(`${fieldName} must be a positive number`);
-          return false;
-        }
-        return true;
-      },
-      isValidPhone(phone) {
-        const ok = /^(0|256|\+256)?[7][0-9]{8}$/.test(String(phone).replace(/\s+/g, ''));
-        if (!ok) Utils.toast('Invalid Ugandan phone number');
-        return ok;
-      },
-      isValidEmail(email) {
-        const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-        if (!ok) Utils.toast('Invalid email address');
-        return ok;
-      },
-      isValidPassword(pwd) {
-        if (!pwd || pwd.length < 6) {
-          Utils.toast('Password must be at least 6 characters');
-          return false;
-        }
-        return true;
-      }
-    };
-
-    const Audit = {
-      log(action, details = '') {
-        if (!state.auditLogs) state.auditLogs = [];
-        state.auditLogs.unshift({
-          id: Utils.generateId('aud'),
-          timestamp: Utils.now(),
-          user: state.currentUser ? state.currentUser.username : 'System',
-          role: state.currentUser ? state.currentUser.role : '-',
-          action,
-          details: typeof details === 'object' ? JSON.stringify(details) : String(details)
-        });
-        if (state.auditLogs.length > 500) state.auditLogs.length = 500;
-        State.save();
-      }
-    };
-
-    // ============================================================
-    // STATE MANAGEMENT
-    // ============================================================
+    // Throttled save to reduce localStorage / IndexedDB pressure
+    let _saveTimer = null;
     const State = {
       async load() {
         await DB.init();
@@ -1280,16 +1252,21 @@
             if (!state.cashPosition) state.cashPosition = { cash: 0, mtn: 0, airtel: 0 };
             if (!state.smsTemplates) state.smsTemplates = { repayment: "Dear {name}, payment of {amount} received. New balance: {balance}. Thank you. - PMMS" };
             if (!state.branchData.mmWithdrawals) state.branchData.mmWithdrawals = [];
+            if (!state.pendingRegistration) state.pendingRegistration = null;
           } catch (e) {}
         }
         this.runDailyAging();
         this.restoreSession();
       },
       save() {
-        const payload = JSON.stringify(state);
-        localStorage.setItem("pmms_state_single_v10", payload);
-        localStorage.setItem("pmms_cloud_shared_state_v10", payload);
-        DB.saveState(payload);
+        // Throttle writes
+        if (_saveTimer) clearTimeout(_saveTimer);
+        _saveTimer = setTimeout(() => {
+          const payload = JSON.stringify(state);
+          localStorage.setItem("pmms_state_single_v10", payload);
+          localStorage.setItem("pmms_cloud_shared_state_v10", payload);
+          DB.saveState(payload);
+        }, 380);
       },
       getActiveBranch() {
         return state.branchData;
@@ -1353,7 +1330,7 @@
         if (savedUser) {
           try {
             state.currentUser = JSON.parse(savedUser);
-            document.getElementById("header-user-tag").innerText = `User: ${state.currentUser.username} (${state.currentUser.role})`;
+            document.getElementById("header-user-tag").innerText = `User: \( {state.currentUser.username} ( \){state.currentUser.role})`;
             Utils.hide("auth-overlay");
             Auth.applyRolePermissions();
           } catch (e) {}
@@ -1373,8 +1350,59 @@
       }
     };
 
+    const Validation = {
+      isRequired(val, fieldName) {
+        if (!val || String(val).trim() === '') {
+          Utils.toast(`${fieldName} is required`);
+          return false;
+        }
+        return true;
+      },
+      isPositiveAmount(val, fieldName = 'Amount') {
+        const n = parseFloat(val);
+        if (isNaN(n) || n <= 0) {
+          Utils.toast(`${fieldName} must be a positive number`);
+          return false;
+        }
+        return true;
+      },
+      isValidPhone(phone) {
+        const ok = /^(0|256|\+256)?[7][0-9]{8}$/.test(String(phone).replace(/\s+/g, ''));
+        if (!ok) Utils.toast('Invalid Ugandan phone number');
+        return ok;
+      },
+      isValidEmail(email) {
+        const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+        if (!ok) Utils.toast('Invalid email address');
+        return ok;
+      },
+      isValidPassword(pwd) {
+        if (!pwd || pwd.length < 6) {
+          Utils.toast('Password must be at least 6 characters');
+          return false;
+        }
+        return true;
+      }
+    };
+
+    const Audit = {
+      log(action, details = '') {
+        if (!state.auditLogs) state.auditLogs = [];
+        state.auditLogs.unshift({
+          id: Utils.generateId('aud'),
+          timestamp: Utils.now(),
+          user: state.currentUser ? state.currentUser.username : 'System',
+          role: state.currentUser ? state.currentUser.role : '-',
+          action,
+          details: typeof details === 'object' ? JSON.stringify(details) : String(details)
+        });
+        if (state.auditLogs.length > 500) state.auditLogs.length = 500;
+        State.save();
+      }
+    };
+
     // ============================================================
-    // CASH POSITION ENGINE & LOW-BALANCE ALERT
+    // CASH POSITION ENGINE
     // ============================================================
     const CashPosition = {
       add(channel, amount) {
@@ -1411,6 +1439,7 @@
         } else {
           state.cashPosition.airtel -= amount;
         }
+        // Automatically add withdrawn money to Cash at Hand
         state.cashPosition.cash += amount;
 
         const branch = State.getActiveBranch();
@@ -1437,7 +1466,6 @@
         const total = cashHand + (state.cashPosition.mtn || 0) + (state.cashPosition.airtel || 0);
         document.getElementById("cash-total").innerText = Utils.formatUGX(total);
 
-        // Low balance alert for cashiers/tellers (threshold: UGX 500,000)
         const lowBalanceBanner = document.getElementById("cash-low-balance-banner");
         if (lowBalanceBanner) {
           if (cashHand < 500000) {
@@ -1502,10 +1530,11 @@
     };
 
     // ============================================================
-    // AUTH
+    // AUTH (with uniqueness + email verification)
     // ============================================================
     const Auth = {
       switchTab(type) {
+        Utils.hide("auth-form-verify");
         if (type === 'login') {
           Utils.show("auth-form-login");
           Utils.hide("auth-form-register");
@@ -1532,15 +1561,94 @@
       handleRegister() {
         const role = document.getElementById("reg-role").value;
         const username = document.getElementById("reg-username").value.trim();
-        const email = document.getElementById("reg-email").value.trim();
+        const email = document.getElementById("reg-email").value.trim().toLowerCase();
         const phone = document.getElementById("reg-phone").value.trim();
         const password = document.getElementById("reg-password").value.trim();
-        if (!Validation.isRequired(username, "Username") || !Validation.isValidEmail(email) ||
-            !Validation.isValidPhone(phone) || !Validation.isValidPassword(password)) return;
-        state.accounts.push({ role, username, email, phone, password, name: username });
+
+        if (!Validation.isRequired(username, "Username") ||
+            !Validation.isValidEmail(email) ||
+            !Validation.isValidPhone(phone) ||
+            !Validation.isValidPassword(password)) return;
+
+        // Uniqueness checks – username, email and phone cannot be reused
+        const existsUsername = state.accounts.some(a => a.username.toLowerCase() === username.toLowerCase());
+        const existsEmail = state.accounts.some(a => (a.email || '').toLowerCase() === email);
+        const existsPhone = state.accounts.some(a => a.phone === phone);
+
+        if (existsUsername) {
+          Utils.toast("Username already registered. Choose another.");
+          return;
+        }
+        if (existsEmail) {
+          Utils.toast("This Gmail is already registered.");
+          return;
+        }
+        if (existsPhone) {
+          Utils.toast("This phone number is already registered.");
+          return;
+        }
+
+        // Generate 6-digit verification code
+        const code = String(Math.floor(100000 + Math.random() * 900000));
+
+        state.pendingRegistration = {
+          role, username, email, phone, password, name: username, code
+        };
         State.save();
-        Utils.toast(`User created with ${role} role`);
+
+        // Simulate sending code to Gmail (client-side demo – code is shown via toast)
+        Utils.toast(`Verification code sent to ${email}: ${code}`, 8000);
+
+        // Switch to verification form
+        Utils.hide("auth-form-register");
+        Utils.show("auth-form-verify");
+        document.getElementById("reg-verify-code").value = "";
+        document.getElementById("reg-verify-code").focus();
+      },
+      completeRegistration() {
+        const entered = (document.getElementById("reg-verify-code").value || "").trim();
+        const pending = state.pendingRegistration;
+
+        if (!pending) {
+          Utils.toast("No pending registration. Start again.");
+          this.switchTab('register');
+          return;
+        }
+        if (entered !== pending.code) {
+          Utils.toast("Incorrect verification code");
+          return;
+        }
+
+        // Final uniqueness safety check
+        if (state.accounts.some(a => a.username.toLowerCase() === pending.username.toLowerCase() ||
+                                    (a.email || '').toLowerCase() === pending.email ||
+                                    a.phone === pending.phone)) {
+          Utils.toast("Account details already taken");
+          state.pendingRegistration = null;
+          State.save();
+          this.switchTab('register');
+          return;
+        }
+
+        state.accounts.push({
+          role: pending.role,
+          username: pending.username,
+          email: pending.email,
+          phone: pending.phone,
+          password: pending.password,
+          name: pending.name
+        });
+        state.pendingRegistration = null;
+        State.save();
+
+        Utils.toast(`Account created successfully with ${pending.role} role`);
         this.switchTab('login');
+        document.getElementById("login-identifier").value = pending.username;
+      },
+      cancelVerification() {
+        state.pendingRegistration = null;
+        State.save();
+        this.switchTab('register');
       },
       handleLogin() {
         const iden = document.getElementById("login-identifier").value.trim();
@@ -1568,7 +1676,7 @@
         }
         state.currentUser = acc;
         localStorage.setItem("pmms_current_user_v10", JSON.stringify(acc));
-        document.getElementById("header-user-tag").innerText = `User: ${acc.username} (${acc.role})`;
+        document.getElementById("header-user-tag").innerText = `User: \( {acc.username} ( \){acc.role})`;
         this.applyRolePermissions();
         Utils.hide("auth-overlay");
         State.save();
@@ -1709,7 +1817,7 @@
         const jsonStr = JSON.stringify(state, null, 2);
         const subject = encodeURIComponent(`[PMMS BACKUP] ${state.company.name} - ${Utils.today()}`);
         const body = encodeURIComponent(`PMMS Backup\nDate: ${Utils.now()}\n\n` + jsonStr);
-        window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
+        window.location.href = `mailto:\( {email}?subject= \){subject}&body=${body}`;
         Utils.toast("Opening email client");
       },
       exportJSON() {
@@ -1767,7 +1875,7 @@
         resultsDiv.innerHTML = filtered.map(c => `
           <div onclick="Posting.selectClient('${c.id}')" class="p-3 hover:bg-slate-100 cursor-pointer text-xs space-y-1">
             <div class="flex justify-between items-center">
-              <div><strong>${c.name}</strong> <span class="text-slate-500">(${c.nin || 'N/A'})</span></div>
+              <div><strong>\( {c.name}</strong> <span class="text-slate-500">( \){c.nin || 'N/A'})</span></div>
               <span class="text-[10px] font-bold px-2 py-0.5 rounded ${(c.overdueDays || 0) > 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}">
                 ${c.overdueDays || 0}d
               </span>
@@ -1781,6 +1889,7 @@
         `).join('') || `<div class="p-3 text-slate-400 text-xs">No clients found</div>`;
         Utils.show(resultsDiv);
       },
+      searchClientsDebounced: null,
       selectClient(clientId) {
         const branch = State.getActiveBranch();
         selectedPostClient = branch.clients.find(c => c.id === clientId);
@@ -1839,7 +1948,7 @@
         }
         list.innerHTML = branch.batch.map((item, idx) => `
           <div class="bg-white p-2.5 border rounded flex justify-between text-xs items-center">
-            <span>${item.clientName} — ${Utils.formatUGX(item.amount)} <span class="text-slate-400">(${item.channel})</span></span>
+            <span>${item.clientName} — \( {Utils.formatUGX(item.amount)} <span class="text-slate-400">( \){item.channel})</span></span>
             <button onclick="Posting.removeFromBatch(${idx})" class="text-red-500 font-bold px-2">Remove</button>
           </div>
         `).join('');
@@ -1907,11 +2016,12 @@
         );
         resultsDiv.innerHTML = filtered.map(c => `
           <div onclick="Posting.selectReceiptClient('${c.id}')" class="p-2.5 hover:bg-slate-100 cursor-pointer text-xs">
-            <strong>${c.name}</strong> <span class="text-slate-500">(${c.nin || 'N/A'})</span>
+            <strong>\( {c.name}</strong> <span class="text-slate-500">( \){c.nin || 'N/A'})</span>
           </div>
         `).join('') || `<div class="p-3 text-slate-400 text-xs">No matches</div>`;
         Utils.show(resultsDiv);
       },
+      searchReceiptClientsDebounced: null,
       selectReceiptClient(id) {
         const branch = State.getActiveBranch();
         selectedReceiptClient = branch.clients.find(c => c.id === id);
@@ -1937,10 +2047,12 @@
         }
         const receiptMsg = `${state.company.name} REPAYMENT RECEIPT\nDate: ${txn.date}\nClient: ${selectedReceiptClient.name}\nPaid: ${Utils.formatUGX(txn.amount)}\nBalance: ${Utils.formatUGX(txn.newBalance)}`;
         if (channel === 'PRINT') Printer.printToXPrinter(receiptMsg);
-        else if (channel === 'WHATSAPP') window.open(`https://wa.me/${selectedReceiptClient.phone}?text=${encodeURIComponent(receiptMsg)}`, '_blank');
+        else if (channel === 'WHATSAPP') window.open(`https://wa.me/\( {selectedReceiptClient.phone}?text= \){encodeURIComponent(receiptMsg)}`, '_blank');
         else if (channel === 'SMS') SMS.dispatch(selectedReceiptClient.phone, receiptMsg, 'Manual Receipt');
       }
     };
+    Posting.searchClientsDebounced = Utils.debounce(q => Posting.searchClients(q), 260);
+    Posting.searchReceiptClientsDebounced = Utils.debounce(q => Posting.searchReceiptClients(q), 260);
 
     // ============================================================
     // DISBURSE
@@ -1978,12 +2090,12 @@
         const msgEl = document.getElementById("guarantor-exposure-msg");
         const submitBtn = document.getElementById("disburse-submit-btn");
         if (count >= 4) {
-          msgEl.innerHTML = `Guarantor <strong>${guarantorName}</strong> already guarantees <strong>${count}</strong> active clients. Maximum is 4.`;
+          msgEl.innerHTML = `Guarantor <strong>\( {guarantorName}</strong> already guarantees <strong> \){count}</strong> active clients. Maximum is 4.`;
           Utils.show(alertDiv);
           submitBtn.disabled = true;
           submitBtn.classList.add("opacity-50", "cursor-not-allowed");
         } else if (count >= 2) {
-          msgEl.innerHTML = `Guarantor <strong>${guarantorName}</strong> currently guarantees <strong>${count}</strong> active clients.`;
+          msgEl.innerHTML = `Guarantor <strong>\( {guarantorName}</strong> currently guarantees <strong> \){count}</strong> active clients.`;
           Utils.show(alertDiv);
           submitBtn.disabled = false;
           submitBtn.classList.remove("opacity-50", "cursor-not-allowed");
@@ -2001,7 +2113,7 @@
         const warnBox = document.getElementById("disburse-active-loan-warning");
         const submitBtn = document.getElementById("disburse-submit-btn");
         if (activeLoan) {
-          document.getElementById("disburse-active-loan-msg").innerHTML = `NIN <strong>${nin}</strong> has active balance of <strong>${Utils.formatUGX(activeLoan.balance)}</strong>. Must be zero.`;
+          document.getElementById("disburse-active-loan-msg").innerHTML = `NIN <strong>\( {nin}</strong> has active balance of <strong> \){Utils.formatUGX(activeLoan.balance)}</strong>. Must be zero.`;
           Utils.show(warnBox);
           submitBtn.disabled = true;
           submitBtn.classList.add("opacity-50", "cursor-not-allowed");
@@ -2033,11 +2145,12 @@
         );
         resultsDiv.innerHTML = filtered.map(c => `
           <div onclick="Disburse.selectByNin('${c.nin}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs">
-            <strong>${c.name}</strong> (${c.nin})
+            <strong>\( {c.name}</strong> ( \){c.nin})
           </div>
         `).join('');
         Utils.show(resultsDiv);
       },
+      searchClientsDebounced: null,
       selectByNin(nin) {
         const branch = State.getActiveBranch();
         const activeLoan = branch.clients.find(c => c.nin && c.nin.toUpperCase() === nin.toUpperCase() && (c.balance || 0) > 0);
@@ -2060,7 +2173,7 @@
           const count = this.checkGuarantorExposure(selectedDisburseClient.guarantor);
           const warnDiv = document.getElementById("disburse-guarantor-exposure-existing");
           if (count >= 4) {
-            warnDiv.innerText = `Guarantor (${selectedDisburseClient.guarantor}) is at maximum exposure (${count} clients)`;
+            warnDiv.innerText = `Guarantor (\( {selectedDisburseClient.guarantor}) is at maximum exposure ( \){count} clients)`;
             Utils.show(warnDiv);
           } else Utils.hide(warnDiv);
         }
@@ -2155,6 +2268,7 @@
         document.getElementById("disburse-principal").value = "";
       }
     };
+    Disburse.searchClientsDebounced = Utils.debounce(q => Disburse.searchClients(q), 260);
 
     // ============================================================
     // SAVINGS
@@ -2168,18 +2282,19 @@
           c.name.toLowerCase().includes(q) || (c.nin && c.nin.toLowerCase().includes(q))
         );
         resultsDiv.innerHTML = filtered.map(c => `
-          <div onclick="Savings.selectClient('${c.nin}', '${c.name.replace(/'/g, "\\'")}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs">
+          <div onclick="Savings.selectClient('\( {c.nin}', ' \){c.name.replace(/'/g, "\\'")}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs">
             <strong>${c.name}</strong>
           </div>
         `).join('');
         Utils.show(resultsDiv);
       },
+      searchClientsDebounced: null,
       selectClient(nin, name) {
         selectedSavingsNin = nin;
         Utils.hide("savings-search-results");
         const branch = State.getActiveBranch();
         if (!branch.savingsAccounts[nin]) branch.savingsAccounts[nin] = { balance: 0, history: [] };
-        document.getElementById("sav-client-name").innerText = `${name} (${nin})`;
+        document.getElementById("sav-client-name").innerText = `\( {name} ( \){nin})`;
         document.getElementById("sav-client-balance").innerText = (branch.savingsAccounts[nin].balance || 0).toLocaleString();
         Utils.show("savings-client-card");
       },
@@ -2213,6 +2328,7 @@
         CashPosition.render();
       }
     };
+    Savings.searchClientsDebounced = Utils.debounce(q => Savings.searchClients(q), 260);
 
     // ============================================================
     // LOAN OPS
@@ -2240,6 +2356,7 @@
         `).join('');
         Utils.show(resultsDiv);
       },
+      searchReversalClientsDebounced: null,
       selectReversalClient(id) {
         if (!['Administrator', 'Manager'].includes(state.currentUser?.role)) return;
         const branch = State.getActiveBranch();
@@ -2252,7 +2369,7 @@
         document.getElementById("rev-client-balance").innerText = (selectedReversalClient.balance || 0).toLocaleString();
         const select = document.getElementById("rev-transaction-select");
         const hist = (selectedReversalClient.history || []).filter(h => h.type === 'Repayment' || h.type === 'Disbursement');
-        select.innerHTML = hist.map((h, i) => `<option value="${i}">${h.date} — ${h.type} — ${Utils.formatUGX(h.amount)}</option>`).join('');
+        select.innerHTML = hist.map((h, i) => `<option value="\( {i}"> \){h.date} — ${h.type} — ${Utils.formatUGX(h.amount)}</option>`).join('');
         Utils.show("reversal-card");
       },
       executeReversal() {
@@ -2291,6 +2408,7 @@
         UI.refreshAll();
       }
     };
+    LoanOps.searchReversalClientsDebounced = Utils.debounce(q => LoanOps.searchReversalClients(q), 260);
 
     // ============================================================
     // CLIENTS
@@ -2315,22 +2433,23 @@
           const currentOfficerId = activeLoan ? activeLoan.officerId : '';
           const officerDropdown = `<select onchange="Clients.reassignOfficer('${c.nin}', this.value)" class="p-1.5 border rounded text-xs bg-slate-50 font-bold">
             <option value="">-- Assign --</option>` +
-            branch.officers.map(o => `<option value="${o.id}" ${currentOfficerId === o.id ? 'selected' : ''}>${o.name}</option>`).join('') +
+            branch.officers.map(o => `<option value="${o.id}" \( {currentOfficerId === o.id ? 'selected' : ''}> \){o.name}</option>`).join('') +
           `</select>`;
           return `<tr class="text-xs">
             <td class="p-3 font-mono font-bold text-purple-700">${c.nin}</td>
-            <td class="p-3"><strong>${c.name}</strong><br>${c.phone || ''}</td>
-            <td class="p-3">${c.guarantor || '-'}<br><span class="text-[10px] ${gCount >= 4 ? 'bg-red-200 text-red-900 font-bold px-1 rounded' : 'text-slate-400'}">${gCount} active</span></td>
+            <td class="p-3"><strong>\( {c.name}</strong><br> \){c.phone || ''}</td>
+            <td class="p-3">${c.guarantor || '-'}<br><span class="text-[10px] \( {gCount >= 4 ? 'bg-red-200 text-red-900 font-bold px-1 rounded' : 'text-slate-400'}"> \){gCount} active</span></td>
             <td class="p-3">${c.category || 'OTHERS'} ${c.plate ? '<br>' + c.plate : ''}</td>
             <td class="p-3">${officerDropdown}</td>
             <td class="p-3 font-bold text-emerald-600">${Utils.formatUGX(savBal)}</td>
             <td class="p-3 font-bold text-purple-700">${docs.length}</td>
             <td class="p-3 text-right flex gap-1 justify-end">
-              <button onclick="Clients.openDocModal('${c.nin}', '${c.name.replace(/'/g, "\\'")}')" class="bg-purple-700 text-white px-2 py-1 rounded font-bold text-[10px]">Docs</button>
+              <button onclick="Clients.openDocModal('\( {c.nin}', ' \){c.name.replace(/'/g, "\\'")}')" class="bg-purple-700 text-white px-2 py-1 rounded font-bold text-[10px]">Docs</button>
             </td>
           </tr>`;
         }).join('') || `<tr><td colspan="8" class="p-4 text-center text-slate-400">No clients</td></tr>`;
       },
+      renderMasterDirectoryDebounced: null,
       reassignOfficer(nin, newOfficerId) {
         const branch = State.getActiveBranch();
         let updated = 0;
@@ -2347,7 +2466,7 @@
       },
       openDocModal(nin, name) {
         activeDocNin = nin;
-        document.getElementById("doc-modal-client-info").innerText = `Client: ${name} (${nin})`;
+        document.getElementById("doc-modal-client-info").innerText = `Client: \( {name} ( \){nin})`;
         this.renderDocList();
         Utils.show("document-modal");
       },
@@ -2360,9 +2479,9 @@
         }
         listDiv.innerHTML = docs.map((d, i) => `
           <div class="p-2 border rounded bg-white flex justify-between items-center text-xs">
-            <div><strong>${d.label}</strong><br><span class="text-[10px] text-slate-400">${d.date}</span></div>
+            <div><strong>\( {d.label}</strong><br><span class="text-[10px] text-slate-400"> \){d.date}</span></div>
             <div class="flex gap-2">
-              <a href="${d.data}" download="${d.label}" class="text-blue-600 font-bold">Download</a>
+              <a href="\( {d.data}" download=" \){d.label}" class="text-blue-600 font-bold">Download</a>
               <button onclick="Clients.deleteDoc(${i})" class="text-red-500 font-bold">Delete</button>
             </div>
           </div>
@@ -2396,6 +2515,7 @@
         this.renderMasterDirectory();
       }
     };
+    Clients.renderMasterDirectoryDebounced = Utils.debounce(() => Clients.renderMasterDirectory(), 280);
 
     // ============================================================
     // DAILY WORKSPACE
@@ -2537,7 +2657,7 @@
           else if (a.type === 'MM Withdrawal') badge = 'bg-cyan-100 text-cyan-900 font-bold';
           return `
             <tr class="hover:bg-slate-50 text-xs">
-              <td class="p-3"><span class="px-2 py-1 rounded text-[10px] ${badge}">${a.type}</span></td>
+              <td class="p-3"><span class="px-2 py-1 rounded text-[10px] \( {badge}"> \){a.type}</span></td>
               <td class="p-3 font-bold">${a.source}</td>
               <td class="p-3">${a.narration}</td>
               <td class="p-3 text-slate-500 text-[10px]">${a.detail}</td>
@@ -2545,8 +2665,10 @@
             </tr>
           `;
         }).join('');
-      }
+      },
+      renderDebounced: null
     };
+    DailyWorkspace.renderDebounced = Utils.debounce(() => DailyWorkspace.render(), 280);
 
     // ============================================================
     // STAFF
@@ -2571,12 +2693,12 @@
       populateDropdowns() {
         const branch = State.getActiveBranch();
         const opts = `<option value="">-- Select Staff --</option>` +
-          branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+          branch.officers.map(o => `<option value="\( {o.id}"> \){o.name}</option>`).join('');
         const disb = document.getElementById("disburse-officer-select");
         if (disb) disb.innerHTML = opts;
         const aging = document.getElementById("aging-officer-filter");
         if (aging) aging.innerHTML = `<option value="ALL">-- ALL STAFF --</option>` +
-          branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+          branch.officers.map(o => `<option value="\( {o.id}"> \){o.name}</option>`).join('');
       },
       getPortfolioMetrics(officerId) {
         const branch = State.getActiveBranch();
@@ -2606,8 +2728,8 @@
             <div class="bg-white border-2 border-slate-200 rounded-2xl shadow-sm overflow-hidden">
               <div class="bg-slate-800 text-white px-4 py-3 flex justify-between items-start">
                 <div>
-                  <div class="font-bold text-sm" id="staff-name-${o.id}">${o.name}</div>
-                  <div class="text-[11px] text-slate-300" id="staff-phone-${o.id}">${o.phone || 'No phone'}</div>
+                  <div class="font-bold text-sm" id="staff-name-\( {o.id}"> \){o.name}</div>
+                  <div class="text-[11px] text-slate-300" id="staff-phone-\( {o.id}"> \){o.phone || 'No phone'}</div>
                 </div>
                 ${isAdmin ? `
                   <button onclick="Staff.editOfficer('${o.id}')" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded">
@@ -2643,7 +2765,7 @@
     };
 
     // ============================================================
-    // BANKING / EXPENSES / CAPITAL (RESTRICTED CAPITAL)
+    // BANKING / EXPENSES / CAPITAL
     // ============================================================
     const Banking = {
       recordDeposit() {
@@ -2713,26 +2835,28 @@
 
     const Capital = {
       submit() {
-        // STRICT RESTRICTION: Only Administrator can add capital (Managers are restricted)
+        // Only Administrator can add capital
         if (state.currentUser?.role !== 'Administrator') {
-          Utils.toast("Access Denied: Only Administrators can add capital. Managers and staff are restricted.");
+          Utils.toast("Access Denied: Only Administrators can add capital.");
           return;
         }
         const amt = parseFloat(document.getElementById("cap-amount").value);
         if (!Validation.isPositiveAmount(amt)) return;
+
+        // Capital is added DIRECTLY to Cash at Hand (no other adjustments)
         State.getActiveBranch().capitalizations.push({
           date: Utils.today(),
           amount: amt,
           narration: document.getElementById("cap-narration").value.trim(),
           status: "Approved"
         });
-        CashPosition.add('cash', amt);
+        CashPosition.add('cash', amt);   // ← direct addition to cash
         State.save();
         this.renderQueue();
         Reports.updateDashboard();
         DailyWorkspace.render();
         CashPosition.render();
-        Utils.toast("Capital added");
+        Utils.toast("Capital injected directly into Cash at Hand");
         document.getElementById("cap-amount").value = "";
         document.getElementById("cap-narration").value = "";
       },
@@ -2740,14 +2864,14 @@
         const branch = State.getActiveBranch();
         document.getElementById("capital-approval-list").innerHTML = branch.capitalizations.map(c => `
           <div class="bg-white p-2 border rounded text-xs">
-            ${Utils.formatUGX(c.amount)} — ${c.narration || 'Capital'} (${c.date})
+            ${Utils.formatUGX(c.amount)} — \( {c.narration || 'Capital'} ( \){c.date})
           </div>
         `).join('') || `<p class="text-slate-400 text-center">No capital records</p>`;
       }
     };
 
     // ============================================================
-    // REPORTS & AUTOMATED SUMMARY TEXT GENERATION
+    // REPORTS
     // ============================================================
     const Reports = {
       computeFullReport() {
@@ -2942,7 +3066,7 @@
           : managers.map(m => `
             <label class="flex items-center gap-2 cursor-pointer font-medium">
               <input type="checkbox" value="${m.phone}" checked class="mgr-whatsapp-chk rounded">
-              <span>${m.name} (${m.phone})</span>
+              <span>\( {m.name} ( \){m.phone})</span>
             </label>
           `).join('');
         document.getElementById("whatsapp-report-preview").value = this.getReportText();
@@ -2957,7 +3081,7 @@
         const text = encodeURIComponent(this.getReportText());
         checkboxes.forEach((chk, index) => {
           setTimeout(() => {
-            window.open(`https://wa.me/${chk.value}?text=${text}`, '_blank');
+            window.open(`https://wa.me/\( {chk.value}?text= \){text}`, '_blank');
           }, index * 500);
         });
         Utils.hide("whatsapp-report-modal");
@@ -3010,17 +3134,17 @@
           const rows = clients.length > 0 ? clients.map((c, idx) => `
             <tr class="hover:bg-slate-50 border-b text-xs">
               <td class="p-3">${idx + 1}</td>
-              <td class="p-3"><strong>${c.name}</strong><br><span class="text-slate-500 text-[10px]">${c.phone || ''}</span></td>
+              <td class="p-3"><strong>\( {c.name}</strong><br><span class="text-slate-500 text-[10px]"> \){c.phone || ''}</span></td>
               <td class="p-3">${c.guarantor || '-'}</td>
               <td class="p-3 font-mono">${Utils.formatUGX(c.principal || 0)}</td>
               <td class="p-3 font-mono font-bold text-blue-700">${Utils.formatUGX(c.balance || 0)}</td>
               <td class="p-3 font-mono font-bold text-red-600">${Utils.formatUGX(c.arrears || 0)}</td>
-              <td class="p-3 font-bold ${(c.overdueDays || 0) >= 90 ? 'text-red-600' : (c.overdueDays || 0) > 0 ? 'text-amber-700' : 'text-emerald-600'}">${c.overdueDays || 0}d</td>
+              <td class="p-3 font-bold \( {(c.overdueDays || 0) >= 90 ? 'text-red-600' : (c.overdueDays || 0) > 0 ? 'text-amber-700' : 'text-emerald-600'}"> \){c.overdueDays || 0}d</td>
             </tr>
           `).join('') : `<tr><td colspan="7" class="p-4 text-center text-slate-400">No clients</td></tr>`;
           return `
             <div class="bg-white border rounded-2xl shadow-sm overflow-hidden p-4 space-y-3">
-              <div class="font-bold text-sm">${officer.name} (${officer.phone || 'No phone'})</div>
+              <div class="font-bold text-sm">\( {officer.name} ( \){officer.phone || 'No phone'})</div>
               <div class="overflow-x-auto border rounded-xl">
                 <table class="w-full text-left border-collapse text-xs">
                   <thead>
@@ -3046,7 +3170,7 @@
         const branch = State.getActiveBranch();
         let csv = 'Name,Phone,Guarantor,Principal,Balance,Arrears,Aging Days\n';
         branch.clients.forEach(c => {
-          csv += `"${c.name}","${c.phone || ''}","${c.guarantor || ''}",${c.principal || 0},${c.balance || 0},${c.arrears || 0},${c.overdueDays || 0}\n`;
+          csv += `"\( {c.name}"," \){c.phone || ''}","\( {c.guarantor || ''}", \){c.principal || 0},\( {c.balance || 0}, \){c.arrears || 0},${c.overdueDays || 0}\n`;
         });
         const blob = new Blob([csv], { type: 'text/csv' });
         const link = document.createElement('a');
@@ -3061,7 +3185,7 @@
         const doc = new jsPDF('landscape');
         const branch = State.getActiveBranch();
         doc.setFontSize(14);
-        doc.text(`${state.company.name} - Aging Report (${Utils.today()})`, 14, 20);
+        doc.text(`\( {state.company.name} - Aging Report ( \){Utils.today()})`, 14, 20);
         doc.autoTable({
           startY: 28,
           head: [['Name', 'Phone', 'Guarantor', 'Principal', 'Balance', 'Arrears', 'Aging']],
@@ -3106,7 +3230,7 @@
       dispatch(phone, message, triggerAction) {
         if (!phone) return;
         const networkCarrier = document.getElementById("sms-preferred-network")?.value || "MTN";
-        const smsLink = `sms:${phone}?body=${encodeURIComponent(message)}`;
+        const smsLink = `sms:\( {phone}?body= \){encodeURIComponent(message)}`;
         const logEntry = {
           timestamp: Utils.now(),
           phone,
@@ -3164,7 +3288,7 @@
         if (!select) return;
         const branch = State.getActiveBranch();
         select.innerHTML = `<option value="">-- Choose Client --</option>` +
-          branch.clients.map(c => `<option value="${c.id}">${c.name} (${c.phone || 'No Phone'})</option>`).join('');
+          branch.clients.map(c => `<option value="\( {c.id}"> \){c.name} (${c.phone || 'No Phone'})</option>`).join('');
       },
       renderLogs() {
         const tbody = document.getElementById("sms-logs-table-body");
@@ -3300,4 +3424,4 @@
     };
   </script>
 </body>
-</html>
+  </html>

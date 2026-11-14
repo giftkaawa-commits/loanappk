@@ -1995,6 +1995,7 @@
           if (client) {
             const prevBal = client.balance || 0;
             client.balance = Math.max(0, prevBal - item.amount);
+            State.recalculateClientStatus(client);
             if (!client.history) client.history = [];
             client.history.push({
               type: 'Repayment',
@@ -2004,11 +2005,11 @@
               time: Utils.timeNow(),
               channel: item.channel,
               prevBalance: prevBal,
-              newBalance: client.balance
+              newBalance: client.balance,
+              arrears: client.arrears || 0
             });
-            State.recalculateClientStatus(client);
             CashPosition.add(item.channel, item.amount);
-            receiptText += `${client.name}: Paid ${Utils.formatUGX(item.amount)}\nBal: ${Utils.formatUGX(client.balance)}\n--------------------------------\n`;
+            receiptText += `${client.name}: Paid ${Utils.formatUGX(item.amount)} | Arrears: ${Utils.formatUGX(client.arrears || 0)} | Bal: ${Utils.formatUGX(client.balance)}\n--------------------------------\n`;
             const template = state.smsTemplates?.repayment || "Dear {name}, payment of {amount} received. New balance: {balance}.";
             const msg = template
               .replace(/{name}/g, client.name)
@@ -2069,15 +2070,42 @@
           Utils.toast("Select a client from the search results");
           return;
         }
-        const txn = (selectedReceiptClient.history || []).find(h => h.date === searchDate && h.type === 'Repayment');
+        const txn = (selectedReceiptClient.history || []).find(h => h.date === searchDate && (h.type === 'Repayment' || h.type === 'Disbursement'));
         if (!txn) {
-          Utils.toast("No repayment found on that date for this client");
+          Utils.toast("No transaction found on that date for this client");
           return;
         }
-        const receiptMsg = `${state.company.name} REPAYMENT RECEIPT\nDate: ${txn.date}\nClient: ${selectedReceiptClient.name}\nPaid: ${Utils.formatUGX(txn.amount)}\nBalance: ${Utils.formatUGX(txn.newBalance)}`;
-        if (channel === 'PRINT') Printer.printToXPrinter(receiptMsg);
-        else if (channel === 'WHATSAPP') window.open(`https://wa.me/${selectedReceiptClient.phone}?text=${encodeURIComponent(receiptMsg)}`, '_blank');
-        else if (channel === 'SMS') SMS.dispatch(selectedReceiptClient.phone, receiptMsg, 'Manual Receipt');
+        const receiptType = txn.type === 'Repayment' ? 'REPAYMENT RECEIPT' : 'SAVING/DISBURSEMENT RECEIPT';
+        const paidAmount = txn.amount || 0;
+        const arrearsVal = txn.arrears !== undefined ? txn.arrears : (selectedReceiptClient.arrears || 0);
+        const outBal = txn.newBalance !== undefined ? txn.newBalance : (selectedReceiptClient.balance || 0);
+
+        if (channel === 'WHATSAPP') {
+          // WhatsApp PDF formatted layout:
+          // Heading: Company Logo (if available), Name of company, dates, receipt type centered
+          // Others starting from the margin.
+          let text = "";
+          if (state.company.logo) {
+            text += `[Company Logo]\n`;
+          }
+          text += `${state.company.name}\n`;
+          text += `Date: ${txn.date}\n`;
+          text += `Type: ${receiptType}\n`;
+          text += `--------------------------------\n`;
+          text += `Client Name: ${selectedReceiptClient.name}\n`;
+          text += `Amount Paid: ${Utils.formatUGX(paidAmount)}\n`;
+          text += `Arrears: ${Utils.formatUGX(arrearsVal)}\n`;
+          text += `Outstanding Balance: ${Utils.formatUGX(outBal)}\n`;
+          text += `--------------------------------`;
+
+          const waUrl = `https://wa.me/${selectedReceiptClient.phone}?text=${encodeURIComponent(text)}`;
+          window.open(waUrl, '_blank');
+          Utils.toast("WhatsApp receipt generated");
+        } else {
+          const receiptMsg = `${state.company.name}\nDate: ${txn.date}\nType: ${receiptType}\n--------------------------------\nClient: ${selectedReceiptClient.name}\nAmount Paid: ${Utils.formatUGX(paidAmount)}\nArrears: ${Utils.formatUGX(arrearsVal)}\nOutstanding Balance: ${Utils.formatUGX(outBal)}`;
+          if (channel === 'PRINT') Printer.printToXPrinter(receiptMsg);
+          else if (channel === 'SMS') SMS.dispatch(selectedReceiptClient.phone, receiptMsg, 'Manual Receipt');
+        }
       }
     };
     Posting.searchClientsDebounced = Utils.debounce(q => Posting.searchClients(q), 260);
@@ -3334,7 +3362,7 @@
           });
           const rows = clients.length > 0 ? clients.map((c, idx) => `
             <tr class="hover:bg-slate-50 border-b text-xs">
-              <td class="p-3">${idx + 1}</td>
+              <td class="p-3">${String(idx + 1).padStart(2, '0')}</td>
               <td class="p-3"><strong>${c.name}</strong><br><span class="text-slate-500 text-[10px]">${c.phone || ''}</span></td>
               <td class="p-3">${c.guarantor || '-'}</td>
               <td class="p-3 font-mono">${Utils.formatUGX(c.principal || 0)}</td>
@@ -3343,6 +3371,18 @@
               <td class="p-3 font-bold ${(c.overdueDays || 0) >= 90 ? 'text-red-600' : (c.overdueDays || 0) > 0 ? 'text-amber-700' : 'text-emerald-600'}">${c.overdueDays || 0}d</td>
             </tr>
           `).join('') : `<tr><td colspan="7" class="p-4 text-center text-slate-400">No clients</td></tr>`;
+
+          // Total row for the officer's aging table
+          const totalRow = clients.length > 0 ? `
+            <tr class="bg-slate-100 font-bold text-xs border-t-2 border-slate-300">
+              <td class="p-3" colspan="3">TOTAL</td>
+              <td class="p-3 font-mono">${Utils.formatUGX(offPrin)}</td>
+              <td class="p-3 font-mono text-blue-700">${Utils.formatUGX(offBal)}</td>
+              <td class="p-3 font-mono text-red-600">${Utils.formatUGX(offArr)}</td>
+              <td class="p-3"></td>
+            </tr>
+          ` : '';
+
           return `
             <div class="bg-white border rounded-2xl shadow-sm overflow-hidden p-4 space-y-3">
               <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b pb-2">
@@ -3367,7 +3407,7 @@
                       <th class="p-3">Aging</th>
                     </tr>
                   </thead>
-                  <tbody>${rows}</tbody>
+                  <tbody>${rows}${totalRow}</tbody>
                 </table>
               </div>
             </div>
@@ -3377,9 +3417,9 @@
       exportCSV() {
         State.runDailyAging();
         const branch = State.getActiveBranch();
-        let csv = 'Name,Phone,Guarantor,Principal,Balance,Arrears,Aging Days\n';
-        branch.clients.forEach(c => {
-          csv += `"${c.name}","${c.phone || ''}","${c.guarantor || ''}",${c.principal || 0},${c.balance || 0},${c.arrears || 0},${c.overdueDays || 0}\n`;
+        let csv = 'No,Name,Phone,Guarantor,Principal,Balance,Arrears,Aging Days\n';
+        branch.clients.forEach((c, idx) => {
+          csv += `${String(idx + 1).padStart(2, '0')},"${c.name}","${c.phone || ''}","${c.guarantor || ''}",${c.principal || 0},${c.balance || 0},${c.arrears || 0},${c.overdueDays || 0}\n`;
         });
         const blob = new Blob([csv], { type: 'text/csv' });
         const link = document.createElement('a');
@@ -3397,9 +3437,9 @@
         doc.text(`${state.company.name} - Aging Report (${Utils.today()})`, 14, 20);
         doc.autoTable({
           startY: 28,
-          head: [['Name', 'Phone', 'Guarantor', 'Principal', 'Balance', 'Arrears', 'Aging']],
-          body: branch.clients.map(c => [
-            c.name, c.phone || '', c.guarantor || '',
+          head: [['No', 'Name', 'Phone', 'Guarantor', 'Principal', 'Balance', 'Arrears', 'Aging']],
+          body: branch.clients.map((c, idx) => [
+            String(idx + 1).padStart(2, '0'), c.name, c.phone || '', c.guarantor || '',
             Utils.formatUGX(c.principal), Utils.formatUGX(c.balance),
             Utils.formatUGX(c.arrears), `${c.overdueDays || 0}d`
           ]),

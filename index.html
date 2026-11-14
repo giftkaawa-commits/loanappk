@@ -1693,8 +1693,6 @@
          "nav-btn-tab-admin-settings"].forEach(show);
 
         if (role === 'Accountant') {
-          // Accountant has access to Bankings, Reports, Staff, Expenses, Clients & Docs,
-          // Aging & PAR, Local & Bulk SMS, Defaulters, plus core Posting/Disburse/Savings/Cash/Daily Workspace.
           hide("nav-btn-tab-loan-ops");
           hide("nav-btn-tab-capital");
           hide("nav-btn-tab-admin-settings");
@@ -2687,7 +2685,6 @@
           }
         });
 
-        // Sort strictly according to how transactions were entered/done (oldest to newest)
         activities.sort((a, b) => {
           if (a.timestamp !== b.timestamp) return a.timestamp - b.timestamp;
           return a.seq - b.seq;
@@ -3172,21 +3169,26 @@
         const branch = State.getActiveBranch();
         State.runDailyAging();
         const activeLoans = branch.clients.filter(c => (c.balance || 0) > 0);
-        let totalPortfolio = 0, totalArrears = 0;
+        let totalPortfolio = 0, totalPrincipal = 0, totalArrears = 0;
         activeLoans.forEach(c => {
           totalPortfolio += c.balance || 0;
+          totalPrincipal += c.principal || 0;
           totalArrears += c.arrears || 0;
         });
         const summaryBox = document.getElementById("par-metrics-summary-box");
         if (summaryBox) {
           summaryBox.innerHTML = `
-            <div class="bg-emerald-900 text-white p-4 rounded-2xl grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
+            <div class="bg-emerald-900 text-white p-4 rounded-2xl grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
               <div>
-                <span class="text-emerald-300 block text-[10px]">Active Borrowers</span>
+                <span class="text-emerald-300 block text-[10px]">Number of Clients</span>
                 <span class="font-black text-base">${activeLoans.length}</span>
               </div>
               <div>
-                <span class="text-emerald-300 block text-[10px]">Portfolio Outstanding</span>
+                <span class="text-emerald-300 block text-[10px]">Total Principal</span>
+                <span class="font-black text-cyan-300 text-base">${Utils.formatUGX(totalPrincipal)}</span>
+              </div>
+              <div>
+                <span class="text-emerald-300 block text-[10px]">Total Balance (Outstanding)</span>
                 <span class="font-black text-amber-300 text-base">${Utils.formatUGX(totalPortfolio)}</span>
               </div>
               <div>
@@ -3206,6 +3208,12 @@
         }
         container.innerHTML = officers.map(officer => {
           const clients = branch.clients.filter(c => c.officerId === officer.id);
+          let offPrin = 0, offBal = 0, offArr = 0;
+          clients.forEach(c => {
+            offPrin += c.principal || 0;
+            offBal += c.balance || 0;
+            offArr += c.arrears || 0;
+          });
           const rows = clients.length > 0 ? clients.map((c, idx) => `
             <tr class="hover:bg-slate-50 border-b text-xs">
               <td class="p-3">${idx + 1}</td>
@@ -3219,7 +3227,15 @@
           `).join('') : `<tr><td colspan="7" class="p-4 text-center text-slate-400">No clients</td></tr>`;
           return `
             <div class="bg-white border rounded-2xl shadow-sm overflow-hidden p-4 space-y-3">
-              <div class="font-bold text-sm">${officer.name} (${officer.phone || 'No phone'})</div>
+              <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b pb-2">
+                <div class="font-bold text-sm text-slate-900"><i class="fa-solid fa-user-tie text-teal-600 mr-1"></i> ${officer.name} (${officer.phone || 'No phone'})</div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-right text-[11px]">
+                  <div class="bg-slate-100 px-2 py-1 rounded"><span class="text-slate-500 block text-[9px]">Clients:</span> <strong class="text-slate-900">${clients.length}</strong></div>
+                  <div class="bg-slate-100 px-2 py-1 rounded"><span class="text-slate-500 block text-[9px]">Principal:</span> <strong class="text-slate-900">${Utils.formatUGX(offPrin)}</strong></div>
+                  <div class="bg-slate-100 px-2 py-1 rounded"><span class="text-slate-500 block text-[9px]">Total:</span> <strong class="text-blue-700">${Utils.formatUGX(offBal)}</strong></div>
+                  <div class="bg-slate-100 px-2 py-1 rounded"><span class="text-slate-500 block text-[9px]">Arrears:</span> <strong class="text-red-600">${Utils.formatUGX(offArr)}</strong></div>
+                </div>
+              </div>
               <div class="overflow-x-auto border rounded-xl">
                 <table class="w-full text-left border-collapse text-xs">
                   <thead>

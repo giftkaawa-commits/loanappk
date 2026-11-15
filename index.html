@@ -430,6 +430,7 @@
 
       <div class="bg-white border p-4 rounded-xl text-xs space-y-2 shadow-sm">
         <div class="flex justify-between"><span>Principal:</span> <span id="dis-base" class="font-bold">UGX 0</span></div>
+        <div class="flex justify-between text-amber-700"><span>Processing Fee:</span> <span id="dis-fee" class="font-bold">UGX 0</span></div>
         <div class="flex justify-between dyn-text"><span>Interest:</span> <span id="dis-interest" class="font-bold">UGX 0</span></div>
         <hr>
         <div class="flex justify-between font-bold text-sm"><span>Total Payable:</span> <span id="dis-total">UGX 0</span></div>
@@ -1001,6 +1002,35 @@
         </div>
       </div>
 
+      <!-- Processing Fee Tiers (Admin Settings) -->
+      <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
+        <h3 class="font-bold text-sm border-b pb-2 flex items-center gap-2 text-amber-700">
+          <i class="fa-solid fa-money-check-dollar"></i> Processing Fee Tiers (Admin Control)
+        </h3>
+        <p class="text-xs text-slate-600">Configure processing fees applied prior to loan disbursement based on principal ranges.</p>
+        <div class="overflow-x-auto border rounded-xl">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="bg-slate-800 text-white text-[11px]">
+                <th class="p-3">Min Principal (UGX)</th>
+                <th class="p-3">Max Principal (UGX)</th>
+                <th class="p-3">Fee Charge (UGX)</th>
+                <th class="p-3 text-right">Action</th>
+              </tr>
+            </thead>
+            <tbody id="fee-tiers-tbody" class="divide-y"></tbody>
+          </table>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-2 text-xs">
+          <input type="number" id="new-fee-min" placeholder="Min Principal" class="p-2 border rounded-lg bg-slate-50">
+          <input type="number" id="new-fee-max" placeholder="Max Principal (or 999999999)" class="p-2 border rounded-lg bg-slate-50">
+          <input type="number" id="new-fee-amt" placeholder="Fee Amount" class="p-2 border rounded-lg bg-slate-50">
+        </div>
+        <button onclick="AdminSettings.addFeeTier()" class="w-full bg-amber-600 hover:bg-amber-700 text-white py-2 rounded-xl text-xs font-bold">
+          + Add / Update Fee Tier
+        </button>
+      </div>
+
       <!-- SMS Template -->
       <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
         <h3 class="font-bold text-sm border-b pb-2 flex items-center gap-2">
@@ -1189,6 +1219,16 @@
       smsTemplates: {
         repayment: "Dear {name}, payment of {amount} received. New balance: {balance}. Thank you. - PMMS"
       },
+      loanFeeTiers: [
+        { min: 5000, max: 100000, fee: 5000 },
+        { min: 100001, max: 250000, fee: 10000 },
+        { min: 250001, max: 400000, fee: 14000 },
+        { min: 400001, max: 500000, fee: 18000 },
+        { min: 500001, max: 650000, fee: 22000 },
+        { min: 650001, max: 850000, fee: 26000 },
+        { min: 850001, max: 1100000, fee: 30000 },
+        { min: 1100001, max: 999999999, fee: 50000 }
+      ],
       cashPosition: { cash: 0, mtn: 0, airtel: 0 },
       branchData: {
         clients: [],
@@ -1276,6 +1316,18 @@
             state = { ...state, ...parsed };
             if (!state.cashPosition) state.cashPosition = { cash: 0, mtn: 0, airtel: 0 };
             if (!state.smsTemplates) state.smsTemplates = { repayment: "Dear {name}, payment of {amount} received. New balance: {balance}. Thank you. - PMMS" };
+            if (!state.loanFeeTiers) {
+              state.loanFeeTiers = [
+                { min: 5000, max: 100000, fee: 5000 },
+                { min: 100001, max: 250000, fee: 10000 },
+                { min: 250001, max: 400000, fee: 14000 },
+                { min: 400001, max: 500000, fee: 18000 },
+                { min: 500001, max: 650000, fee: 22000 },
+                { min: 650001, max: 850000, fee: 26000 },
+                { min: 850001, max: 1100000, fee: 30000 },
+                { min: 1100001, max: 999999999, fee: 50000 }
+              ];
+            }
             if (!state.branchData.mmWithdrawals) state.branchData.mmWithdrawals = [];
             if (!state.pendingRegistration) state.pendingRegistration = null;
           } catch (e) {}
@@ -1532,6 +1584,7 @@
           document.getElementById("set-company-contact").value = state.company.contact || "";
           document.getElementById("set-company-location").value = state.company.location || "";
           document.getElementById("set-company-about").value = state.company.about || "";
+          AdminSettings.renderFeeTiersTable();
         }
       },
       show(id) { Utils.show(id); },
@@ -1763,6 +1816,24 @@
     };
 
     // ============================================================
+    // LOAN FEE CALCULATION ENGINE
+    // ============================================================
+    const LoanFees = {
+      calculate(principal) {
+        const p = Number(principal) || 0;
+        if (p <= 0) return 0;
+        const tiers = state.loanFeeTiers || [];
+        for (let tier of tiers) {
+          if (p >= tier.min && p <= tier.max) {
+            return tier.fee;
+          }
+        }
+        // Fallback for amounts exceeding standard tiers (e.g. 1.2M and above)
+        return 50000;
+      }
+    };
+
+    // ============================================================
     // ADMIN SETTINGS
     // ============================================================
     const AdminSettings = {
@@ -1791,6 +1862,53 @@
         State.save();
         State.updateCompanyHeader();
         Utils.toast("Company profile saved");
+      },
+      renderFeeTiersTable() {
+        const tbody = document.getElementById("fee-tiers-tbody");
+        if (!tbody) return;
+        const tiers = state.loanFeeTiers || [];
+        tbody.innerHTML = tiers.map((t, idx) => `
+          <tr>
+            <td class="p-3 font-mono">${t.min.toLocaleString()}</td>
+            <td class="p-3 font-mono">${t.max >= 999999999 ? '1.2M and above' : t.max.toLocaleString()}</td>
+            <td class="p-3 font-mono font-bold text-amber-700">${t.fee.toLocaleString()}</td>
+            <td class="p-3 text-right">
+              <button onclick="AdminSettings.deleteFeeTier(${idx})" class="bg-red-600 text-white px-2 py-0.5 rounded text-[10px]">Delete</button>
+            </td>
+          </tr>
+        `).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No fee tiers configured</td></tr>`;
+      },
+      addFeeTier() {
+        if (state.currentUser?.role !== 'Administrator') {
+          Utils.toast("Access Denied: Admin only");
+          return;
+        }
+        const min = parseFloat(document.getElementById("new-fee-min").value);
+        const max = parseFloat(document.getElementById("new-fee-max").value);
+        const fee = parseFloat(document.getElementById("new-fee-amt").value);
+        if (isNaN(min) || isNaN(max) || isNaN(fee)) {
+          Utils.toast("Provide valid minimum, maximum and fee amounts");
+          return;
+        }
+        if (!state.loanFeeTiers) state.loanFeeTiers = [];
+        state.loanFeeTiers.push({ min, max, fee });
+        state.loanFeeTiers.sort((a, b) => a.min - b.min);
+        State.save();
+        this.renderFeeTiersTable();
+        Utils.toast("Fee tier added/updated successfully");
+        document.getElementById("new-fee-min").value = "";
+        document.getElementById("new-fee-max").value = "";
+        document.getElementById("new-fee-amt").value = "";
+      },
+      deleteFeeTier(idx) {
+        if (state.currentUser?.role !== 'Administrator') {
+          Utils.toast("Admin only");
+          return;
+        }
+        state.loanFeeTiers.splice(idx, 1);
+        State.save();
+        this.renderFeeTiersTable();
+        Utils.toast("Fee tier removed");
       },
       saveSmsTemplate() {
         if (state.currentUser?.role !== 'Administrator') {
@@ -2081,9 +2199,6 @@
         const outBal = txn.newBalance !== undefined ? txn.newBalance : (selectedReceiptClient.balance || 0);
 
         if (channel === 'WHATSAPP') {
-          // WhatsApp PDF formatted layout:
-          // Heading: Company Logo (if available), Name of company, dates, receipt type centered
-          // Others starting from the margin.
           let text = "";
           if (state.company.logo) {
             text += `[Company Logo]\n`;
@@ -2238,13 +2353,15 @@
       liveCalculate() {
         const p = parseFloat(document.getElementById("disburse-principal").value) || 0;
         const r = parseFloat(document.getElementById("disburse-rate").value) || 0;
-        const d = parseFloat(document.getElementById("disburse-days").value) || 30;
+        const days = parseFloat(document.getElementById("disburse-days").value) || 30;
+        const fee = LoanFees.calculate(p);
         const interest = p * (r / 100);
         const tot = p + interest;
         document.getElementById("dis-base").innerText = Utils.formatUGX(p);
+        document.getElementById("dis-fee").innerText = Utils.formatUGX(fee);
         document.getElementById("dis-interest").innerText = Utils.formatUGX(interest);
         document.getElementById("dis-total").innerText = Utils.formatUGX(tot);
-        document.getElementById("dis-daily").innerText = Utils.formatUGX(Math.round(tot / d));
+        document.getElementById("dis-daily").innerText = Utils.formatUGX(Math.round(tot / days));
       },
       process() {
         const isNew = document.querySelector('input[name="client-type"]:checked').value === "new";
@@ -2290,17 +2407,21 @@
             return;
           }
         }
+        const fee = LoanFees.calculate(p);
+        const netDisburseAmount = p - fee;
         const interest = p * (r / 100);
         const total = p + interest;
         const deadline = new Date();
         deadline.setDate(deadline.getDate() + days);
         const nowTs = Date.now();
         const nowTime = Utils.timeNow();
+        
         branch.clients.push({
           id: Utils.generateId("cli"),
           nin, name, phone, address, guarantor, guarantorPhone, category, plate,
           officerId,
           principal: p,
+          processingFee: fee,
           interestAmount: interest,
           initialBalance: total,
           balance: total,
@@ -2319,14 +2440,15 @@
             timestamp: nowTs,
             time: nowTime,
             principal: p,
+            processingFee: fee,
             interest: interest
           }]
         });
         if (!branch.savingsAccounts[nin]) branch.savingsAccounts[nin] = { balance: 0, history: [] };
-        CashPosition.deduct('cash', p);
-        SMS.dispatch(phone, `PMMS Loan Disbursed: ${Utils.formatUGX(p)}. Total payable: ${Utils.formatUGX(total)}. Daily: ${Utils.formatUGX(Math.round(total / days))}`, 'Disbursement');
+        CashPosition.deduct('cash', netDisburseAmount);
+        SMS.dispatch(phone, `PMMS Loan Disbursed: ${Utils.formatUGX(p)} (Fee: ${Utils.formatUGX(fee)}). Total payable: ${Utils.formatUGX(total)}. Daily: ${Utils.formatUGX(Math.round(total / days))}`, 'Disbursement');
         State.save();
-        Utils.toast("Loan disbursed successfully");
+        Utils.toast(`Loan disbursed successfully (Fee charged: ${Utils.formatUGX(fee)})`);
         UI.refreshAll();
         document.getElementById("disburse-principal").value = "";
       }
@@ -2460,7 +2582,7 @@
           CashPosition.deduct(txn.channel || 'cash', txn.amount);
         } else if (txn.type === 'Disbursement') {
           selectedReversalClient.balance = Math.max(0, (selectedReversalClient.balance || 0) - txn.amount);
-          CashPosition.add('cash', txn.principal || txn.amount);
+          CashPosition.add('cash', (txn.principal || txn.amount) - (txn.processingFee || 0));
         }
         selectedReversalClient.history.push({
           type: 'Reversal',
@@ -2631,7 +2753,7 @@
               source: c.name,
               officerId: c.officerId,
               narration: 'New Loan',
-              detail: `Principal ${Utils.formatUGX(c.principal || 0)}`,
+              detail: `Principal ${Utils.formatUGX(c.principal || 0)} (Fee: ${Utils.formatUGX(c.processingFee || 0)})`,
               amount: c.principal || 0
             });
           }
@@ -3098,7 +3220,11 @@
         const activeClients = branch.clients.filter(c => (c.balance || 0) > 0);
         const totalActiveClients = activeClients.length;
         const paidToday = new Set();
+        let totalProcessingFeeCollectedToday = 0;
         branch.clients.forEach(c => {
+          if (c.dateDisbursed === today && c.processingFee) {
+            totalProcessingFeeCollectedToday += c.processingFee;
+          }
           (c.history || []).forEach(h => {
             if (h.type === 'Repayment' && h.date === today) paidToday.add(c.id);
           });
@@ -3166,7 +3292,7 @@
           totalSaving, totalLoansDisbursed, totalAmountDisbursed, totalExpenses,
           principalCollected: Math.round(principalCollected),
           interestCollected: Math.round(interestCollected),
-          processingFee: 0, totalLoanPortfolio,
+          processingFee: totalProcessingFeeCollectedToday, totalLoanPortfolio,
           principalBalance: Math.round(principalBalance),
           interestBalance: Math.round(interestBalance),
           savingWithdraws, closingCash, cashAtHand, mtn, airtel
@@ -3222,8 +3348,8 @@
             <span class="text-lg font-bold text-emerald-300">${Utils.formatUGX(r.interestCollected)}</span>
           </div>
           <div class="bg-slate-700/60 p-3 rounded-xl">
-            <span class="text-slate-400 block text-[10px]">Processing Fee</span>
-            <span class="text-lg font-bold text-slate-300">${Utils.formatUGX(r.processingFee)}</span>
+            <span class="text-slate-400 block text-[10px]">Processing Fee (Today)</span>
+            <span class="text-lg font-bold text-amber-300">${Utils.formatUGX(r.processingFee)}</span>
           </div>
           <div class="bg-slate-700/60 p-3 rounded-xl">
             <span class="text-slate-400 block text-[10px]">Total Loan Portfolio</span>
@@ -3261,6 +3387,7 @@
           `Total Expenses: ${Utils.formatUGX(r.totalExpenses)}\n` +
           `Principal Collected: ${Utils.formatUGX(r.principalCollected)}\n` +
           `Interest Collected: ${Utils.formatUGX(r.interestCollected)}\n` +
+          `Processing Fee: ${Utils.formatUGX(r.processingFee)}\n` +
           `Loan Portfolio: ${Utils.formatUGX(r.totalLoanPortfolio)}\n` +
           `Principal Balance: ${Utils.formatUGX(r.principalBalance)}\n` +
           `Interest Balance: ${Utils.formatUGX(r.interestBalance)}\n` +
@@ -3372,7 +3499,6 @@
             </tr>
           `).join('') : `<tr><td colspan="7" class="p-4 text-center text-slate-400">No clients</td></tr>`;
 
-          // Total row for the officer's aging table
           const totalRow = clients.length > 0 ? `
             <tr class="bg-slate-100 font-bold text-xs border-t-2 border-slate-300">
               <td class="p-3" colspan="3">TOTAL</td>
@@ -3669,6 +3795,7 @@
       UI.refreshAll();
       DailyWorkspace.setToday();
       AdminSettings.renderManagersList();
+      AdminSettings.renderFeeTiersTable();
       if (!navigator.onLine) Utils.show("offline-banner");
     };
   </script>

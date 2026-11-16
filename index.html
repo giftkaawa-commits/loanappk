@@ -1030,6 +1030,24 @@
                 </div>
             </div>
 
+            <!-- TIME FORMAT SETTING -->
+            <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
+                <h3 class="font-bold text-sm border-b pb-2 flex items-center gap-2 text-indigo-700">
+                    <i class="fa-solid fa-clock"></i> Time Display Format
+                </h3>
+                <p class="text-xs text-slate-600">Choose whether the system displays times in 12-hour (AM/PM) or 24-hour format. This affects new timestamps, receipts, daily workspace, and reports.</p>
+                <div class="flex items-center justify-between p-3 bg-slate-50 border rounded-xl text-xs">
+                    <div>
+                        <span class="font-bold text-slate-900 block">Clock Format</span>
+                        <span class="text-slate-500 text-[11px]">Applies to all newly generated times across the system.</span>
+                    </div>
+                    <select id="setting-time-format" onchange="AdminSettings.setTimeFormat(this.value)" class="p-2.5 border rounded-lg bg-white font-bold text-xs min-w-[160px]">
+                        <option value="24">24-hour (14:30:00)</option>
+                        <option value="12">12-hour (2:30:00 PM)</option>
+                    </select>
+                </div>
+            </div>
+
             <!-- Processing Fee Tiers (Admin Settings) -->
             <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
                 <h3 class="font-bold text-sm border-b pb-2 flex items-center gap-2 text-amber-700">
@@ -1240,7 +1258,8 @@
                 logo: ""
             },
             settings: {
-                applyOverduePenalty: true
+                applyOverduePenalty: true,
+                timeFormat: "24"
             },
             managers: [],
             globalClients: [],
@@ -1281,6 +1300,7 @@
         let xPrinterDevice = null;
         let activeDocNin = null;
         let selectedReceiptClient = null;
+        let selectedSavingsNin = null;
 
         // ============================================================
         // PDF GENERATION ENGINE
@@ -1389,7 +1409,16 @@
                 return new Date().toISOString().replace('T', ' ').substring(0, 19);
             },
             timeNow() {
-                return new Date().toTimeString().substring(0, 8);
+                const now = new Date();
+                if (state.settings?.timeFormat === '12') {
+                    return now.toLocaleTimeString('en-US', {
+                        hour: 'numeric',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true
+                    });
+                }
+                return now.toTimeString().substring(0, 8);
             },
             generateId(prefix = 'id') {
                 return prefix + '-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
@@ -1418,7 +1447,8 @@
                         const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
                         state = { ...state, ...parsed };
                         if (!state.cashPosition) state.cashPosition = { cash: 0, mtn: 0, airtel: 0 };
-                        if (!state.settings) state.settings = { applyOverduePenalty: true };
+                        if (!state.settings) state.settings = { applyOverduePenalty: true, timeFormat: '24' };
+                        if (state.settings.timeFormat === undefined) state.settings.timeFormat = '24';
                         if (!state.smsTemplates) state.smsTemplates = { repayment: "Dear {name}, payment of {amount} received. New balance: {balance}. Thank you. - PMMS" };
                         if (!state.loanFeeTiers) {
                             state.loanFeeTiers = [
@@ -1491,7 +1521,6 @@
                     c.overdueDays = 0;
                 }
                 
-                // Only apply penalty if enabled in settings
                 if (state.settings?.applyOverduePenalty && c.overdueDays > 7 && !c.penaltyApplied) {
                     const penalty = (c.principal || c.initialBalance) * 0.30;
                     c.balance = (c.balance || 0) + penalty;
@@ -1691,6 +1720,7 @@
                     document.getElementById("set-company-location").value = state.company.location || "";
                     document.getElementById("set-company-about").value = state.company.about || "";
                     document.getElementById("setting-penalty-toggle").checked = state.settings?.applyOverduePenalty ?? true;
+                    document.getElementById("setting-time-format").value = state.settings?.timeFormat || '24';
                     AdminSettings.renderFeeTiersTable();
                 }
             },
@@ -1977,6 +2007,12 @@
                 UI.refreshAll();
                 Utils.toast(`Overdue penalty setting updated: ${isChecked ? 'Enabled' : 'Disabled'}`);
             },
+            setTimeFormat(format) {
+                if (!state.settings) state.settings = {};
+                state.settings.timeFormat = format === '12' ? '12' : '24';
+                State.save();
+                Utils.toast(`Time format set to ${state.settings.timeFormat}-hour clock`);
+            },
             renderFeeTiersTable() {
                 const tbody = document.getElementById("fee-tiers-tbody");
                 if (!tbody) return;
@@ -2097,7 +2133,8 @@
                         if (parsed && parsed.branchData) {
                             state = parsed;
                             if (!state.cashPosition) state.cashPosition = { cash: 0, mtn: 0, airtel: 0 };
-                            if (!state.settings) state.settings = { applyOverduePenalty: true };
+                            if (!state.settings) state.settings = { applyOverduePenalty: true, timeFormat: '24' };
+                            if (state.settings.timeFormat === undefined) state.settings.timeFormat = '24';
                             if (!state.branchData.mmWithdrawals) state.branchData.mmWithdrawals = [];
                             State.runDailyAging();
                             UI.refreshAll();

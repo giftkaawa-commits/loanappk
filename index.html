@@ -305,7 +305,7 @@
                 <i class="fa-solid fa-print"></i> Print
               </button>
               <button onclick="Posting.dispatchReceipt('WHATSAPP')" class="bg-emerald-600 hover:bg-emerald-700 text-white py-2 rounded-lg font-bold text-xs shadow flex items-center justify-center gap-1">
-                <i class="fa-brands fa-whatsapp"></i> WhatsApp
+                <i class="fa-brands fa-whatsapp"></i> WhatsApp (PDF)
               </button>
               <button onclick="Posting.dispatchReceipt('SMS')" class="bg-sky-600 hover:bg-sky-700 text-white py-2 rounded-lg font-bold text-xs shadow flex items-center justify-center gap-1">
                 <i class="fa-solid fa-comment-sms"></i> SMS
@@ -613,9 +613,14 @@
             <i class="fa-solid fa-id-card text-purple-600"></i> Master Client Directory
           </h2>
         </div>
-        <button onclick="UI.triggerQuickPrint()" class="bg-purple-700 hover:bg-purple-800 text-white px-3 py-1.5 rounded-lg text-xs font-bold">
-          <i class="fa-solid fa-print"></i> Print
-        </button>
+        <div class="flex gap-2">
+          <button onclick="Clients.printSelectedStatement()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold">
+            <i class="fa-solid fa-print"></i> Print Statement
+          </button>
+          <button onclick="Clients.shareWhatsAppStatement()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold">
+            <i class="fa-brands fa-whatsapp"></i> WhatsApp Statement (PDF)
+          </button>
+        </div>
       </div>
 
       <input type="text" id="master-client-search" oninput="Clients.renderMasterDirectoryDebounced()" placeholder="Filter by Name, NIN, Phone, Guarantor..." class="w-full p-2.5 border rounded-xl bg-white text-xs shadow-sm">
@@ -624,6 +629,7 @@
         <table class="w-full text-left border-collapse text-xs">
           <thead>
             <tr class="bg-slate-800 text-white text-[11px]">
+              <th class="p-3 w-10">Select</th>
               <th class="p-3">NIN / ID</th>
               <th class="p-3">Name & Contact</th>
               <th class="p-3">Guarantor</th>
@@ -856,7 +862,7 @@
             <i class="fa-solid fa-copy"></i> Copy Summary
           </button>
           <button onclick="Reports.openWhatsAppModal()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-3 py-1.5 rounded-lg font-bold flex items-center gap-1">
-            <i class="fa-brands fa-whatsapp"></i> WhatsApp
+            <i class="fa-brands fa-whatsapp"></i> WhatsApp (PDF)
           </button>
           <button onclick="UI.triggerQuickPrint()" class="bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg font-bold">
             <i class="fa-solid fa-print"></i> Print
@@ -1082,7 +1088,7 @@
             <input type="text" id="set-company-contact" class="w-full p-2.5 border rounded-lg bg-slate-50">
           </div>
           <div>
-            <label class="block font-semibold mb-1">Location</label>
+            <label class="block font-semibold mb-1">Location / Branch</label>
             <input type="text" id="set-company-location" class="w-full p-2.5 border rounded-lg bg-slate-50">
           </div>
           <div>
@@ -1090,7 +1096,7 @@
             <input type="text" id="set-company-about" class="w-full p-2.5 border rounded-lg bg-slate-50">
           </div>
           <div class="sm:col-span-2">
-            <label class="block font-semibold mb-1">Logo</label>
+            <label class="block font-semibold mb-1">Company Logo (for PDF & Receipts)</label>
             <input type="file" id="set-company-logo-file" accept="image/*" onchange="AdminSettings.handleLogoUpload(event)" class="w-full p-2.5 border rounded-lg bg-slate-50 text-xs">
             <div id="logo-preview-container" class="mt-2"></div>
           </div>
@@ -1130,14 +1136,14 @@
     <div class="bg-white rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl text-xs">
       <div class="flex justify-between items-center border-b pb-2">
         <h3 class="font-bold text-sm flex items-center gap-1.5">
-          <i class="fa-brands fa-whatsapp text-emerald-600"></i> Send Daily Report
+          <i class="fa-brands fa-whatsapp text-emerald-600"></i> Send Daily Report (PDF)
         </h3>
         <button onclick="UI.hide('whatsapp-report-modal')" class="text-slate-400 font-bold">✕</button>
       </div>
       <div id="whatsapp-manager-checkboxes" class="space-y-2 max-h-40 overflow-y-auto border p-3 rounded-xl bg-slate-50"></div>
       <textarea id="whatsapp-report-preview" readonly class="w-full h-40 p-2.5 border rounded-xl bg-slate-100 font-mono text-[11px]"></textarea>
       <div class="flex gap-2">
-        <button onclick="Reports.sendSelectedWhatsAppReports()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold">Send</button>
+        <button onclick="Reports.sendSelectedWhatsAppReports()" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-2.5 rounded-xl font-bold">Download PDF & Open WhatsApp</button>
         <button onclick="UI.hide('whatsapp-report-modal')" class="bg-slate-200 text-slate-700 px-4 py-2.5 rounded-lg font-bold">Cancel</button>
       </div>
     </div>
@@ -1252,6 +1258,82 @@
     let activeDocNin = null;
     let activeSavingsNin = null;
     let selectedReceiptClient = null;
+
+    // ============================================================
+    // PDF GENERATION ENGINE (CENTERED LOGO, BRANCH, DATES)
+    // ============================================================
+    const PdfEngine = {
+      async generatePDF(title, headers, rows, summaryLines = []) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        let startY = 15;
+
+        // Add Company Logo Centered if available
+        if (state.company.logo) {
+          try {
+            doc.addImage(state.company.logo, 'PNG', 92, startY, 26, 26);
+            startY += 30;
+          } catch (e) {
+            startY += 5;
+          }
+        }
+
+        // Header Information Centered
+        doc.setFontSize(14);
+        doc.setFont("helvetica", "bold");
+        doc.text(state.company.name || "PMMS Microfinance", 105, startY, { align: "center" });
+        startY += 6;
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`Location / Branch: ${state.company.location || "Kampala, Uganda"}`, 105, startY, { align: "center" });
+        startY += 5;
+        doc.text(`Date Generated: ${Utils.today()} (${Utils.timeNow()})`, 105, startY, { align: "center" });
+        startY += 8;
+
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(title, 105, startY, { align: "center" });
+        startY += 8;
+
+        if (summaryLines.length > 0) {
+          doc.setFontSize(9);
+          doc.setFont("helvetica", "normal");
+          summaryLines.forEach(line => {
+            doc.text(line, 14, startY);
+            startY += 5;
+          });
+          startY += 3;
+        }
+
+        doc.autoTable({
+          startY: startY,
+          head: [headers],
+          body: rows,
+          styles: { fontSize: 9 },
+          headStyles: { fillColor: [15, 23, 42] }
+        });
+
+        return doc;
+      },
+      async downloadReceiptPDF(receiptTitle, details) {
+        const doc = await this.generatePDF(receiptTitle, ["Field", "Detail"], details);
+        doc.save(`PMMS_Receipt_${Utils.today()}.pdf`);
+      },
+      async downloadStatementPDF(clientName, nin, headers, rows) {
+        const summary = [
+          `Client Name: ${clientName}`,
+          `NIN / ID: ${nin}`,
+          `Statement Generated: ${Utils.today()}`
+        ];
+        const doc = await this.generatePDF("REPAYMENT & SAVINGS STATEMENT", headers, rows, summary);
+        doc.save(`PMMS_Statement_${nin}_${Utils.today()}.pdf`);
+      },
+      async downloadReportPDF(reportTitle, headers, rows, summaryLines) {
+        const doc = await this.generatePDF(reportTitle, headers, rows, summaryLines);
+        doc.save(`PMMS_Report_${Utils.today()}.pdf`);
+      }
+    };
 
     // ============================================================
     // UTILITIES + PERFORMANCE HELPERS
@@ -1828,7 +1910,6 @@
             return tier.fee;
           }
         }
-        // Fallback for amounts exceeding standard tiers (e.g. 1.2M and above)
         return 50000;
       }
     };
@@ -2178,7 +2259,7 @@
           document.getElementById("manual-receipt-client-query").value = selectedReceiptClient.name;
         }
       },
-      dispatchReceipt(channel) {
+      async dispatchReceipt(channel) {
         const searchDate = document.getElementById("manual-receipt-date").value;
         if (!searchDate) {
           Utils.toast("Select a date");
@@ -2199,23 +2280,19 @@
         const outBal = txn.newBalance !== undefined ? txn.newBalance : (selectedReceiptClient.balance || 0);
 
         if (channel === 'WHATSAPP') {
-          let text = "";
-          if (state.company.logo) {
-            text += `[Company Logo]\n`;
-          }
-          text += `${state.company.name}\n`;
-          text += `Date: ${txn.date}\n`;
-          text += `Type: ${receiptType}\n`;
-          text += `--------------------------------\n`;
-          text += `Client Name: ${selectedReceiptClient.name}\n`;
-          text += `Amount Paid: ${Utils.formatUGX(paidAmount)}\n`;
-          text += `Arrears: ${Utils.formatUGX(arrearsVal)}\n`;
-          text += `Outstanding Balance: ${Utils.formatUGX(outBal)}\n`;
-          text += `--------------------------------`;
-
-          const waUrl = `https://wa.me/${selectedReceiptClient.phone}?text=${encodeURIComponent(text)}`;
+          const rows = [
+            ["Client Name", selectedReceiptClient.name],
+            ["NIN / ID", selectedReceiptClient.nin || "N/A"],
+            ["Transaction Type", receiptType],
+            ["Amount Paid", Utils.formatUGX(paidAmount)],
+            ["Arrears", Utils.formatUGX(arrearsVal)],
+            ["Outstanding Balance", Utils.formatUGX(outBal)],
+            ["Date", txn.date]
+          ];
+          await PdfEngine.downloadReceiptPDF(receiptType, rows);
+          const waUrl = `https://wa.me/${selectedReceiptClient.phone}?text=${encodeURIComponent(`Hello ${selectedReceiptClient.name}, your PDF receipt for transaction on ${txn.date} has been generated and downloaded. Please attach and send.`)}`;
           window.open(waUrl, '_blank');
-          Utils.toast("WhatsApp receipt generated");
+          Utils.toast("Receipt PDF generated & WhatsApp opened");
         } else {
           const receiptMsg = `${state.company.name}\nDate: ${txn.date}\nType: ${receiptType}\n--------------------------------\nClient: ${selectedReceiptClient.name}\nAmount Paid: ${Utils.formatUGX(paidAmount)}\nArrears: ${Utils.formatUGX(arrearsVal)}\nOutstanding Balance: ${Utils.formatUGX(outBal)}`;
           if (channel === 'PRINT') Printer.printToXPrinter(receiptMsg);
@@ -2629,6 +2706,7 @@
             branch.officers.map(o => `<option value="${o.id}" ${currentOfficerId === o.id ? 'selected' : ''}>${o.name}</option>`).join('') +
           `</select>`;
           return `<tr class="text-xs">
+            <td class="p-3 text-center"><input type="checkbox" class="client-stmt-checkbox rounded" value="${c.nin}" data-name="${c.name.replace(/'/g, "")}"></td>
             <td class="p-3 font-mono font-bold text-purple-700">${c.nin}</td>
             <td class="p-3"><strong>${c.name}</strong><br>${c.phone || ''}</td>
             <td class="p-3">${c.guarantor || '-'}<br><span class="text-[10px] ${gCount >= 4 ? 'bg-red-200 text-red-900 font-bold px-1 rounded' : 'text-slate-400'}">${gCount} active</span></td>
@@ -2640,9 +2718,46 @@
               <button onclick="Clients.openDocModal('${c.nin}', '${c.name.replace(/'/g, "\\'")}')" class="bg-purple-700 text-white px-2 py-1 rounded font-bold text-[10px]">Docs</button>
             </td>
           </tr>`;
-        }).join('') || `<tr><td colspan="8" class="p-4 text-center text-slate-400">No clients</td></tr>`;
+        }).join('') || `<tr><td colspan="9" class="p-4 text-center text-slate-400">No clients</td></tr>`;
       },
       renderMasterDirectoryDebounced: null,
+      getSelectedClientNins() {
+        const checkboxes = document.querySelectorAll(".client-stmt-checkbox:checked");
+        return Array.from(checkboxes).map(cb => ({ nin: cb.value, name: cb.getAttribute("data-name") }));
+      },
+      async printSelectedStatement() {
+        const selected = this.getSelectedClientNins();
+        if (selected.length === 0) {
+          Utils.toast("Select at least one client checkbox");
+          return;
+        }
+        const branch = State.getActiveBranch();
+        for (let item of selected) {
+          const clientObj = branch.clients.find(c => c.nin === item.nin);
+          const history = clientObj ? (clientObj.history || []) : [];
+          const rows = history.map(h => [h.date || '', h.type || '', Utils.formatUGX(h.amount || 0), h.channel || '-']);
+          await PdfEngine.downloadStatementPDF(item.name, item.nin, ["Date", "Type", "Amount", "Channel"], rows);
+        }
+        Utils.toast("Statement PDF(s) downloaded");
+      },
+      async shareWhatsAppStatement() {
+        const selected = this.getSelectedClientNins();
+        if (selected.length === 0) {
+          Utils.toast("Select at least one client");
+          return;
+        }
+        const branch = State.getActiveBranch();
+        for (let item of selected) {
+          const clientObj = branch.clients.find(c => c.nin === item.nin);
+          const history = clientObj ? (clientObj.history || []) : [];
+          const rows = history.map(h => [h.date || '', h.type || '', Utils.formatUGX(h.amount || 0), h.channel || '-']);
+          await PdfEngine.downloadStatementPDF(item.name, item.nin, ["Date", "Type", "Amount", "Channel"], rows);
+          if (clientObj && clientObj.phone) {
+            window.open(`https://wa.me/${clientObj.phone}?text=${encodeURIComponent(`Hello ${item.name}, your repayment & savings statement PDF has been downloaded. Please find attached.`)}`, '_blank');
+          }
+        }
+        Utils.toast("Statements generated & WhatsApp opened");
+      },
       reassignOfficer(nin, newOfficerId) {
         const branch = State.getActiveBranch();
         let updated = 0;
@@ -2711,7 +2826,7 @@
     Clients.renderMasterDirectoryDebounced = Utils.debounce(() => Clients.renderMasterDirectory(), 280);
 
     // ============================================================
-    // DAILY WORKSPACE (STRICT CHRONOLOGICAL ENTRY ORDER)
+    // DAILY WORKSPACE
     // ============================================================
     const DailyWorkspace = {
       setToday() {
@@ -3417,20 +3532,46 @@
         document.getElementById("whatsapp-report-preview").value = this.getReportText();
         Utils.show("whatsapp-report-modal");
       },
-      sendSelectedWhatsAppReports() {
+      async sendSelectedWhatsAppReports() {
         const checkboxes = document.querySelectorAll(".mgr-whatsapp-chk:checked");
         if (checkboxes.length === 0) {
           Utils.toast("Select at least one manager");
           return;
         }
-        const text = encodeURIComponent(this.getReportText());
+        const r = this.computeFullReport();
+        const rows = [
+          ["Opening Cash Balance", Utils.formatUGX(r.openingCash)],
+          ["Total Active Clients", String(r.totalActiveClients)],
+          ["Number of Paid Clients", String(r.numberOfPaidClients)],
+          ["Total Collection", Utils.formatUGX(r.totalCollection)],
+          ["Collection Rate", `${r.collectionRate}%`],
+          ["Total Savings", Utils.formatUGX(r.totalSaving)],
+          ["Loans Disbursed", String(r.totalLoansDisbursed)],
+          ["Amount Disbursed", Utils.formatUGX(r.totalAmountDisbursed)],
+          ["Total Expenses", Utils.formatUGX(r.totalExpenses)],
+          ["Principal Collected", Utils.formatUGX(r.principalCollected)],
+          ["Interest Collected", Utils.formatUGX(r.interestCollected)],
+          ["Processing Fee", Utils.formatUGX(r.processingFee)],
+          ["Loan Portfolio", Utils.formatUGX(r.totalLoanPortfolio)],
+          ["Principal Balance", Utils.formatUGX(r.principalBalance)],
+          ["Interest Balance", Utils.formatUGX(r.interestBalance)],
+          ["Savings Withdrawals", Utils.formatUGX(r.savingWithdraws)],
+          ["Closing Cash Balance", Utils.formatUGX(r.closingCash)]
+        ];
+        await PdfEngine.downloadReportPDF("DAILY CLOSING REPORT", ["Metric", "Value"], rows, [
+          `Company: ${state.company.name}`,
+          `Location / Branch: ${state.company.location || 'Kampala, Uganda'}`,
+          `Date: ${Utils.today()}`
+        ]);
+
+        const text = encodeURIComponent(`Hello Manager, please find attached the Daily Closing Report PDF for ${Utils.today()}.`);
         checkboxes.forEach((chk, index) => {
           setTimeout(() => {
             window.open(`https://wa.me/${chk.value}?text=${text}`, '_blank');
           }, index * 500);
         });
         Utils.hide("whatsapp-report-modal");
-        Utils.toast("Reports sent");
+        Utils.toast("Report PDF downloaded & WhatsApp opened");
       }
     };
 
@@ -3554,23 +3695,15 @@
         link.click();
         Utils.toast("CSV exported");
       },
-      exportPDF() {
+      async exportPDF() {
         State.runDailyAging();
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('landscape');
         const branch = State.getActiveBranch();
-        doc.setFontSize(14);
-        doc.text(`${state.company.name} - Aging Report (${Utils.today()})`, 14, 20);
-        doc.autoTable({
-          startY: 28,
-          head: [['No', 'Name', 'Phone', 'Guarantor', 'Principal', 'Balance', 'Arrears', 'Aging']],
-          body: branch.clients.map((c, idx) => [
-            String(idx + 1).padStart(2, '0'), c.name, c.phone || '', c.guarantor || '',
-            Utils.formatUGX(c.principal), Utils.formatUGX(c.balance),
-            Utils.formatUGX(c.arrears), `${c.overdueDays || 0}d`
-          ]),
-          styles: { fontSize: 8 }
-        });
+        const rows = branch.clients.map((c, idx) => [
+          String(idx + 1).padStart(2, '0'), c.name, c.phone || '', c.guarantor || '',
+          Utils.formatUGX(c.principal), Utils.formatUGX(c.balance),
+          Utils.formatUGX(c.arrears), `${c.overdueDays || 0}d`
+        ]);
+        const doc = await PdfEngine.generatePDF("AGING & PAR REPORT", ['No', 'Name', 'Phone', 'Guarantor', 'Principal', 'Balance', 'Arrears', 'Aging'], rows);
         doc.save(`PMMS_Aging_${Utils.today()}.pdf`);
         Utils.toast("PDF exported");
       }

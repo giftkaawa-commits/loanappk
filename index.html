@@ -358,7 +358,10 @@
                         <div class="font-bold text-teal-900 text-sm" id="stmt-client-name-display">Client Name</div>
                         <div class="text-xs text-teal-700" id="stmt-client-details-display">NIN | Phone</div>
                     </div>
-                    <div class="flex gap-2">
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="Statements.printXPrinter()" class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 shadow">
+                            <i class="fa-solid fa-print"></i> Print X-Printer
+                        </button>
                         <button onclick="Statements.downloadPDF()" class="bg-teal-700 hover:bg-teal-800 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 shadow">
                             <i class="fa-solid fa-file-pdf"></i> Download PDF
                         </button>
@@ -1914,6 +1917,37 @@
                     </tr>
                 `).join('');
             },
+            async printXPrinter() {
+                if (!selectedStatementClient) {
+                    Utils.toast("Please select a client first");
+                    return;
+                }
+                const branch = State.getActiveBranch();
+                const typeLabel = currentStatementType === 'loan' ? 'Loan Repayment' : 'Savings';
+                let textData = `=== ${state.company.name} ===\n`;
+                textData += `${typeLabel.toUpperCase()} STATEMENT\n`;
+                textData += `--------------------------------\n`;
+                textData += `Name: ${selectedStatementClient.name}\n`;
+                textData += `NIN: ${selectedStatementClient.nin || 'N/A'}\n`;
+                textData += `Date: ${Utils.today()} ${Utils.timeNow()}\n`;
+                textData += `--------------------------------\n`;
+
+                if (currentStatementType === 'loan') {
+                    (selectedStatementClient.history || []).forEach(h => {
+                        textData += `${h.date} | ${h.type}\n`;
+                        textData += `Detail: ${h.channel || h.reason || '-'}\n`;
+                        textData += `Amount: ${Utils.formatUGX(h.amount || 0)}\n--------------------------------\n`;
+                    });
+                } else {
+                    const sav = branch.savingsAccounts[selectedStatementClient.nin] || { history: [] };
+                    (sav.history || []).forEach(sh => {
+                        textData += `${sh.date} | Savings ${sh.type}\n`;
+                        textData += `Amount: ${Utils.formatUGX(sh.amount || 0)}\n--------------------------------\n`;
+                    });
+                }
+                await Printer.printToXPrinter(textData);
+                Utils.toast("Statement dispatched to X-Printer");
+            },
             async downloadPDF() {
                 if (!selectedStatementClient) return;
                 const branch = State.getActiveBranch();
@@ -2067,7 +2101,6 @@
                  "nav-btn-tab-admin-settings"].forEach(show);
 
                 if (role === 'Loan Officer' || role === 'Manager') {
-                    // Only allow: Statements, Aging & PAR, Defaulters List, Reports, and Daily Workspace
                     ["nav-btn-tab-posting", "nav-btn-tab-disburse", "nav-btn-tab-savings", "nav-btn-tab-cash",
                      "nav-btn-tab-loan-ops", "nav-btn-tab-unified-clients", "nav-btn-tab-officers", "nav-btn-tab-bankings",
                      "nav-btn-tab-expenses", "nav-btn-tab-capital", "nav-btn-tab-sms-logs",
@@ -2079,7 +2112,6 @@
                     show("nav-btn-tab-reports");
                     show("nav-btn-tab-daily-workspace");
                     
-                    // Default to Daily Workspace or Reports if current tab is hidden
                     UI.showTab('tab-daily-workspace');
                 } else if (role === 'Accountant') {
                     hide("nav-btn-tab-loan-ops");
@@ -2428,7 +2460,7 @@
                 const branch = State.getActiveBranch();
                 if (branch.batch.length === 0) return;
                 if (!Utils.confirmAction(`Post ${branch.batch.length} payment(s)?`)) return;
-                let receiptText = `=== ${state.company.name} ===\nDate: ${Utils.today()}\n--------------------------------\n`;
+                let receiptText = `=== ${state.company.name} ===\nREPAYMENT RECEIPT\nDate: ${Utils.today()} ${Utils.timeNow()}\n--------------------------------\n`;
                 const baseTs = Date.now();
                 branch.batch.forEach((item, index) => {
                     const client = branch.clients.find(c => c.id === item.clientId);
@@ -2449,7 +2481,7 @@
                             arrears: client.arrears || 0
                         });
                         CashPosition.add(item.channel, item.amount);
-                        receiptText += `${client.name}: Paid ${Utils.formatUGX(item.amount)} | Arrears: ${Utils.formatUGX(client.arrears || 0)} | Bal: ${Utils.formatUGX(client.balance)}\n--------------------------------\n`;
+                        receiptText += `Client: ${client.name}\nPaid: ${Utils.formatUGX(item.amount)}\nArrears: ${Utils.formatUGX(client.arrears || 0)}\nBalance: ${Utils.formatUGX(client.balance)}\n--------------------------------\n`;
                         const template = state.smsTemplates?.repayment || "Dear {name}, payment of {amount} received. New balance: {balance}.";
                         const msg = template
                             .replace(/{name}/g, client.name)
@@ -2464,7 +2496,7 @@
                 this.renderBatchList();
                 if (selectedPostClient) this.selectClient(selectedPostClient.id);
                 Printer.printToXPrinter(receiptText);
-                Utils.toast("Batch posted successfully");
+                Utils.toast("Batch posted successfully & Repayment receipts printed");
                 Reports.updateDashboard();
                 Staff.renderHub();
                 DailyWorkspace.render();
@@ -2535,7 +2567,7 @@
                     window.open(waUrl, '_blank');
                     Utils.toast("Receipt PDF generated & WhatsApp opened");
                 } else {
-                    const receiptMsg = `${state.company.name}\nDate: ${txn.date}\nType: ${receiptType}\n--------------------------------\nClient: ${selectedReceiptClient.name}\nAmount Paid: ${Utils.formatUGX(paidAmount)}\nArrears: ${Utils.formatUGX(arrearsVal)}\nOutstanding Balance: ${Utils.formatUGX(outBal)}`;
+                    const receiptMsg = `${state.company.name}\n${receiptType}\nDate: ${txn.date} ${Utils.timeNow()}\n--------------------------------\nClient: ${selectedReceiptClient.name}\nNIN: ${selectedReceiptClient.nin || 'N/A'}\nPaid Amount: ${Utils.formatUGX(paidAmount)}\nArrears: ${Utils.formatUGX(arrearsVal)}\nBalance: ${Utils.formatUGX(outBal)}\n--------------------------------\nThank you!`;
                     if (channel === 'PRINT') Printer.printToXPrinter(receiptMsg);
                     else if (channel === 'SMS') SMS.dispatch(selectedReceiptClient.phone, receiptMsg, 'Manual Receipt');
                 }

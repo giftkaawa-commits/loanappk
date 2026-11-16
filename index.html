@@ -675,14 +675,6 @@
                         <i class="fa-solid fa-id-card text-purple-600"></i> Master Client Directory
                     </h2>
                 </div>
-                <div class="flex gap-2">
-                    <button onclick="Clients.printSelectedStatement()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold">
-                        <i class="fa-solid fa-print"></i> Print Statement
-                    </button>
-                    <button onclick="Clients.shareWhatsAppStatement()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold">
-                        <i class="fa-brands fa-whatsapp"></i> WhatsApp Statement (PDF)
-                    </button>
-                </div>
             </div>
 
             <input type="text" id="master-client-search" oninput="Clients.renderMasterDirectoryDebounced()" placeholder="Filter by Name, NIN, Phone, Guarantor..." class="w-full p-2.5 border rounded-xl bg-white text-xs shadow-sm">
@@ -691,7 +683,6 @@
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
                         <tr class="bg-slate-800 text-white text-[11px]">
-                            <th class="p-3 w-10">Select</th>
                             <th class="p-3">NIN / ID</th>
                             <th class="p-3">Name & Contact</th>
                             <th class="p-3">Guarantor</th>
@@ -1049,6 +1040,38 @@
                 </div>
             </div>
 
+            <!-- X-PRINTER CONFIGURATION -->
+            <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
+                <h3 class="font-bold text-sm border-b pb-2 flex items-center gap-2 text-teal-700">
+                    <i class="fa-solid fa-print"></i> X-Printer Configuration & Connection
+                </h3>
+                <p class="text-xs text-slate-600">Configure and connect your Bluetooth or USB thermal X-Printer for fast receipt and statement printing.</p>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div>
+                        <label class="block font-semibold mb-1">Printer Model / Type</label>
+                        <select id="xprinter-model-select" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
+                            <option value="XPrinter-Thermal">XPrinter (Bluetooth / USB Thermal)</option>
+                            <option value="XPrinter-POS-58">XPrinter POS-58 / POS-80</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold mb-1">Connection Interface</label>
+                        <select id="xprinter-interface-select" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
+                            <option value="bluetooth">Web Bluetooth</option>
+                            <option value="usb">Web USB / Serial</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button onclick="Printer.connectXPrinter()" class="flex-1 dyn-bg text-white py-2.5 rounded-xl font-bold text-xs shadow flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-bluetooth"></i> Connect X-Printer Now
+                    </button>
+                    <button onclick="Printer.testPrint()" class="bg-slate-800 text-white px-4 py-2.5 rounded-xl font-bold text-xs shadow">
+                        Test Print
+                    </button>
+                </div>
+            </div>
+
             <!-- Backup -->
             <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
                 <h3 class="font-bold text-sm border-b pb-2 flex items-center gap-2">
@@ -1302,6 +1325,7 @@
                 { role: "Administrator", username: "admin", email: "admin@pmms.com", phone: "0770000000", password: "password123", name: "System Admin" },
                 { role: "Manager", username: "manager", email: "mgr@pmms.com", phone: "0771111111", password: "password123", name: "Branch Manager" },
                 { role: "Accountant", username: "accountant", email: "acc@pmms.com", phone: "0772222222", password: "password123", name: "Branch Accountant" },
+                { role: "Loan Officer", username: "officer", email: "off@pmms.com", phone: "0774444444", password: "password123", name: "Loan Officer" },
                 { role: "Cashier", username: "cashier", email: "cash@pmms.com", phone: "0773333333", password: "password123", name: "Branch Cashier" }
             ],
             currentUser: null,
@@ -2042,7 +2066,22 @@
                  "nav-btn-tab-reports", "nav-btn-tab-aging", "nav-btn-tab-demand", "nav-btn-tab-sms-logs",
                  "nav-btn-tab-admin-settings"].forEach(show);
 
-                if (role === 'Accountant') {
+                if (role === 'Loan Officer' || role === 'Manager') {
+                    // Only allow: Statements, Aging & PAR, Defaulters List, Reports, and Daily Workspace
+                    ["nav-btn-tab-posting", "nav-btn-tab-disburse", "nav-btn-tab-savings", "nav-btn-tab-cash",
+                     "nav-btn-tab-loan-ops", "nav-btn-tab-unified-clients", "nav-btn-tab-officers", "nav-btn-tab-bankings",
+                     "nav-btn-tab-expenses", "nav-btn-tab-capital", "nav-btn-tab-sms-logs",
+                     "nav-btn-tab-admin-settings"].forEach(hide);
+                     
+                    show("nav-btn-tab-statements");
+                    show("nav-btn-tab-aging");
+                    show("nav-btn-tab-demand");
+                    show("nav-btn-tab-reports");
+                    show("nav-btn-tab-daily-workspace");
+                    
+                    // Default to Daily Workspace or Reports if current tab is hidden
+                    UI.showTab('tab-daily-workspace');
+                } else if (role === 'Accountant') {
                     hide("nav-btn-tab-loan-ops");
                     hide("nav-btn-tab-capital");
                     hide("nav-btn-tab-admin-settings");
@@ -2057,12 +2096,6 @@
                     hide("nav-btn-tab-aging");
                     hide("nav-btn-tab-demand");
                     hide("nav-btn-tab-sms-logs");
-                    hide("nav-btn-tab-admin-settings");
-                } else if (role === 'Loan Officer') {
-                    hide("nav-btn-tab-loan-ops");
-                    hide("nav-btn-tab-capital");
-                    hide("nav-btn-tab-admin-settings");
-                } else if (role === 'Manager') {
                     hide("nav-btn-tab-admin-settings");
                 }
             },
@@ -2914,7 +2947,6 @@
                         branch.officers.map(o => `<option value="${o.id}" ${currentOfficerId === o.id ? 'selected' : ''}>${o.name}</option>`).join('') +
                     `</select>`;
                     return `<tr class="text-xs">
-                        <td class="p-3 text-center"><input type="checkbox" class="client-stmt-checkbox rounded" value="${c.nin}" data-name="${c.name.replace(/'/g, "")}"></td>
                         <td class="p-3 font-mono font-bold text-purple-700">${c.nin}</td>
                         <td class="p-3"><strong>${c.name}</strong><br>${c.phone || ''}</td>
                         <td class="p-3">${c.guarantor || '-'}<br><span class="text-[10px] ${gCount >= 4 ? 'bg-red-200 text-red-900 font-bold px-1 rounded' : 'text-slate-400'}">${gCount} active</span></td>
@@ -2926,46 +2958,9 @@
                             <button onclick="Clients.openDocModal('${c.nin}', '${c.name.replace(/'/g, "\\'")}')" class="bg-purple-700 text-white px-2 py-1 rounded font-bold text-[10px]">Docs</button>
                         </td>
                     </tr>`;
-                }).join('') || `<tr><td colspan="9" class="p-4 text-center text-slate-400">No clients</td></tr>`;
+                }).join('') || `<tr><td colspan="8" class="p-4 text-center text-slate-400">No clients</td></tr>`;
             },
             renderMasterDirectoryDebounced: null,
-            getSelectedClientNins() {
-                const checkboxes = document.querySelectorAll(".client-stmt-checkbox:checked");
-                return Array.from(checkboxes).map(cb => ({ nin: cb.value, name: cb.getAttribute("data-name") }));
-            },
-            async printSelectedStatement() {
-                const selected = this.getSelectedClientNins();
-                if (selected.length === 0) {
-                    Utils.toast("Select at least one client checkbox");
-                    return;
-                }
-                const branch = State.getActiveBranch();
-                for (let item of selected) {
-                    const clientObj = branch.clients.find(c => c.nin === item.nin);
-                    const history = clientObj ? (clientObj.history || []) : [];
-                    const rows = history.map(h => [h.date || '', h.type || '', Utils.formatUGX(h.amount || 0), h.channel || '-']);
-                    await PdfEngine.downloadStatementPDF(item.name, item.nin, ["Date", "Type", "Amount", "Channel"], rows, "Repayment");
-                }
-                Utils.toast("Statement PDF(s) downloaded");
-            },
-            async shareWhatsAppStatement() {
-                const selected = this.getSelectedClientNins();
-                if (selected.length === 0) {
-                    Utils.toast("Select at least one client");
-                    return;
-                }
-                const branch = State.getActiveBranch();
-                for (let item of selected) {
-                    const clientObj = branch.clients.find(c => c.nin === item.nin);
-                    const history = clientObj ? (clientObj.history || []) : [];
-                    const rows = history.map(h => [h.date || '', h.type || '', Utils.formatUGX(h.amount || 0), h.channel || '-']);
-                    await PdfEngine.downloadStatementPDF(item.name, item.nin, ["Date", "Type", "Amount", "Channel"], rows, "Repayment");
-                    if (clientObj && clientObj.phone) {
-                        window.open(`https://wa.me/${clientObj.phone}?text=${encodeURIComponent(`Hello ${item.name}, your repayment & savings statement PDF has been downloaded. Please find attached.`)}`, '_blank');
-                    }
-                }
-                Utils.toast("Statements generated & WhatsApp opened");
-            },
             reassignOfficer(nin, newOfficerId) {
                 const branch = State.getActiveBranch();
                 let updated = 0;
@@ -4052,10 +4047,15 @@
                         optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
                     });
                     document.getElementById("xprinter-status-text").innerText = "Connected";
-                    Utils.toast("Printer connected");
+                    Utils.toast("X-Printer connected successfully");
                 } catch (err) {
-                    Utils.toast("Connection cancelled");
+                    Utils.toast("Connection cancelled or failed");
                 }
+            },
+            async testPrint() {
+                const testText = `=== ${state.company.name} ===\nTEST PRINT RECEIPT\nDate: ${Utils.today()} ${Utils.timeNow()}\nX-Printer Connected Successfully!\n--------------------------------\n`;
+                await this.printToXPrinter(testText);
+                Utils.toast("Test print dispatched");
             },
             async printToXPrinter(textData) {
                 let headerPrefix = state.company.name ? `${state.company.name}\n` : "";

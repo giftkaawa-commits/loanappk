@@ -13,7 +13,7 @@
     <style>
         .hidden, [hidden] { display: none !important; }
         .fallback-overlay {
-            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            position: fixed; inset: 0;
             background-color: rgba(15, 23, 42, 0.98); z-index: 9999;
             display: flex; align-items: center; justify-content: center; padding: 1rem;
         }
@@ -53,12 +53,12 @@
 <body class="theme-teal bg-slate-100 text-slate-800 font-sans min-h-screen pb-28 md:pb-12">
 
     <!-- Offline Banner -->
-    <div id="offline-banner" hidden class="fixed top-0 left-0 right-0 bg-amber-600 text-white text-center text-xs py-1.5 z-[60] font-bold">
+    <div id="offline-banner" hidden class="fixed top-0 inset-x-0 bg-amber-600 text-white text-center text-xs py-1.5 z-[60] font-bold">
         <i class="fa-solid fa-wifi-slash mr-1"></i> You are offline — Offline IndexedDB storage active
     </div>
 
     <!-- AUTH OVERLAY -->
-    <div id="auth-overlay" class="fixed inset-0 bg-slate-900/98 z-50 flex items-center justify-center p-4 fallback-overlay">
+    <div id="auth-overlay" class="fallback-overlay">
         <div class="bg-white rounded-2xl p-6 w-full max-w-sm text-center space-y-4 shadow-2xl">
             <div class="w-14 h-14 dyn-bg text-white rounded-full flex items-center justify-center mx-auto text-2xl font-bold shadow-inner">
                 <i class="fa-solid fa-user-shield"></i>
@@ -97,9 +97,9 @@
             </div>
 
             <!-- REGISTER FORM -->
-            <div id="auth-form-register" hidden class="space-y-3 text-left hidden">
+            <div id="auth-form-register" hidden class="space-y-3 text-left">
                 <div class="bg-slate-50 border dyn-border p-2.5 rounded-xl text-[11px] text-slate-900 font-semibold">
-                    <i class="fa-solid fa-circle-info mr-1 dyn-text"></i> Register with Role-Based Access. Gmail code verification will trigger.
+                    <i class="fa-solid fa-circle-info mr-1 dyn-text"></i> Register with Role-Based Access. Verification code will trigger.
                 </div>
                 <div>
                     <label class="block text-[10px] text-slate-600 font-semibold mb-1">System Role *</label>
@@ -131,9 +131,9 @@
             </div>
 
             <!-- EMAIL VERIFICATION FORM -->
-            <div id="auth-form-verify" hidden class="space-y-3 text-left hidden">
+            <div id="auth-form-verify" hidden class="space-y-3 text-left">
                 <div class="bg-emerald-50 border border-emerald-300 p-2.5 rounded-xl text-[11px] text-emerald-900 font-semibold">
-                    <i class="fa-solid fa-envelope-circle-check mr-1"></i> A 6-digit verification code was sent to your Gmail.
+                    <i class="fa-solid fa-envelope-circle-check mr-1"></i> A 6-digit verification code was sent to your email.
                 </div>
                 <div>
                     <label class="block text-[10px] text-slate-600 font-semibold mb-1">Enter Verification Code *</label>
@@ -146,15 +146,15 @@
     </div>
 
     <!-- FORGOT PASSWORD -->
-    <div id="forgot-password-modal" hidden class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4 hidden">
+    <div id="forgot-password-modal" hidden class="fixed inset-0 bg-slate-950/80 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl p-6 w-full max-w-sm space-y-4 shadow-2xl text-xs">
             <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="font-bold text-slate-900 text-sm"><i class="fa-solid fa-key text-amber-600 mr-1"></i> Reset Password</h3>
                 <button onclick="Auth.closeForgotModal()" class="text-slate-400 font-bold">✕</button>
             </div>
-            <p class="text-slate-600 text-[11px]">Enter registered Gmail or Phone number.</p>
+            <p class="text-slate-600 text-[11px]">Enter registered email or Phone number.</p>
             <div>
-                <label class="block font-semibold text-slate-600 mb-1">Gmail or Phone</label>
+                <label class="block font-semibold text-slate-600 mb-1">Email or Phone</label>
                 <input type="text" id="forgot-input-id" placeholder="user@gmail.com or 0771234567" class="w-full p-2.5 border rounded-lg bg-slate-50">
             </div>
             <div>
@@ -205,6 +205,7 @@
             <button id="nav-btn-tab-cash" onclick="UI.showTab('tab-cash')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5"><i class="fa-solid fa-money-bill-wave"></i> Cash Position</button>
             <button id="nav-btn-tab-loan-ops" onclick="UI.showTab('tab-loan-ops')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-indigo-400 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5"><i class="fa-solid fa-sliders"></i> Loan Ops</button>
             <button id="nav-btn-tab-unified-clients" onclick="UI.showTab('tab-unified-clients')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-purple-400 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5"><i class="fa-solid fa-id-card"></i> Clients & Docs</button>
+            <button id="nav-btn-tab-statements" onclick="UI.showTab('tab-statements')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-teal-400 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5"><i class="fa-solid fa-file-invoice-dollar"></i> Statements</button>
             <button id="nav-btn-tab-daily-workspace" onclick="UI.showTab('tab-daily-workspace')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5"><i class="fa-solid fa-calendar-day"></i> Daily Workspace</button>
             <button id="nav-btn-tab-officers" onclick="UI.showTab('tab-officers')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5"><i class="fa-solid fa-user-tie dyn-text"></i> Staff</button>
             <button id="nav-btn-tab-bankings" onclick="UI.showTab('tab-bankings')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5"><i class="fa-solid fa-building-columns"></i> Bankings</button>
@@ -218,7 +219,7 @@
         </div>
     </nav>
 
-    <div id="printable-area" hidden class="hidden p-6 bg-white text-slate-900"></div>
+    <div id="printable-area" hidden class="p-6 bg-white text-slate-900"></div>
 
     <main class="p-3 md:p-6 max-w-7xl mx-auto space-y-4">
 
@@ -241,10 +242,10 @@
                     <div>
                         <label class="block text-xs font-semibold mb-1 text-slate-600">Search Active Client</label>
                         <input type="text" id="post-search" oninput="Posting.searchClientsDebounced(this.value)" placeholder="Name, NIN, phone or account..." class="w-full p-3 border rounded-xl bg-white text-sm focus:outline-none focus:ring-2 dyn-border shadow-sm">
-                        <div id="post-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-56 overflow-y-auto hidden shadow-lg"></div>
+                        <div id="post-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-56 overflow-y-auto shadow-lg"></div>
                     </div>
 
-                    <div id="post-selected-card" hidden class="bg-slate-800 text-white p-4 rounded-xl hidden text-sm space-y-2 shadow-md">
+                    <div id="post-selected-card" hidden class="bg-slate-800 text-white p-4 rounded-xl text-sm space-y-2 shadow-md">
                         <div class="flex justify-between items-start">
                             <div>
                                 <div class="font-bold text-base md:text-lg" id="post-client-name"></div>
@@ -266,7 +267,7 @@
                         </div>
                     </div>
 
-                    <div id="post-form" hidden class="space-y-3 hidden bg-white p-4 rounded-xl border shadow-sm">
+                    <div id="post-form" hidden class="space-y-3 bg-white p-4 rounded-xl border shadow-sm">
                         <div id="zero-balance-warning" class="hidden p-3 bg-red-50 border border-red-300 text-red-800 rounded-xl text-xs font-bold">
                             <i class="fa-solid fa-ban mr-1"></i> Loan balance is UGX 0. Further payments locked.
                         </div>
@@ -301,7 +302,7 @@
                             <div>
                                 <label class="block font-semibold text-slate-600 mb-1">Search Client (Name / NIN)</label>
                                 <input type="text" id="manual-receipt-client-query" oninput="Posting.searchReceiptClientsDebounced(this.value)" placeholder="Type name or NIN..." class="w-full p-2.5 border rounded-lg bg-slate-50">
-                                <div id="manual-receipt-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-lg"></div>
+                                <div id="manual-receipt-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-40 overflow-y-auto shadow-lg"></div>
                             </div>
                         </div>
                         <div class="grid grid-cols-3 gap-2">
@@ -328,8 +329,65 @@
             </div>
         </section>
 
+        <!-- TAB: STATEMENTS -->
+        <section id="tab-statements" hidden class="tab-content space-y-4 max-w-4xl mx-auto">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h2 class="text-base md:text-lg font-bold flex items-center gap-2">
+                    <i class="fa-solid fa-file-invoice-dollar text-teal-600"></i> Instant Client Statements
+                </h2>
+            </div>
+            
+            <div class="bg-white p-5 border rounded-2xl shadow-sm space-y-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold mb-1 text-slate-600">Search Registered Client</label>
+                        <input type="text" id="statement-client-search" oninput="Statements.searchClientsDebounced(this.value)" placeholder="Type name, NIN, or phone..." class="w-full p-2.5 border rounded-xl bg-slate-50 text-xs">
+                        <div id="statement-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-40 overflow-y-auto shadow-lg z-10 absolute w-72"></div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold mb-1 text-slate-600">Statement Type</label>
+                        <div class="flex bg-slate-100 p-1 rounded-xl text-xs font-bold">
+                            <button id="stmt-type-loan" onclick="Statements.setStatementType('loan')" class="w-1/2 py-2 rounded-lg bg-white text-slate-900 shadow-sm">Loan Repayment</button>
+                            <button id="stmt-type-savings" onclick="Statements.setStatementType('savings')" class="w-1/2 py-2 rounded-lg text-slate-500">Savings Statement</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="statement-client-info-card" hidden class="bg-teal-50 border border-teal-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <div class="font-bold text-teal-900 text-sm" id="stmt-client-name-display">Client Name</div>
+                        <div class="text-xs text-teal-700" id="stmt-client-details-display">NIN | Phone</div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="Statements.downloadPDF()" class="bg-teal-700 hover:bg-teal-800 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 shadow">
+                            <i class="fa-solid fa-file-pdf"></i> Download PDF
+                        </button>
+                        <button onclick="Statements.shareWhatsApp()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg text-xs font-bold flex items-center gap-1 shadow">
+                            <i class="fa-brands fa-whatsapp"></i> Share WhatsApp
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto border rounded-xl">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-800 text-white text-[11px]">
+                                <th class="p-3">Date & Time</th>
+                                <th class="p-3">Transaction Type</th>
+                                <th class="p-3">Channel / Detail</th>
+                                <th class="p-3 text-right">Amount (UGX)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="statement-table-body" class="divide-y">
+                            <tr><td colspan="4" class="p-4 text-center text-slate-400">Search and select a client to load statement</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
         <!-- TAB: DISBURSE -->
-        <section id="tab-disburse" hidden class="tab-content space-y-4 hidden max-w-3xl mx-auto">
+        <section id="tab-disburse" hidden class="tab-content space-y-4 max-w-3xl mx-auto">
             <h2 class="text-lg font-bold border-b pb-2">Loan Disbursement</h2>
             
             <div id="disburse-active-loan-warning" class="hidden p-3 bg-red-100 border-2 border-red-500 rounded-xl text-xs space-y-1 text-red-900">
@@ -353,7 +411,7 @@
                 <select id="disburse-officer-select" class="w-full p-2.5 border rounded-lg text-xs bg-white font-semibold"></select>
             </div>
 
-            <div id="new-client-fields" hidden class="space-y-3 hidden border p-4 rounded-xl bg-white shadow-sm">
+            <div id="new-client-fields" hidden class="space-y-3 border p-4 rounded-xl bg-white shadow-sm">
                 <div class="font-bold text-xs text-slate-700 uppercase tracking-wider">New Client Details</div>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
@@ -386,7 +444,7 @@
                     </div>
                 </div>
                 
-                <div id="guarantor-exposure-alert" hidden class="hidden p-3 bg-red-100 border-2 border-red-500 rounded-xl text-xs space-y-1 text-red-900">
+                <div id="guarantor-exposure-alert" hidden class="p-3 bg-red-100 border-2 border-red-500 rounded-xl text-xs space-y-1 text-red-900">
                     <div class="font-bold flex items-center gap-1.5 text-sm">
                         <i class="fa-solid fa-triangle-exclamation text-red-600"></i> GUARANTOR EXPOSURE WARNING
                     </div>
@@ -401,7 +459,7 @@
                             <option value="BODABODA">BODABODA</option>
                         </select>
                     </div>
-                    <div id="new-plate-container" hidden class="hidden">
+                    <div id="new-plate-container" hidden>
                         <label class="block text-[10px] text-slate-600 font-semibold mb-1">Number Plate</label>
                         <input type="text" id="new-number-plate" placeholder="UER 123X" class="w-full p-2.5 border rounded-lg text-xs uppercase bg-white">
                     </div>
@@ -411,9 +469,9 @@
             <div id="existing-client-fields">
                 <label class="block text-xs font-semibold mb-1 text-slate-600">Search Client</label>
                 <input type="text" id="disburse-search" oninput="Disburse.searchClientsDebounced(this.value)" placeholder="Search registered client..." class="w-full p-3 border rounded-xl bg-white text-sm shadow-sm">
-                <div id="disburse-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
+                <div id="disburse-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-40 overflow-y-auto shadow-md"></div>
                 <div id="disburse-selected-name" class="text-xs font-bold text-green-700 mt-2"></div>
-                <div id="disburse-guarantor-exposure-existing" hidden class="hidden mt-2 p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 font-bold"></div>
+                <div id="disburse-guarantor-exposure-existing" hidden class="mt-2 p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 font-bold"></div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
@@ -445,7 +503,7 @@
         </section>
 
         <!-- TAB: SAVINGS -->
-        <section id="tab-savings" hidden class="tab-content space-y-4 hidden max-w-4xl mx-auto">
+        <section id="tab-savings" hidden class="tab-content space-y-4 max-w-4xl mx-auto">
             <div class="flex justify-between items-center border-b pb-2">
                 <h2 class="text-base md:text-lg font-bold"><i class="fa-solid fa-piggy-bank text-emerald-600"></i> Client Savings</h2>
             </div>
@@ -456,7 +514,7 @@
                     <div>
                         <label class="block text-slate-600 font-semibold mb-1">Search Client</label>
                         <input type="text" id="savings-search-input" oninput="Savings.searchClientsDebounced(this.value)" placeholder="Name or NIN..." class="w-full p-2.5 border rounded-lg bg-slate-50">
-                        <div id="savings-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-32 overflow-y-auto hidden"></div>
+                        <div id="savings-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-32 overflow-y-auto"></div>
                     </div>
                     <div id="savings-client-card" hidden class="bg-emerald-50 p-3 rounded-xl border border-emerald-200 space-y-1">
                         <div class="font-bold text-emerald-900 text-sm" id="sav-client-name"></div>
@@ -488,7 +546,7 @@
         </section>
 
         <!-- TAB: CASH POSITION -->
-        <section id="tab-cash" hidden class="tab-content space-y-4 hidden max-w-3xl mx-auto">
+        <section id="tab-cash" hidden class="tab-content space-y-4 max-w-3xl mx-auto">
             <div class="flex justify-between items-center border-b pb-2">
                 <h2 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-money-bill-wave text-cyan-600"></i> Cash Position</h2>
                 <button onclick="CashPosition.render()" class="bg-slate-800 text-white text-xs px-3 py-1.5 rounded-lg font-bold">Refresh</button>
@@ -548,7 +606,7 @@
         </section>
 
         <!-- TAB: LOAN OPS -->
-        <section id="tab-loan-ops" hidden class="tab-content space-y-6 hidden max-w-5xl mx-auto">
+        <section id="tab-loan-ops" hidden class="tab-content space-y-6 max-w-5xl mx-auto">
             <div class="flex justify-between items-center border-b pb-2">
                 <div>
                     <h2 class="text-lg font-bold flex items-center gap-2">
@@ -569,9 +627,9 @@
                     <div>
                         <label class="block text-xs font-semibold mb-1">Search Client</label>
                         <input type="text" id="reversal-search" oninput="LoanOps.searchReversalClientsDebounced(this.value)" placeholder="Name, NIN..." class="w-full p-2.5 border rounded-xl text-xs bg-slate-50">
-                        <div id="reversal-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-36 overflow-y-auto hidden shadow-md"></div>
+                        <div id="reversal-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-36 overflow-y-auto shadow-md"></div>
                     </div>
-                    <div id="reversal-card" hidden class="space-y-3 hidden bg-slate-50 p-3.5 rounded-xl border mt-3">
+                    <div id="reversal-card" hidden class="space-y-3 bg-slate-50 p-3.5 rounded-xl border mt-3">
                         <div class="flex justify-between text-xs">
                             <span id="rev-client-name" class="font-bold"></span>
                             <span id="rev-client-nin" class="font-mono text-purple-700 font-bold"></span>
@@ -610,7 +668,7 @@
         </section>
 
         <!-- TAB: CLIENTS -->
-        <section id="tab-unified-clients" hidden class="tab-content space-y-4 hidden">
+        <section id="tab-unified-clients" hidden class="tab-content space-y-4">
             <div class="flex justify-between items-center border-b pb-2">
                 <div>
                     <h2 class="text-base md:text-lg font-bold flex items-center gap-2">
@@ -650,7 +708,7 @@
         </section>
 
         <!-- TAB: DAILY WORKSPACE -->
-        <section id="tab-daily-workspace" hidden class="tab-content space-y-4 hidden">
+        <section id="tab-daily-workspace" hidden class="tab-content space-y-4">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-3 gap-3">
                 <div>
                     <h2 class="text-base md:text-lg font-bold flex items-center gap-2">
@@ -703,7 +761,7 @@
         </section>
 
         <!-- TAB: STAFF -->
-        <section id="tab-officers" hidden class="tab-content space-y-4 hidden">
+        <section id="tab-officers" hidden class="tab-content space-y-4">
             <div class="flex justify-between items-center border-b pb-2">
                 <div>
                     <h2 class="text-base md:text-lg font-bold">
@@ -752,7 +810,7 @@
         </section>
 
         <!-- TAB: BANKINGS -->
-        <section id="tab-bankings" hidden class="tab-content space-y-4 hidden">
+        <section id="tab-bankings" hidden class="tab-content space-y-4">
             <div class="flex justify-between items-center border-b pb-2">
                 <h2 class="text-base md:text-lg font-bold"><i class="fa-solid fa-building-columns text-blue-600"></i> Bankings</h2>
             </div>
@@ -790,7 +848,7 @@
         </section>
 
         <!-- TAB: EXPENSES -->
-        <section id="tab-expenses" hidden class="tab-content space-y-4 hidden">
+        <section id="tab-expenses" hidden class="tab-content space-y-4">
             <div class="flex justify-between items-center border-b pb-2">
                 <h2 class="text-base md:text-lg font-bold"><i class="fa-solid fa-wallet text-rose-600"></i> Expenses</h2>
             </div>
@@ -834,7 +892,7 @@
         </section>
 
         <!-- TAB: CAPITAL -->
-        <section id="tab-capital" hidden class="tab-content space-y-4 hidden max-w-3xl mx-auto">
+        <section id="tab-capital" hidden class="tab-content space-y-4 max-w-3xl mx-auto">
             <div class="flex justify-between items-center border-b pb-2">
                 <h2 class="text-lg font-bold"><i class="fa-solid fa-coins text-emerald-600"></i> Capital Injection</h2>
             </div>
@@ -858,7 +916,7 @@
         </section>
 
         <!-- TAB: REPORTS -->
-        <section id="tab-reports" hidden class="tab-content space-y-6 hidden">
+        <section id="tab-reports" hidden class="tab-content space-y-6">
             <div class="flex justify-between items-center border-b pb-2">
                 <h2 class="text-lg font-bold">Daily Closing Report & Summary</h2>
                 <div class="flex gap-2">
@@ -879,14 +937,12 @@
                     <i class="fa-solid fa-chart-pie mr-1"></i> Full Daily Report
                 </h3>
                 
-                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs" id="full-report-grid">
-                    <!-- Populated by JS -->
-                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs" id="full-report-grid"></div>
             </div>
         </section>
 
         <!-- TAB: AGING -->
-        <section id="tab-aging" hidden class="tab-content space-y-4 hidden">
+        <section id="tab-aging" hidden class="tab-content space-y-4">
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 border-b pb-3">
                 <div>
                     <h2 class="text-lg font-bold flex items-center gap-2">
@@ -907,7 +963,7 @@
         </section>
 
         <!-- TAB: DEFAULTERS -->
-        <section id="tab-demand" hidden class="tab-content space-y-4 hidden">
+        <section id="tab-demand" hidden class="tab-content space-y-4">
             <div class="border-b pb-2">
                 <h2 class="text-lg font-bold text-red-700 flex items-center gap-2">
                     <i class="fa-solid fa-triangle-exclamation"></i> Defaulters (90+ Days)
@@ -917,7 +973,7 @@
         </section>
 
         <!-- TAB: SMS -->
-        <section id="tab-sms-logs" hidden class="tab-content space-y-4 hidden">
+        <section id="tab-sms-logs" hidden class="tab-content space-y-4">
             <div class="flex justify-between items-center border-b pb-2">
                 <div>
                     <h2 class="text-base md:text-lg font-bold flex items-center gap-2">
@@ -983,7 +1039,7 @@
         </section>
 
         <!-- TAB: ADMIN SETTINGS -->
-        <section id="tab-admin-settings" hidden class="tab-content space-y-6 hidden max-w-4xl mx-auto">
+        <section id="tab-admin-settings" hidden class="tab-content space-y-6 max-w-4xl mx-auto">
             <div class="flex justify-between items-center border-b pb-2">
                 <div>
                     <h2 class="text-lg font-bold flex items-center gap-2">
@@ -1172,7 +1228,7 @@
     </main>
 
     <!-- WhatsApp Report Modal -->
-    <div id="whatsapp-report-modal" hidden class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 hidden">
+    <div id="whatsapp-report-modal" hidden class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl p-6 w-full max-w-md space-y-4 shadow-2xl text-xs">
             <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="font-bold text-sm flex items-center gap-1.5">
@@ -1190,7 +1246,7 @@
     </div>
 
     <!-- Document Modal -->
-    <div id="document-modal" hidden class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4 hidden">
+    <div id="document-modal" hidden class="fixed inset-0 bg-slate-900/80 z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl p-6 w-full max-w-lg space-y-4 shadow-2xl text-xs">
             <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="font-bold text-sm flex items-center gap-1.5">
@@ -1301,6 +1357,8 @@
         let activeDocNin = null;
         let selectedReceiptClient = null;
         let selectedSavingsNin = null;
+        let selectedStatementClient = null;
+        let currentStatementType = 'loan';
 
         // ============================================================
         // PDF GENERATION ENGINE
@@ -1361,14 +1419,15 @@
                 const doc = await this.generatePDF(receiptTitle, ["Field", "Detail"], details);
                 doc.save(`PMMS_Receipt_${Utils.today()}.pdf`);
             },
-            async downloadStatementPDF(clientName, nin, headers, rows) {
+            async downloadStatementPDF(clientName, nin, headers, rows, typeLabel = "Statement") {
                 const summary = [
                     `Client Name: ${clientName}`,
                     `NIN / ID: ${nin}`,
-                    `Statement Generated: ${Utils.today()}`
+                    `Statement Type: ${typeLabel}`,
+                    `Date Generated: ${Utils.today()}`
                 ];
-                const doc = await this.generatePDF("REPAYMENT & SAVINGS STATEMENT", headers, rows, summary);
-                doc.save(`PMMS_Statement_${nin}_${Utils.today()}.pdf`);
+                const doc = await this.generatePDF(`${typeLabel.toUpperCase()} STATEMENT`, headers, rows, summary);
+                doc.save(`PMMS_${typeLabel}_${nin}_${Utils.today()}.pdf`);
             },
             async downloadReportPDF(reportTitle, headers, rows, summaryLines) {
                 const doc = await this.generatePDF(reportTitle, headers, rows, summaryLines);
@@ -1746,7 +1805,123 @@
         };
 
         // ============================================================
-        // AUTH
+        // STATEMENTS MODULE
+        // ============================================================
+        const Statements = {
+            searchClients(query) {
+                const resultsDiv = document.getElementById("statement-search-results");
+                if (!query || query.trim().length < 1) {
+                    Utils.hide(resultsDiv);
+                    return;
+                }
+                const branch = State.getActiveBranch();
+                const q = query.toLowerCase();
+                const filtered = branch.clients.filter(c =>
+                    c.name.toLowerCase().includes(q) ||
+                    (c.nin && c.nin.toLowerCase().includes(q)) ||
+                    (c.phone && c.phone.includes(q))
+                );
+                resultsDiv.innerHTML = filtered.map(c => `
+                    <div onclick="Statements.selectClient('${c.id}')" class="p-2.5 hover:bg-slate-100 cursor-pointer text-xs">
+                        <strong>${c.name}</strong> <span class="text-slate-500">(${c.nin || 'N/A'})</span>
+                    </div>
+                `).join('') || `<div class="p-3 text-slate-400 text-xs">No clients found</div>`;
+                Utils.show(resultsDiv);
+            },
+            searchClientsDebounced: null,
+            selectClient(clientId) {
+                const branch = State.getActiveBranch();
+                selectedStatementClient = branch.clients.find(c => c.id === clientId);
+                Utils.hide("statement-search-results");
+                if (!selectedStatementClient) return;
+
+                document.getElementById("statement-client-search").value = selectedStatementClient.name;
+                document.getElementById("stmt-client-name-display").innerText = selectedStatementClient.name;
+                document.getElementById("stmt-client-details-display").innerText = `NIN: ${selectedStatementClient.nin || 'N/A'} | Phone: ${selectedStatementClient.phone || 'N/A'}`;
+                Utils.show("statement-client-info-card");
+                this.renderTable();
+            },
+            setStatementType(type) {
+                currentStatementType = type;
+                if (type === 'loan') {
+                    document.getElementById("stmt-type-loan").className = "w-1/2 py-2 rounded-lg bg-white text-slate-900 shadow-sm";
+                    document.getElementById("stmt-type-savings").className = "w-1/2 py-2 rounded-lg text-slate-500";
+                } else {
+                    document.getElementById("stmt-type-savings").className = "w-1/2 py-2 rounded-lg bg-white text-slate-900 shadow-sm";
+                    document.getElementById("stmt-type-loan").className = "w-1/2 py-2 rounded-lg text-slate-500";
+                }
+                if (selectedStatementClient) this.renderTable();
+            },
+            renderTable() {
+                const tbody = document.getElementById("statement-table-body");
+                if (!selectedStatementClient || !tbody) return;
+                const branch = State.getActiveBranch();
+
+                let rowsData = [];
+                if (currentStatementType === 'loan') {
+                    rowsData = (selectedStatementClient.history || []).map(h => [
+                        `${h.date} ${h.time || ''}`,
+                        h.type,
+                        h.channel || h.reason || '-',
+                        Utils.formatUGX(h.amount || 0)
+                    ]);
+                } else {
+                    const nin = selectedStatementClient.nin;
+                    const sav = branch.savingsAccounts[nin] || { history: [] };
+                    rowsData = (sav.history || []).map(sh => [
+                        `${sh.date} ${sh.time || ''}`,
+                        `Savings ${sh.type}`,
+                        '-',
+                        Utils.formatUGX(sh.amount || 0)
+                    ]);
+                }
+
+                if (rowsData.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-slate-400">No transactions recorded for this statement type.</td></tr>`;
+                    return;
+                }
+
+                tbody.innerHTML = rowsData.map(r => `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-mono text-[11px]">${r[0]}</td>
+                        <td class="p-3 font-semibold">${r[1]}</td>
+                        <td class="p-3 text-slate-600">${r[2]}</td>
+                        <td class="p-3 text-right font-mono font-bold">${r[3]}</td>
+                    </tr>
+                `).join('');
+            },
+            async downloadPDF() {
+                if (!selectedStatementClient) return;
+                const branch = State.getActiveBranch();
+                let rows = [];
+                let label = currentStatementType === 'loan' ? 'Loan Repayment' : 'Savings';
+
+                if (currentStatementType === 'loan') {
+                    rows = (selectedStatementClient.history || []).map(h => [h.date || '', h.type || '', h.channel || '-', Utils.formatUGX(h.amount || 0)]);
+                } else {
+                    const sav = branch.savingsAccounts[selectedStatementClient.nin] || { history: [] };
+                    rows = (sav.history || []).map(sh => [sh.date || '', `Savings ${sh.type}`, '-', Utils.formatUGX(sh.amount || 0)]);
+                }
+
+                await PdfEngine.downloadStatementPDF(selectedStatementClient.name, selectedStatementClient.nin || 'N/A', ["Date", "Type", "Channel", "Amount"], rows, label);
+                Utils.toast("Statement PDF downloaded");
+            },
+            async shareWhatsApp() {
+                if (!selectedStatementClient) return;
+                await this.downloadPDF();
+                if (selectedStatementClient.phone) {
+                    const label = currentStatementType === 'loan' ? 'Loan Repayment' : 'Savings';
+                    const text = encodeURIComponent(`Hello ${selectedStatementClient.name}, your ${label} statement PDF has been generated and downloaded. Please find attached.`);
+                    window.open(`https://wa.me/${selectedStatementClient.phone}?text=${text}`, '_blank');
+                } else {
+                    Utils.toast("Client phone number missing");
+                }
+            }
+        };
+        Statements.searchClientsDebounced = Utils.debounce(q => Statements.searchClients(q), 280);
+
+        // ============================================================
+        // AUTH MODULE
         // ============================================================
         const Auth = {
             switchTab(type) {
@@ -1754,13 +1929,13 @@
                 if (type === 'login') {
                     Utils.show("auth-form-login");
                     Utils.hide("auth-form-register");
-                    document.getElementById("tab-btn-login").classList.add("bg-white", "text-slate-900", "shadow-sm");
-                    document.getElementById("tab-btn-register").classList.remove("bg-white", "text-slate-900", "shadow-sm");
+                    document.getElementById("tab-btn-login").className = "w-1/2 py-2 rounded-lg bg-white text-slate-900 shadow-sm";
+                    document.getElementById("tab-btn-register").className = "w-1/2 py-2 rounded-lg text-slate-500";
                 } else {
                     Utils.hide("auth-form-login");
                     Utils.show("auth-form-register");
-                    document.getElementById("tab-btn-register").classList.add("bg-white", "text-slate-900", "shadow-sm");
-                    document.getElementById("tab-btn-login").classList.remove("bg-white", "text-slate-900", "shadow-sm");
+                    document.getElementById("tab-btn-register").className = "w-1/2 py-2 rounded-lg bg-white text-slate-900 shadow-sm";
+                    document.getElementById("tab-btn-login").className = "w-1/2 py-2 rounded-lg text-slate-500";
                 }
             },
             togglePasswordVisibility() {
@@ -1786,32 +1961,20 @@
                     !Validation.isValidPhone(phone) ||
                     !Validation.isValidPassword(password)) return;
 
-                const existsUsername = state.accounts.some(a => a.username.toLowerCase() === username.toLowerCase());
-                const existsEmail = state.accounts.some(a => (a.email || '').toLowerCase() === email);
-                const existsPhone = state.accounts.some(a => a.phone === phone);
-
-                if (existsUsername) {
-                    Utils.toast("Username already registered. Choose another.");
+                if (state.accounts.some(a => a.username.toLowerCase() === username.toLowerCase())) {
+                    Utils.toast("Username already registered.");
                     return;
                 }
-                if (existsEmail) {
-                    Utils.toast("This Gmail is already registered.");
-                    return;
-                }
-                if (existsPhone) {
-                    Utils.toast("This phone number is already registered.");
+                if (state.accounts.some(a => (a.email || '').toLowerCase() === email)) {
+                    Utils.toast("This Email is already registered.");
                     return;
                 }
 
                 const code = String(Math.floor(100000 + Math.random() * 900000));
-
-                state.pendingRegistration = {
-                    role, username, email, phone, password, name: username, code
-                };
+                state.pendingRegistration = { role, username, email, phone, password, name: username, code };
                 State.save();
 
                 Utils.toast(`Verification code sent to ${email}: ${code}`, 8000);
-
                 Utils.hide("auth-form-register");
                 Utils.show("auth-form-verify");
                 document.getElementById("reg-verify-code").value = "";
@@ -1822,22 +1985,12 @@
                 const pending = state.pendingRegistration;
 
                 if (!pending) {
-                    Utils.toast("No pending registration. Start again.");
+                    Utils.toast("No pending registration.");
                     this.switchTab('register');
                     return;
                 }
                 if (entered !== pending.code) {
                     Utils.toast("Incorrect verification code");
-                    return;
-                }
-
-                if (state.accounts.some(a => a.username.toLowerCase() === pending.username.toLowerCase() ||
-                                            (a.email || '').toLowerCase() === pending.email ||
-                                            a.phone === pending.phone)) {
-                    Utils.toast("Account details already taken");
-                    state.pendingRegistration = null;
-                    State.save();
-                    this.switchTab('register');
                     return;
                 }
 
@@ -1852,7 +2005,7 @@
                 state.pendingRegistration = null;
                 State.save();
 
-                Utils.toast(`Account created successfully with ${pending.role} role`);
+                Utils.toast(`Account created successfully!`);
                 this.switchTab('login');
                 document.getElementById("login-identifier").value = pending.username;
             },
@@ -1869,22 +2022,6 @@
                     Utils.toast("Access Denied: Incorrect credentials");
                     return;
                 }
-                if (!state.deviceSessions) state.deviceSessions = {};
-                if (!state.deviceSessions[acc.username]) state.deviceSessions[acc.username] = [];
-                let deviceId = localStorage.getItem("pmms_device_token");
-                if (!deviceId) {
-                    deviceId = Utils.generateId("dev");
-                    localStorage.setItem("pmms_device_token", deviceId);
-                }
-                const sessions = state.deviceSessions[acc.username];
-                if (!sessions.includes(deviceId)) {
-                    if (sessions.length >= 4) {
-                        Utils.toast("Maximum 4 devices reached for this account");
-                        return;
-                    }
-                    sessions.push(deviceId);
-                    State.save();
-                }
                 state.currentUser = acc;
                 localStorage.setItem("pmms_current_user_v10", JSON.stringify(acc));
                 document.getElementById("header-user-tag").innerText = `User: ${acc.username} (${acc.role})`;
@@ -1896,11 +2033,11 @@
             },
             applyRolePermissions() {
                 const role = state.currentUser?.role || 'Guest';
-                const hide = (id) => Utils.hide(id);
-                const show = (id) => Utils.show(id);
+                const hide = id => Utils.hide(id);
+                const show = id => Utils.show(id);
 
                 ["nav-btn-tab-posting", "nav-btn-tab-disburse", "nav-btn-tab-savings", "nav-btn-tab-cash",
-                 "nav-btn-tab-loan-ops", "nav-btn-tab-unified-clients", "nav-btn-tab-daily-workspace",
+                 "nav-btn-tab-loan-ops", "nav-btn-tab-unified-clients", "nav-btn-tab-statements", "nav-btn-tab-daily-workspace",
                  "nav-btn-tab-officers", "nav-btn-tab-bankings", "nav-btn-tab-expenses", "nav-btn-tab-capital",
                  "nav-btn-tab-reports", "nav-btn-tab-aging", "nav-btn-tab-demand", "nav-btn-tab-sms-logs",
                  "nav-btn-tab-admin-settings"].forEach(show);
@@ -2045,7 +2182,7 @@
                 state.loanFeeTiers.sort((a, b) => a.min - b.min);
                 State.save();
                 this.renderFeeTiersTable();
-                Utils.toast("Fee tier added/updated successfully");
+                Utils.toast("Fee tier added successfully");
                 document.getElementById("new-fee-min").value = "";
                 document.getElementById("new-fee-max").value = "";
                 document.getElementById("new-fee-amt").value = "";
@@ -2337,7 +2474,7 @@
                     return;
                 }
                 if (!selectedReceiptClient) {
-                    Utils.toast("Select a client from the search results");
+                    Utils.toast("Select a client from search results");
                     return;
                 }
                 const txn = (selectedReceiptClient.history || []).find(h => h.date === searchDate && (h.type === 'Repayment' || h.type === 'Disbursement'));
@@ -2807,7 +2944,7 @@
                     const clientObj = branch.clients.find(c => c.nin === item.nin);
                     const history = clientObj ? (clientObj.history || []) : [];
                     const rows = history.map(h => [h.date || '', h.type || '', Utils.formatUGX(h.amount || 0), h.channel || '-']);
-                    await PdfEngine.downloadStatementPDF(item.name, item.nin, ["Date", "Type", "Amount", "Channel"], rows);
+                    await PdfEngine.downloadStatementPDF(item.name, item.nin, ["Date", "Type", "Amount", "Channel"], rows, "Repayment");
                 }
                 Utils.toast("Statement PDF(s) downloaded");
             },
@@ -2822,7 +2959,7 @@
                     const clientObj = branch.clients.find(c => c.nin === item.nin);
                     const history = clientObj ? (clientObj.history || []) : [];
                     const rows = history.map(h => [h.date || '', h.type || '', Utils.formatUGX(h.amount || 0), h.channel || '-']);
-                    await PdfEngine.downloadStatementPDF(item.name, item.nin, ["Date", "Type", "Amount", "Channel"], rows);
+                    await PdfEngine.downloadStatementPDF(item.name, item.nin, ["Date", "Type", "Amount", "Channel"], rows, "Repayment");
                     if (clientObj && clientObj.phone) {
                         window.open(`https://wa.me/${clientObj.phone}?text=${encodeURIComponent(`Hello ${item.name}, your repayment & savings statement PDF has been downloaded. Please find attached.`)}`, '_blank');
                     }

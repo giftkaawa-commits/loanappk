@@ -4093,7 +4093,7 @@
                 let headerPrefix = state.company.name ? `${state.company.name}\n` : "";
                 lastPrintedReceiptText = headerPrefix + textData;
                 const shouldPrint = document.getElementById("toggle-print-receipt")?.checked ?? true;
-                if (!shouldPrint) return;
+                if (!shouldPrint && !textData.includes("STATEMENT")) return;
                 if (xPrinterDevice?.gatt?.connected) {
                     try {
                         const server = await xPrinterDevice.gatt.connect();

@@ -1030,7 +1030,7 @@
                 </div>
             </div>
 
-            <!-- TIME FORMAT SETTING (NEW) -->
+            <!-- TIME FORMAT SETTING -->
             <div class="bg-white border p-5 rounded-2xl space-y-4 shadow-sm">
                 <h3 class="font-bold text-sm border-b pb-2 flex items-center gap-2 text-indigo-700">
                     <i class="fa-solid fa-clock"></i> Time Display Format
@@ -1259,7 +1259,7 @@
             },
             settings: {
                 applyOverduePenalty: true,
-                timeFormat: "24"          // "12" or "24"
+                timeFormat: "24"
             },
             managers: [],
             globalClients: [],
@@ -1329,7 +1329,7 @@
                 doc.setFont("helvetica", "normal");
                 doc.text(`Location / Branch: ${state.company.location || "Kampala, Uganda"}`, 105, startY, { align: "center" });
                 startY += 5;
-                doc.text(`Date Generated: \( {Utils.today()} ( \){Utils.timeNow()})`, 105, startY, { align: "center" });
+                doc.text(`Date Generated: ${Utils.today()} (${Utils.timeNow()})`, 105, startY, { align: "center" });
                 startY += 8;
 
                 doc.setFontSize(12);
@@ -1368,7 +1368,7 @@
                     `Statement Generated: ${Utils.today()}`
                 ];
                 const doc = await this.generatePDF("REPAYMENT & SAVINGS STATEMENT", headers, rows, summary);
-                doc.save(`PMMS_Statement_\( {nin}_ \){Utils.today()}.pdf`);
+                doc.save(`PMMS_Statement_${nin}_${Utils.today()}.pdf`);
             },
             async downloadReportPDF(reportTitle, headers, rows, summaryLines) {
                 const doc = await this.generatePDF(reportTitle, headers, rows, summaryLines);
@@ -1418,7 +1418,6 @@
                         hour12: true
                     });
                 }
-                // Default 24-hour
                 return now.toTimeString().substring(0, 8);
             },
             generateId(prefix = 'id') {
@@ -1522,7 +1521,6 @@
                     c.overdueDays = 0;
                 }
                 
-                // Only apply penalty if enabled in settings
                 if (state.settings?.applyOverduePenalty && c.overdueDays > 7 && !c.penaltyApplied) {
                     const penalty = (c.principal || c.initialBalance) * 0.30;
                     c.balance = (c.balance || 0) + penalty;
@@ -1543,7 +1541,7 @@
                 if (savedUser) {
                     try {
                         state.currentUser = JSON.parse(savedUser);
-                        document.getElementById("header-user-tag").innerText = `User: \( {state.currentUser.username} ( \){state.currentUser.role})`;
+                        document.getElementById("header-user-tag").innerText = `User: ${state.currentUser.username} (${state.currentUser.role})`;
                         Utils.hide("auth-overlay");
                         Auth.applyRolePermissions();
                     } catch (e) {}
@@ -1889,7 +1887,7 @@
                 }
                 state.currentUser = acc;
                 localStorage.setItem("pmms_current_user_v10", JSON.stringify(acc));
-                document.getElementById("header-user-tag").innerText = `User: \( {acc.username} ( \){acc.role})`;
+                document.getElementById("header-user-tag").innerText = `User: ${acc.username} (${acc.role})`;
                 this.applyRolePermissions();
                 Utils.hide("auth-overlay");
                 State.save();
@@ -2112,7 +2110,7 @@
                 const jsonStr = JSON.stringify(state, null, 2);
                 const subject = encodeURIComponent(`[PMMS BACKUP] ${state.company.name} - ${Utils.today()}`);
                 const body = encodeURIComponent(`PMMS Backup\nDate: ${Utils.now()}\n\n` + jsonStr);
-                window.location.href = `mailto:\( {email}?subject= \){subject}&body=${body}`;
+                window.location.href = `mailto:${email}?subject=${subject}&body=${body}`;
                 Utils.toast("Opening email client");
             },
             exportJSON() {
@@ -2172,7 +2170,7 @@
                 resultsDiv.innerHTML = filtered.map(c => `
                     <div onclick="Posting.selectClient('${c.id}')" class="p-3 hover:bg-slate-100 cursor-pointer text-xs space-y-1">
                         <div class="flex justify-between items-center">
-                            <div><strong>\( {c.name}</strong> <span class="text-slate-500">( \){c.nin || 'N/A'})</span></div>
+                            <div><strong>${c.name}</strong> <span class="text-slate-500">(${c.nin || 'N/A'})</span></div>
                             <span class="text-[10px] font-bold px-2 py-0.5 rounded ${(c.overdueDays || 0) > 0 ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-700'}">
                                 ${c.overdueDays || 0}d
                             </span>
@@ -2246,7 +2244,7 @@
                 }
                 list.innerHTML = branch.batch.map((item, idx) => `
                     <div class="bg-white p-2.5 border rounded flex justify-between text-xs items-center">
-                        <span>${item.clientName} — \( {Utils.formatUGX(item.amount)} <span class="text-slate-400">( \){item.channel})</span></span>
+                        <span>${item.clientName} — ${Utils.formatUGX(item.amount)} <span class="text-slate-400">(${item.channel})</span></span>
                         <button onclick="Posting.removeFromBatch(${idx})" class="text-red-500 font-bold px-2">Remove</button>
                     </div>
                 `).join('');
@@ -2318,7 +2316,7 @@
                 );
                 resultsDiv.innerHTML = filtered.map(c => `
                     <div onclick="Posting.selectReceiptClient('${c.id}')" class="p-2.5 hover:bg-slate-100 cursor-pointer text-xs">
-                        <strong>\( {c.name}</strong> <span class="text-slate-500">( \){c.nin || 'N/A'})</span>
+                        <strong>${c.name}</strong> <span class="text-slate-500">(${c.nin || 'N/A'})</span>
                     </div>
                 `).join('') || `<div class="p-3 text-slate-400 text-xs">No matches</div>`;
                 Utils.show(resultsDiv);
@@ -2363,7 +2361,7 @@
                         ["Date", txn.date]
                     ];
                     await PdfEngine.downloadReceiptPDF(receiptType, rows);
-                    const waUrl = `https://wa.me/\( {selectedReceiptClient.phone}?text= \){encodeURIComponent(`Hello ${selectedReceiptClient.name}, your PDF receipt for transaction on ${txn.date} has been generated and downloaded. Please attach and send.`)}`;
+                    const waUrl = `https://wa.me/${selectedReceiptClient.phone}?text=${encodeURIComponent(`Hello ${selectedReceiptClient.name}, your PDF receipt for transaction on ${txn.date} has been generated and downloaded. Please attach and send.`)}`;
                     window.open(waUrl, '_blank');
                     Utils.toast("Receipt PDF generated & WhatsApp opened");
                 } else {
@@ -2412,12 +2410,12 @@
                 const msgEl = document.getElementById("guarantor-exposure-msg");
                 const submitBtn = document.getElementById("disburse-submit-btn");
                 if (count >= 4) {
-                    msgEl.innerHTML = `Guarantor <strong>\( {guarantorName}</strong> already guarantees <strong> \){count}</strong> active clients. Maximum is 4.`;
+                    msgEl.innerHTML = `Guarantor <strong>${guarantorName}</strong> already guarantees <strong>${count}</strong> active clients. Maximum is 4.`;
                     Utils.show(alertDiv);
                     submitBtn.disabled = true;
                     submitBtn.classList.add("opacity-50", "cursor-not-allowed");
                 } else if (count >= 2) {
-                    msgEl.innerHTML = `Guarantor <strong>\( {guarantorName}</strong> currently guarantees <strong> \){count}</strong> active clients.`;
+                    msgEl.innerHTML = `Guarantor <strong>${guarantorName}</strong> currently guarantees <strong>${count}</strong> active clients.`;
                     Utils.show(alertDiv);
                     submitBtn.disabled = false;
                     submitBtn.classList.remove("opacity-50", "cursor-not-allowed");
@@ -2435,7 +2433,7 @@
                 const warnBox = document.getElementById("disburse-active-loan-warning");
                 const submitBtn = document.getElementById("disburse-submit-btn");
                 if (activeLoan) {
-                    document.getElementById("disburse-active-loan-msg").innerHTML = `NIN <strong>\( {nin}</strong> has active balance of <strong> \){Utils.formatUGX(activeLoan.balance)}</strong>. Must be zero.`;
+                    document.getElementById("disburse-active-loan-msg").innerHTML = `NIN <strong>${nin}</strong> has active balance of <strong>${Utils.formatUGX(activeLoan.balance)}</strong>. Must be zero.`;
                     Utils.show(warnBox);
                     submitBtn.disabled = true;
                     submitBtn.classList.add("opacity-50", "cursor-not-allowed");
@@ -2467,7 +2465,7 @@
                 );
                 resultsDiv.innerHTML = filtered.map(c => `
                     <div onclick="Disburse.selectByNin('${c.nin}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs">
-                        <strong>\( {c.name}</strong> ( \){c.nin})
+                        <strong>${c.name}</strong> (${c.nin})
                     </div>
                 `).join('');
                 Utils.show(resultsDiv);
@@ -2495,7 +2493,7 @@
                     const count = this.checkGuarantorExposure(selectedDisburseClient.guarantor);
                     const warnDiv = document.getElementById("disburse-guarantor-exposure-existing");
                     if (count >= 4) {
-                        warnDiv.innerText = `Guarantor (\( {selectedDisburseClient.guarantor}) is at maximum exposure ( \){count} clients)`;
+                        warnDiv.innerText = `Guarantor (${selectedDisburseClient.guarantor}) is at maximum exposure (${count} clients)`;
                         Utils.show(warnDiv);
                     } else Utils.hide(warnDiv);
                 }
@@ -2617,7 +2615,7 @@
                     c.name.toLowerCase().includes(q) || (c.nin && c.nin.toLowerCase().includes(q))
                 );
                 resultsDiv.innerHTML = filtered.map(c => `
-                    <div onclick="Savings.selectClient('\( {c.nin}', ' \){c.name.replace(/'/g, "\\'")}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs">
+                    <div onclick="Savings.selectClient('${c.nin}', '${c.name.replace(/'/g, "\\'")}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs">
                         <strong>${c.name}</strong>
                     </div>
                 `).join('');
@@ -2629,7 +2627,7 @@
                 Utils.hide("savings-search-results");
                 const branch = State.getActiveBranch();
                 if (!branch.savingsAccounts[nin]) branch.savingsAccounts[nin] = { balance: 0, history: [] };
-                document.getElementById("sav-client-name").innerText = `\( {name} ( \){nin})`;
+                document.getElementById("sav-client-name").innerText = `${name} (${nin})`;
                 document.getElementById("sav-client-balance").innerText = (branch.savingsAccounts[nin].balance || 0).toLocaleString();
                 Utils.show("savings-client-card");
             },
@@ -2710,7 +2708,7 @@
                 document.getElementById("rev-client-balance").innerText = (selectedReversalClient.balance || 0).toLocaleString();
                 const select = document.getElementById("rev-transaction-select");
                 const hist = (selectedReversalClient.history || []).filter(h => h.type === 'Repayment' || h.type === 'Disbursement');
-                select.innerHTML = hist.map((h, i) => `<option value="\( {i}"> \){h.date} — ${h.type} — ${Utils.formatUGX(h.amount)}</option>`).join('');
+                select.innerHTML = hist.map((h, i) => `<option value="${i}">${h.date} — ${h.type} — ${Utils.formatUGX(h.amount)}</option>`).join('');
                 Utils.show("reversal-card");
             },
             executeReversal() {
@@ -2776,19 +2774,19 @@
                     const currentOfficerId = activeLoan ? activeLoan.officerId : '';
                     const officerDropdown = `<select onchange="Clients.reassignOfficer('${c.nin}', this.value)" class="p-1.5 border rounded text-xs bg-slate-50 font-bold">
                         <option value="">-- Assign --</option>` +
-                        branch.officers.map(o => `<option value="${o.id}" \( {currentOfficerId === o.id ? 'selected' : ''}> \){o.name}</option>`).join('') +
+                        branch.officers.map(o => `<option value="${o.id}" ${currentOfficerId === o.id ? 'selected' : ''}>${o.name}</option>`).join('') +
                     `</select>`;
                     return `<tr class="text-xs">
-                        <td class="p-3 text-center"><input type="checkbox" class="client-stmt-checkbox rounded" value="\( {c.nin}" data-name=" \){c.name.replace(/'/g, "")}"></td>
+                        <td class="p-3 text-center"><input type="checkbox" class="client-stmt-checkbox rounded" value="${c.nin}" data-name="${c.name.replace(/'/g, "")}"></td>
                         <td class="p-3 font-mono font-bold text-purple-700">${c.nin}</td>
-                        <td class="p-3"><strong>\( {c.name}</strong><br> \){c.phone || ''}</td>
-                        <td class="p-3">${c.guarantor || '-'}<br><span class="text-[10px] \( {gCount >= 4 ? 'bg-red-200 text-red-900 font-bold px-1 rounded' : 'text-slate-400'}"> \){gCount} active</span></td>
+                        <td class="p-3"><strong>${c.name}</strong><br>${c.phone || ''}</td>
+                        <td class="p-3">${c.guarantor || '-'}<br><span class="text-[10px] ${gCount >= 4 ? 'bg-red-200 text-red-900 font-bold px-1 rounded' : 'text-slate-400'}">${gCount} active</span></td>
                         <td class="p-3">${c.category || 'OTHERS'} ${c.plate ? '<br>' + c.plate : ''}</td>
                         <td class="p-3">${officerDropdown}</td>
                         <td class="p-3 font-bold text-emerald-600">${Utils.formatUGX(savBal)}</td>
                         <td class="p-3 font-bold text-purple-700">${docs.length}</td>
                         <td class="p-3 text-right flex gap-1 justify-end">
-                            <button onclick="Clients.openDocModal('\( {c.nin}', ' \){c.name.replace(/'/g, "\\'")}')" class="bg-purple-700 text-white px-2 py-1 rounded font-bold text-[10px]">Docs</button>
+                            <button onclick="Clients.openDocModal('${c.nin}', '${c.name.replace(/'/g, "\\'")}')" class="bg-purple-700 text-white px-2 py-1 rounded font-bold text-[10px]">Docs</button>
                         </td>
                     </tr>`;
                 }).join('') || `<tr><td colspan="9" class="p-4 text-center text-slate-400">No clients</td></tr>`;
@@ -2826,7 +2824,7 @@
                     const rows = history.map(h => [h.date || '', h.type || '', Utils.formatUGX(h.amount || 0), h.channel || '-']);
                     await PdfEngine.downloadStatementPDF(item.name, item.nin, ["Date", "Type", "Amount", "Channel"], rows);
                     if (clientObj && clientObj.phone) {
-                        window.open(`https://wa.me/\( {clientObj.phone}?text= \){encodeURIComponent(`Hello ${item.name}, your repayment & savings statement PDF has been downloaded. Please find attached.`)}`, '_blank');
+                        window.open(`https://wa.me/${clientObj.phone}?text=${encodeURIComponent(`Hello ${item.name}, your repayment & savings statement PDF has been downloaded. Please find attached.`)}`, '_blank');
                     }
                 }
                 Utils.toast("Statements generated & WhatsApp opened");
@@ -2847,7 +2845,7 @@
             },
             openDocModal(nin, name) {
                 activeDocNin = nin;
-                document.getElementById("doc-modal-client-info").innerText = `Client: \( {name} ( \){nin})`;
+                document.getElementById("doc-modal-client-info").innerText = `Client: ${name} (${nin})`;
                 this.renderDocList();
                 Utils.show("document-modal");
             },
@@ -2860,9 +2858,9 @@
                 }
                 listDiv.innerHTML = docs.map((d, i) => `
                     <div class="p-2 border rounded bg-white flex justify-between items-center text-xs">
-                        <div><strong>\( {d.label}</strong><br><span class="text-[10px] text-slate-400"> \){d.date}</span></div>
+                        <div><strong>${d.label}</strong><br><span class="text-[10px] text-slate-400">${d.date}</span></div>
                         <div class="flex gap-2">
-                            <a href="\( {d.data}" download=" \){d.label}" class="text-blue-600 font-bold">Download</a>
+                            <a href="${d.data}" download="${d.label}" class="text-blue-600 font-bold">Download</a>
                             <button onclick="Clients.deleteDoc(${i})" class="text-red-500 font-bold">Delete</button>
                         </div>
                     </div>
@@ -3094,8 +3092,8 @@
                     else if (a.type === 'MM Withdrawal') badge = 'bg-cyan-100 text-cyan-900 font-bold';
                     return `
                         <tr class="hover:bg-slate-50 text-xs">
-                            <td class="p-3 font-mono text-[11px] text-slate-500"><strong>#${idx + 1}</strong> \( {a.time ? `<span class="ml-1 text-slate-400"> \){a.time}</span>` : ''}</td>
-                            <td class="p-3"><span class="px-2 py-1 rounded text-[10px] \( {badge}"> \){a.type}</span></td>
+                            <td class="p-3 font-mono text-[11px] text-slate-500"><strong>#${idx + 1}</strong> ${a.time ? `<span class="ml-1 text-slate-400">${a.time}</span>` : ''}</td>
+                            <td class="p-3"><span class="px-2 py-1 rounded text-[10px] ${badge}">${a.type}</span></td>
                             <td class="p-3 font-bold">${a.source}</td>
                             <td class="p-3">${a.narration}</td>
                             <td class="p-3 text-slate-500 text-[10px]">${a.detail}</td>
@@ -3131,12 +3129,12 @@
             populateDropdowns() {
                 const branch = State.getActiveBranch();
                 const opts = `<option value="">-- Select Staff --</option>` +
-                    branch.officers.map(o => `<option value="\( {o.id}"> \){o.name}</option>`).join('');
+                    branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
                 const disb = document.getElementById("disburse-officer-select");
                 if (disb) disb.innerHTML = opts;
                 const aging = document.getElementById("aging-officer-filter");
                 if (aging) aging.innerHTML = `<option value="ALL">-- ALL STAFF --</option>` +
-                    branch.officers.map(o => `<option value="\( {o.id}"> \){o.name}</option>`).join('');
+                    branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
                 const historySel = document.getElementById("staff-history-select");
                 if (historySel) historySel.innerHTML = opts;
                 const historyDate = document.getElementById("staff-history-date");
@@ -3210,7 +3208,7 @@
                             ${clientRecords.length > 0 ? clientRecords.map(cr => `
                                 <div class="bg-white p-2 rounded border flex justify-between text-xs items-center">
                                     <div>
-                                        <strong>\( {cr.name}</strong> <span class="text-slate-400">( \){cr.nin})</span><br>
+                                        <strong>${cr.name}</strong> <span class="text-slate-400">(${cr.nin})</span><br>
                                         <span class="text-[10px] text-slate-500">Balance: ${Utils.formatUGX(cr.balance)}</span>
                                     </div>
                                     <div class="text-right">
@@ -3252,8 +3250,8 @@
                         <div class="bg-white border-2 border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                             <div class="bg-slate-800 text-white px-4 py-3 flex justify-between items-start">
                                 <div>
-                                    <div class="font-bold text-sm" id="staff-name-\( {o.id}"> \){o.name}</div>
-                                    <div class="text-[11px] text-slate-300" id="staff-phone-\( {o.id}"> \){o.phone || 'No phone'}</div>
+                                    <div class="font-bold text-sm" id="staff-name-${o.id}">${o.name}</div>
+                                    <div class="text-[11px] text-slate-300" id="staff-phone-${o.id}">${o.phone || 'No phone'}</div>
                                 </div>
                                 ${isAdmin ? `
                                     <button onclick="Staff.editOfficer('${o.id}')" class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded">
@@ -3392,7 +3390,7 @@
                 const branch = State.getActiveBranch();
                 document.getElementById("capital-approval-list").innerHTML = branch.capitalizations.map(c => `
                     <div class="bg-white p-2 border rounded text-xs">
-                        ${Utils.formatUGX(c.amount)} — \( {c.narration || 'Capital'} ( \){c.date})
+                        ${Utils.formatUGX(c.amount)} — ${c.narration || 'Capital'} (${c.date})
                     </div>
                 `).join('') || `<p class="text-slate-400 text-center">No capital records</p>`;
             }
@@ -3599,7 +3597,7 @@
                     : managers.map(m => `
                         <label class="flex items-center gap-2 cursor-pointer font-medium">
                             <input type="checkbox" value="${m.phone}" checked class="mgr-whatsapp-chk rounded">
-                            <span>\( {m.name} ( \){m.phone})</span>
+                            <span>${m.name} (${m.phone})</span>
                         </label>
                     `).join('');
                 document.getElementById("whatsapp-report-preview").value = this.getReportText();
@@ -3640,7 +3638,7 @@
                 const text = encodeURIComponent(`Hello Manager, please find attached the Daily Closing Report PDF for ${Utils.today()}.`);
                 checkboxes.forEach((chk, index) => {
                     setTimeout(() => {
-                        window.open(`https://wa.me/\( {chk.value}?text= \){text}`, '_blank');
+                        window.open(`https://wa.me/${chk.value}?text=${text}`, '_blank');
                     }, index * 500);
                 });
                 Utils.hide("whatsapp-report-modal");
@@ -3704,12 +3702,12 @@
                     const rows = clients.length > 0 ? clients.map((c, idx) => `
                         <tr class="hover:bg-slate-50 border-b text-xs">
                             <td class="p-3">${String(idx + 1).padStart(2, '0')}</td>
-                            <td class="p-3"><strong>\( {c.name}</strong><br><span class="text-slate-500 text-[10px]"> \){c.phone || ''}</span></td>
+                            <td class="p-3"><strong>${c.name}</strong><br><span class="text-slate-500 text-[10px]">${c.phone || ''}</span></td>
                             <td class="p-3">${c.guarantor || '-'}</td>
                             <td class="p-3 font-mono">${Utils.formatUGX(c.principal || 0)}</td>
                             <td class="p-3 font-mono font-bold text-blue-700">${Utils.formatUGX(c.balance || 0)}</td>
                             <td class="p-3 font-mono font-bold text-red-600">${Utils.formatUGX(c.arrears || 0)}</td>
-                            <td class="p-3 font-bold \( {(c.overdueDays || 0) >= 90 ? 'text-red-600' : (c.overdueDays || 0) > 0 ? 'text-amber-700' : 'text-emerald-600'}"> \){c.overdueDays || 0}d</td>
+                            <td class="p-3 font-bold ${(c.overdueDays || 0) >= 90 ? 'text-red-600' : (c.overdueDays || 0) > 0 ? 'text-amber-700' : 'text-emerald-600'}">${c.overdueDays || 0}d</td>
                         </tr>
                     `).join('') : `<tr><td colspan="7" class="p-4 text-center text-slate-400">No clients</td></tr>`;
 
@@ -3726,7 +3724,7 @@
                     return `
                         <div class="bg-white border rounded-2xl shadow-sm overflow-hidden p-4 space-y-3">
                             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b pb-2">
-                                <div class="font-bold text-sm text-slate-900"><i class="fa-solid fa-user-tie text-teal-600 mr-1"></i> \( {officer.name} ( \){officer.phone || 'No phone'})</div>
+                                <div class="font-bold text-sm text-slate-900"><i class="fa-solid fa-user-tie text-teal-600 mr-1"></i> ${officer.name} (${officer.phone || 'No phone'})</div>
                                 <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-right text-[11px]">
                                     <div class="bg-slate-100 px-2 py-1 rounded"><span class="text-slate-500 block text-[9px]">Clients:</span> <strong class="text-slate-900">${clients.length}</strong></div>
                                     <div class="bg-slate-100 px-2 py-1 rounded"><span class="text-slate-500 block text-[9px]">Principal:</span> <strong class="text-slate-900">${Utils.formatUGX(offPrin)}</strong></div>
@@ -3747,7 +3745,7 @@
                                             <th class="p-3">Aging</th>
                                         </tr>
                                     </thead>
-                                    <tbody>\( {rows} \){totalRow}</tbody>
+                                    <tbody>${rows}${totalRow}</tbody>
                                 </table>
                             </div>
                         </div>
@@ -3759,7 +3757,7 @@
                 const branch = State.getActiveBranch();
                 let csv = 'No,Name,Phone,Guarantor,Principal,Balance,Arrears,Aging Days\n';
                 branch.clients.forEach((c, idx) => {
-                    csv += `\( {String(idx + 1).padStart(2, '0')}," \){c.name}","\( {c.phone || ''}"," \){c.guarantor || ''}",\( {c.principal || 0}, \){c.balance || 0},\( {c.arrears || 0}, \){c.overdueDays || 0}\n`;
+                    csv += `${String(idx + 1).padStart(2, '0')},"${c.name}","${c.phone || ''}","${c.guarantor || ''}",${c.principal || 0},${c.balance || 0},${c.arrears || 0},${c.overdueDays || 0}\n`;
                 });
                 const blob = new Blob([csv], { type: 'text/csv' });
                 const link = document.createElement('a');
@@ -3811,7 +3809,7 @@
             dispatch(phone, message, triggerAction) {
                 if (!phone) return;
                 const networkCarrier = document.getElementById("sms-preferred-network")?.value || "MTN";
-                const smsLink = `sms:\( {phone}?body= \){encodeURIComponent(message)}`;
+                const smsLink = `sms:${phone}?body=${encodeURIComponent(message)}`;
                 const logEntry = {
                     timestamp: Utils.now(),
                     phone,
@@ -3869,7 +3867,7 @@
                 if (!select) return;
                 const branch = State.getActiveBranch();
                 select.innerHTML = `<option value="">-- Choose Client --</option>` +
-                    branch.clients.map(c => `<option value="\( {c.id}"> \){c.name} (${c.phone || 'No Phone'})</option>`).join('');
+                    branch.clients.map(c => `<option value="${c.id}">${c.name} (${c.phone || 'No Phone'})</option>`).join('');
             },
             renderLogs() {
                 const tbody = document.getElementById("sms-logs-table-body");
@@ -4006,4 +4004,4 @@
         };
     </script>
 </body>
-    </html>
+</html>

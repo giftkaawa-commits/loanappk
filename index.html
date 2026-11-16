@@ -202,7 +202,6 @@
             <button id="nav-btn-tab-posting" onclick="UI.showTab('tab-posting')" class="nav-btn dyn-bg text-white px-3.5 py-2 rounded-xl font-bold text-xs shadow-md flex items-center gap-1.5"><i class="fa-solid fa-cash-register"></i> Posting</button>
             <button id="nav-btn-tab-disburse" onclick="UI.showTab('tab-disburse')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5"><i class="fa-solid fa-hand-holding-dollar"></i> Disburse</button>
             <button id="nav-btn-tab-savings" onclick="UI.showTab('tab-savings')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5"><i class="fa-solid fa-piggy-bank"></i> Savings</button>
-            <button id="nav-btn-tab-statements" onclick="UI.showTab('tab-statements')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-amber-300 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5"><i class="fa-solid fa-file-invoice-dollar"></i> Statements & PDF</button>
             <button id="nav-btn-tab-cash" onclick="UI.showTab('tab-cash')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5"><i class="fa-solid fa-money-bill-wave"></i> Cash Position</button>
             <button id="nav-btn-tab-loan-ops" onclick="UI.showTab('tab-loan-ops')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-indigo-400 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5"><i class="fa-solid fa-sliders"></i> Loan Ops</button>
             <button id="nav-btn-tab-unified-clients" onclick="UI.showTab('tab-unified-clients')" class="nav-btn bg-slate-800 hover:bg-slate-700 text-purple-400 border border-slate-700 px-3.5 py-2 rounded-xl font-bold text-xs flex items-center gap-1.5"><i class="fa-solid fa-id-card"></i> Clients & Docs</button>
@@ -325,61 +324,6 @@
                         <button onclick="Posting.postAllBatch()" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-lg text-xs font-bold shadow">POST ALL</button>
                     </div>
                     <div id="batch-list" class="space-y-2 max-h-[400px] overflow-y-auto"></div>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB: STATEMENTS & PDF (NEWLY ADDED) -->
-        <section id="tab-statements" hidden class="tab-content space-y-4 hidden max-w-4xl mx-auto">
-            <div class="flex justify-between items-center border-b pb-2">
-                <h2 class="text-base md:text-lg font-bold"><i class="fa-solid fa-file-invoice-dollar text-amber-600"></i> Client Statement Printing & WhatsApp PDF</h2>
-            </div>
-
-            <div class="bg-white p-5 border rounded-xl space-y-4 shadow-sm text-xs">
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                        <label class="block font-semibold text-slate-700 mb-1">1. Search Client (Name, NIN, or Phone)</label>
-                        <input type="text" id="statement-client-search" oninput="Statements.searchClientsDebounced(this.value)" placeholder="Type client name or NIN..." class="w-full p-3 border rounded-xl bg-slate-50 font-bold">
-                        <div id="statement-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-40 overflow-y-auto hidden shadow-md"></div>
-                    </div>
-                    <div>
-                        <label class="block font-semibold text-slate-700 mb-1">2. Statement Type</label>
-                        <select id="statement-type-select" class="w-full p-3 border rounded-xl bg-slate-50 font-bold">
-                            <option value="loan">Loan Repayment Statement</option>
-                            <option value="saving">Savings Account Statement</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div id="statement-selected-banner" hidden class="hidden bg-amber-50 border border-amber-300 p-3.5 rounded-xl flex justify-between items-center">
-                    <div>
-                        <div class="font-bold text-amber-900 text-sm" id="stmt-client-name-display"></div>
-                        <div class="text-amber-800 text-[11px]" id="stmt-client-details-display"></div>
-                    </div>
-                    <span class="bg-amber-600 text-white px-3 py-1 rounded-full font-bold text-[11px]">Selected</span>
-                </div>
-
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
-                    <button onclick="Statements.generatePDF()" class="bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow">
-                        <i class="fa-solid fa-file-pdf"></i> Download PDF
-                    </button>
-                    <button onclick="Statements.shareWhatsAppPDF()" class="bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow">
-                        <i class="fa-brands fa-whatsapp"></i> WhatsApp PDF
-                    </button>
-                    <button onclick="Statements.printThermal()" class="dyn-bg text-white py-3 rounded-xl font-bold flex items-center justify-center gap-1.5 shadow">
-                        <i class="fa-solid fa-print"></i> Thermal Print
-                    </button>
-                </div>
-            </div>
-
-            <!-- Statement Preview Box -->
-            <div class="bg-white p-5 border rounded-xl space-y-3 shadow-sm text-xs">
-                <h3 class="font-bold text-slate-800 text-sm border-b pb-2 flex items-center justify-between">
-                    <span>Statement Preview</span>
-                    <span id="stmt-preview-type-tag" class="text-slate-500 font-normal">Loan Repayment</span>
-                </h3>
-                <div id="statement-preview-container" class="space-y-2 max-h-[350px] overflow-y-auto font-mono text-[11px] bg-slate-50 p-3 rounded-xl border">
-                    <p class="text-slate-400 text-center py-6">Select a client above to view statement history.</p>
                 </div>
             </div>
         </section>
@@ -673,6 +617,14 @@
                         <i class="fa-solid fa-id-card text-purple-600"></i> Master Client Directory
                     </h2>
                 </div>
+                <div class="flex gap-2">
+                    <button onclick="Clients.printSelectedStatement()" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold">
+                        <i class="fa-solid fa-print"></i> Print Statement
+                    </button>
+                    <button onclick="Clients.shareWhatsAppStatement()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold">
+                        <i class="fa-brands fa-whatsapp"></i> WhatsApp Statement (PDF)
+                    </button>
+                </div>
             </div>
 
             <input type="text" id="master-client-search" oninput="Clients.renderMasterDirectoryDebounced()" placeholder="Filter by Name, NIN, Phone, Guarantor..." class="w-full p-2.5 border rounded-xl bg-white text-xs shadow-sm">
@@ -681,6 +633,7 @@
                 <table class="w-full text-left border-collapse text-xs">
                     <thead>
                         <tr class="bg-slate-800 text-white text-[11px]">
+                            <th class="p-3 w-10">Select</th>
                             <th class="p-3">NIN / ID</th>
                             <th class="p-3">Name & Contact</th>
                             <th class="p-3">Guarantor</th>
@@ -1348,155 +1301,6 @@
         let activeDocNin = null;
         let selectedReceiptClient = null;
         let selectedSavingsNin = null;
-        let selectedStatementClient = null;
-
-        // ============================================================
-        // STATEMENTS MODULE (NEW)
-        // ============================================================
-        const Statements = {
-            searchClients(query) {
-                const resultsDiv = document.getElementById("statement-search-results");
-                if (!query || query.trim().length < 1) {
-                    Utils.hide(resultsDiv);
-                    return;
-                }
-                const branch = State.getActiveBranch();
-                const q = query.toLowerCase();
-                const filtered = branch.clients.filter(c =>
-                    c.name.toLowerCase().includes(q) ||
-                    (c.nin && c.nin.toLowerCase().includes(q)) ||
-                    (c.phone && c.phone.includes(q))
-                );
-                resultsDiv.innerHTML = filtered.map(c => `
-                    <div onclick="Statements.selectClient('${c.id}')" class="p-3 hover:bg-slate-100 cursor-pointer text-xs">
-                        <strong>${c.name}</strong> <span class="text-slate-500">(${c.nin || 'N/A'})</span>
-                    </div>
-                `).join('') || `<div class="p-3 text-slate-400 text-xs">No clients found</div>`;
-                Utils.show(resultsDiv);
-            },
-            searchClientsDebounced: null,
-            selectClient(clientId) {
-                const branch = State.getActiveBranch();
-                selectedStatementClient = branch.clients.find(c => c.id === clientId);
-                Utils.hide("statement-search-results");
-                if (!selectedStatementClient) return;
-
-                document.getElementById("statement-client-search").value = selectedStatementClient.name;
-                document.getElementById("stmt-client-name-display").innerText = selectedStatementClient.name;
-                document.getElementById("stmt-client-details-display").innerText = `NIN: ${selectedStatementClient.nin || 'N/A'} | Phone: ${selectedStatementClient.phone || 'N/A'} | Balance: ${Utils.formatUGX(selectedStatementClient.balance || 0)}`;
-                Utils.show("statement-selected-banner");
-                this.renderPreview();
-            },
-            renderPreview() {
-                const container = document.getElementById("statement-preview-container");
-                const type = document.getElementById("statement-type-select").value;
-                document.getElementById("stmt-preview-type-tag").innerText = type === 'loan' ? 'Loan Repayment Statement' : 'Savings Statement';
-
-                if (!selectedStatementClient) {
-                    container.innerHTML = `<p class="text-slate-400 text-center py-6">Select a client above to view statement history.</p>`;
-                    return;
-                }
-
-                if (type === 'loan') {
-                    const history = selectedStatementClient.history || [];
-                    if (history.length === 0) {
-                        container.innerHTML = `<p class="text-slate-400 text-center py-6">No loan transaction history found.</p>`;
-                        return;
-                    }
-                    container.innerHTML = history.map(h => `
-                        <div class="p-2 border-b flex justify-between">
-                            <span>${h.date} [${h.type}]</span>
-                            <span class="font-bold">${Utils.formatUGX(h.amount || 0)}</span>
-                        </div>
-                    `).join('');
-                } else {
-                    const branch = State.getActiveBranch();
-                    const sav = branch.savingsAccounts[selectedStatementClient.nin];
-                    const savHistory = sav ? (sav.history || []) : [];
-                    if (savHistory.length === 0) {
-                        container.innerHTML = `<p class="text-slate-400 text-center py-6">No savings transaction history found.</p>`;
-                        return;
-                    }
-                    container.innerHTML = savHistory.map(sh => `
-                        <div class="p-2 border-b flex justify-between">
-                            <span>${sh.date} [Savings ${sh.type}]</span>
-                            <span class="font-bold text-emerald-600">${Utils.formatUGX(sh.amount || 0)}</span>
-                        </div>
-                    `).join('');
-                }
-            },
-            async generatePDF() {
-                if (!selectedStatementClient) {
-                    Utils.toast("Please select a client first");
-                    return;
-                }
-                const type = document.getElementById("statement-type-select").value;
-                const title = type === 'loan' ? 'LOAN REPAYMENT STATEMENT' : 'SAVINGS STATEMENT';
-                
-                let headers = ["Date", "Type", "Amount", "Channel / Detail"];
-                let rows = [];
-
-                if (type === 'loan') {
-                    rows = (selectedStatementClient.history || []).map(h => [
-                        h.date || '', h.type || '', Utils.formatUGX(h.amount || 0), h.channel || h.reason || '-'
-                    ]);
-                } else {
-                    const branch = State.getActiveBranch();
-                    const sav = branch.savingsAccounts[selectedStatementClient.nin];
-                    rows = sav && sav.history ? sav.history.map(sh => [
-                        sh.date || '', `Savings ${sh.type}`, Utils.formatUGX(sh.amount || 0), '-'
-                    ]) : [];
-                }
-
-                await PdfEngine.downloadStatementPDF(selectedStatementClient.name, selectedStatementClient.nin || 'N/A', headers, rows);
-                Utils.toast("Statement PDF downloaded successfully");
-            },
-            async shareWhatsAppPDF() {
-                if (!selectedStatementClient) {
-                    Utils.toast("Please select a client first");
-                    return;
-                }
-                await this.generatePDF();
-                if (selectedStatementClient.phone) {
-                    const type = document.getElementById("statement-type-select").value;
-                    const msg = encodeURIComponent(`Hello ${selectedStatementClient.name}, your ${type === 'loan' ? 'Loan Repayment' : 'Savings'} Statement PDF has been generated and downloaded. Please find attached.`);
-                    window.open(`https://wa.me/${selectedStatementClient.phone}?text=${msg}`, '_blank');
-                } else {
-                    Utils.toast("Client has no phone number registered for WhatsApp");
-                }
-            },
-            printThermal() {
-                if (!selectedStatementClient) {
-                    Utils.toast("Please select a client first");
-                    return;
-                }
-                const type = document.getElementById("statement-type-select").value;
-                const title = type === 'loan' ? 'LOAN STATEMENT' : 'SAVINGS STATEMENT';
-                
-                let text = `=== ${state.company.name} ===\n${title}\n--------------------------------\nClient: ${selectedStatementClient.name}\nNIN: ${selectedStatementClient.nin || 'N/A'}\n--------------------------------\n`;
-
-                if (type === 'loan') {
-                    (selectedStatementClient.history || []).forEach(h => {
-                        text += `${h.date} | ${h.type} | ${Utils.formatUGX(h.amount || 0)}\n`;
-                    });
-                    text += `--------------------------------\nOutstanding Balance: ${Utils.formatUGX(selectedStatementClient.balance || 0)}`;
-                } else {
-                    const branch = State.getActiveBranch();
-                    const sav = branch.savingsAccounts[selectedStatementClient.nin];
-                    const savBal = sav ? sav.balance : 0;
-                    if (sav && sav.history) {
-                        sav.history.forEach(sh => {
-                            text += `${sh.date} | ${sh.type} | ${Utils.formatUGX(sh.amount || 0)}\n`;
-                        });
-                    }
-                    text += `--------------------------------\nSavings Balance: ${Utils.formatUGX(savBal)}`;
-                }
-
-                Printer.printToXPrinter(text);
-                Utils.toast("Statement sent to printer");
-            }
-        };
-        Statements.searchClientsDebounced = Utils.debounce(q => Statements.searchClients(q), 260);
 
         // ============================================================
         // PDF GENERATION ENGINE
@@ -2095,7 +1899,7 @@
                 const hide = (id) => Utils.hide(id);
                 const show = (id) => Utils.show(id);
 
-                ["nav-btn-tab-posting", "nav-btn-tab-disburse", "nav-btn-tab-savings", "nav-btn-tab-statements", "nav-btn-tab-cash",
+                ["nav-btn-tab-posting", "nav-btn-tab-disburse", "nav-btn-tab-savings", "nav-btn-tab-cash",
                  "nav-btn-tab-loan-ops", "nav-btn-tab-unified-clients", "nav-btn-tab-daily-workspace",
                  "nav-btn-tab-officers", "nav-btn-tab-bankings", "nav-btn-tab-expenses", "nav-btn-tab-capital",
                  "nav-btn-tab-reports", "nav-btn-tab-aging", "nav-btn-tab-demand", "nav-btn-tab-sms-logs",
@@ -2973,6 +2777,7 @@
                         branch.officers.map(o => `<option value="${o.id}" ${currentOfficerId === o.id ? 'selected' : ''}>${o.name}</option>`).join('') +
                     `</select>`;
                     return `<tr class="text-xs">
+                        <td class="p-3 text-center"><input type="checkbox" class="client-stmt-checkbox rounded" value="${c.nin}" data-name="${c.name.replace(/'/g, "")}"></td>
                         <td class="p-3 font-mono font-bold text-purple-700">${c.nin}</td>
                         <td class="p-3"><strong>${c.name}</strong><br>${c.phone || ''}</td>
                         <td class="p-3">${c.guarantor || '-'}<br><span class="text-[10px] ${gCount >= 4 ? 'bg-red-200 text-red-900 font-bold px-1 rounded' : 'text-slate-400'}">${gCount} active</span></td>
@@ -2984,9 +2789,46 @@
                             <button onclick="Clients.openDocModal('${c.nin}', '${c.name.replace(/'/g, "\\'")}')" class="bg-purple-700 text-white px-2 py-1 rounded font-bold text-[10px]">Docs</button>
                         </td>
                     </tr>`;
-                }).join('') || `<tr><td colspan="8" class="p-4 text-center text-slate-400">No clients</td></tr>`;
+                }).join('') || `<tr><td colspan="9" class="p-4 text-center text-slate-400">No clients</td></tr>`;
             },
             renderMasterDirectoryDebounced: null,
+            getSelectedClientNins() {
+                const checkboxes = document.querySelectorAll(".client-stmt-checkbox:checked");
+                return Array.from(checkboxes).map(cb => ({ nin: cb.value, name: cb.getAttribute("data-name") }));
+            },
+            async printSelectedStatement() {
+                const selected = this.getSelectedClientNins();
+                if (selected.length === 0) {
+                    Utils.toast("Select at least one client checkbox");
+                    return;
+                }
+                const branch = State.getActiveBranch();
+                for (let item of selected) {
+                    const clientObj = branch.clients.find(c => c.nin === item.nin);
+                    const history = clientObj ? (clientObj.history || []) : [];
+                    const rows = history.map(h => [h.date || '', h.type || '', Utils.formatUGX(h.amount || 0), h.channel || '-']);
+                    await PdfEngine.downloadStatementPDF(item.name, item.nin, ["Date", "Type", "Amount", "Channel"], rows);
+                }
+                Utils.toast("Statement PDF(s) downloaded");
+            },
+            async shareWhatsAppStatement() {
+                const selected = this.getSelectedClientNins();
+                if (selected.length === 0) {
+                    Utils.toast("Select at least one client");
+                    return;
+                }
+                const branch = State.getActiveBranch();
+                for (let item of selected) {
+                    const clientObj = branch.clients.find(c => c.nin === item.nin);
+                    const history = clientObj ? (clientObj.history || []) : [];
+                    const rows = history.map(h => [h.date || '', h.type || '', Utils.formatUGX(h.amount || 0), h.channel || '-']);
+                    await PdfEngine.downloadStatementPDF(item.name, item.nin, ["Date", "Type", "Amount", "Channel"], rows);
+                    if (clientObj && clientObj.phone) {
+                        window.open(`https://wa.me/${clientObj.phone}?text=${encodeURIComponent(`Hello ${item.name}, your repayment & savings statement PDF has been downloaded. Please find attached.`)}`, '_blank');
+                    }
+                }
+                Utils.toast("Statements generated & WhatsApp opened");
+            },
             reassignOfficer(nin, newOfficerId) {
                 const branch = State.getActiveBranch();
                 let updated = 0;

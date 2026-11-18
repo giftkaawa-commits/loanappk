@@ -228,8 +228,10 @@
             <h2 class="text-base md:text-lg font-bold border-b pb-2 flex justify-between items-center">
                 <span>Repayment & Batch Posting</span>
                 <div class="flex items-center gap-3">
-                    <label class="text-xs font-semibold flex items-center gap-1 cursor-pointer bg-slate-200 px-2.5 py-1.5 rounded-lg">
-                        <input type="checkbox" id="toggle-print-receipt" checked class="rounded"> Print Receipt
+                    <label id="print-receipt-label" class="text-xs font-semibold flex items-center gap-1.5 cursor-pointer bg-slate-200 hover:bg-slate-300 px-2.5 py-1.5 rounded-lg transition-colors">
+                        <input type="checkbox" id="toggle-print-receipt" checked onchange="Printer.onTogglePrintReceipt(this.checked)" class="rounded accent-teal-600">
+                        <span>Print Receipt</span>
+                        <span id="xprinter-mini-dot" class="w-2 h-2 rounded-full bg-slate-400 inline-block" title="X-Printer Disconnected"></span>
                     </label>
                     <button onclick="Printer.printLastTransactionReceipt()" class="dyn-bg text-white text-xs px-3 py-1.5 rounded-lg font-bold flex items-center gap-1">
                         <i class="fa-solid fa-print"></i> Re-print
@@ -1342,7 +1344,8 @@
             },
             settings: {
                 applyOverduePenalty: true,
-                timeFormat: "24"
+                timeFormat: "24",
+                printReceiptEnabled: true
             },
             managers: [],
             globalClients: [],
@@ -1381,6 +1384,8 @@
         let selectedReversalClient = null;
         let lastPrintedReceiptText = "";
         let xPrinterDevice = null;
+        let xPrinterCharacteristic = null;
+        let xPrinterSerialPort = null;
         let activeDocNin = null;
         let selectedReceiptClient = null;
         let selectedSavingsNin = null;
@@ -1533,8 +1538,9 @@
                         const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
                         state = { ...state, ...parsed };
                         if (!state.cashPosition) state.cashPosition = { cash: 0, mtn: 0, airtel: 0 };
-                        if (!state.settings) state.settings = { applyOverduePenalty: true, timeFormat: '24' };
+                        if (!state.settings) state.settings = { applyOverduePenalty: true, timeFormat: '24', printReceiptEnabled: true };
                         if (state.settings.timeFormat === undefined) state.settings.timeFormat = '24';
+                        if (state.settings.printReceiptEnabled === undefined) state.settings.printReceiptEnabled = true;
                         if (!state.smsTemplates) state.smsTemplates = { repayment: "Dear {name}, payment of {amount} received. New balance: {balance}. Thank you. - PMMS" };
                         if (!state.loanFeeTiers) {
                             state.loanFeeTiers = [
@@ -1945,8 +1951,7 @@
                         textData += `Amount: ${Utils.formatUGX(sh.amount || 0)}\n--------------------------------\n`;
                     });
                 }
-                await Printer.printToXPrinter(textData);
-                Utils.toast("Statement dispatched to X-Printer");
+                await Printer.printToXPrinter(textData, true);
             },
             async downloadPDF() {
                 if (!selectedStatementClient) return;
@@ -2335,8 +2340,9 @@
                         if (parsed && parsed.branchData) {
                             state = parsed;
                             if (!state.cashPosition) state.cashPosition = { cash: 0, mtn: 0, airtel: 0 };
-                            if (!state.settings) state.settings = { applyOverduePenalty: true, timeFormat: '24' };
+                            if (!state.settings) state.settings = { applyOverduePenalty: true, timeFormat: '24', printReceiptEnabled: true };
                             if (state.settings.timeFormat === undefined) state.settings.timeFormat = '24';
+                            if (state.settings.printReceiptEnabled === undefined) state.settings.printReceiptEnabled = true;
                             if (!state.branchData.mmWithdrawals) state.branchData.mmWithdrawals = [];
                             State.runDailyAging();
                             UI.refreshAll();
@@ -2456,11 +2462,11 @@
                 State.save();
                 this.renderBatchList();
             },
-            postAllBatch() {
+            async postAllBatch() {
                 const branch = State.getActiveBranch();
                 if (branch.batch.length === 0) return;
                 if (!Utils.confirmAction(`Post ${branch.batch.length} payment(s)?`)) return;
-                let receiptText = `=== ${state.company.name} ===\nREPAYMENT RECEIPT\nDate: ${Utils.today()} ${Utils.timeNow()}\n--------------------------------\n`;
+                let receiptText = `REPAYMENT RECEIPT\nDate: ${Utils.today()} ${Utils.timeNow()}\n--------------------------------\n`;
                 const baseTs = Date.now();
                 branch.batch.forEach((item, index) => {
                     const client = branch.clients.find(c => c.id === item.clientId);
@@ -2481,7 +2487,7 @@
                             arrears: client.arrears || 0
                         });
                         CashPosition.add(item.channel, item.amount);
-                        receiptText += `Client: ${client.name}\nPaid: ${Utils.formatUGX(item.amount)}\nArrears: ${Utils.formatUGX(client.arrears || 0)}\nBalance: ${Utils.formatUGX(client.balance)}\n--------------------------------\n`;
+                        receiptText += `Client: ${client.name}\nChannel: ${item.channel}\nPaid: ${Utils.formatUGX(item.amount)}\nArrears: ${Utils.formatUGX(client.arrears || 0)}\nBalance: ${Utils.formatUGX(client.balance)}\n--------------------------------\n`;
                         const template = state.smsTemplates?.repayment || "Dear {name}, payment of {amount} received. New balance: {balance}.";
                         const msg = template
                             .replace(/{name}/g, client.name)
@@ -2491,12 +2497,13 @@
                         SMS.dispatch(client.phone, msg, 'Repayment');
                     }
                 });
+                receiptText += `Thank you for banking with us!\n`;
                 branch.batch = [];
                 State.save();
                 this.renderBatchList();
                 if (selectedPostClient) this.selectClient(selectedPostClient.id);
-                Printer.printToXPrinter(receiptText);
-                Utils.toast("Batch posted successfully & Repayment receipts printed");
+                await Printer.printToXPrinter(receiptText);
+                Utils.toast("Batch posted successfully");
                 Reports.updateDashboard();
                 Staff.renderHub();
                 DailyWorkspace.render();
@@ -2547,7 +2554,7 @@
                     Utils.toast("No transaction found on that date for this client");
                     return;
                 }
-                const receiptType = txn.type === 'Repayment' ? 'REPAYMENT RECEIPT' : 'SAVING/DISBURSEMENT RECEIPT';
+                const receiptType = txn.type === 'Repayment' ? 'REPAYMENT RECEIPT' : 'DISBURSEMENT RECEIPT';
                 const paidAmount = txn.amount || 0;
                 const arrearsVal = txn.arrears !== undefined ? txn.arrears : (selectedReceiptClient.arrears || 0);
                 const outBal = txn.newBalance !== undefined ? txn.newBalance : (selectedReceiptClient.balance || 0);
@@ -2567,8 +2574,8 @@
                     window.open(waUrl, '_blank');
                     Utils.toast("Receipt PDF generated & WhatsApp opened");
                 } else {
-                    const receiptMsg = `${state.company.name}\n${receiptType}\nDate: ${txn.date} ${Utils.timeNow()}\n--------------------------------\nClient: ${selectedReceiptClient.name}\nNIN: ${selectedReceiptClient.nin || 'N/A'}\nPaid Amount: ${Utils.formatUGX(paidAmount)}\nArrears: ${Utils.formatUGX(arrearsVal)}\nBalance: ${Utils.formatUGX(outBal)}\n--------------------------------\nThank you!`;
-                    if (channel === 'PRINT') Printer.printToXPrinter(receiptMsg);
+                    const receiptMsg = `${receiptType}\nDate: ${txn.date} ${Utils.timeNow()}\n--------------------------------\nClient: ${selectedReceiptClient.name}\nNIN: ${selectedReceiptClient.nin || 'N/A'}\nPaid Amount: ${Utils.formatUGX(paidAmount)}\nArrears: ${Utils.formatUGX(arrearsVal)}\nBalance: ${Utils.formatUGX(outBal)}\n--------------------------------\nThank you!\n`;
+                    if (channel === 'PRINT') await Printer.printToXPrinter(receiptMsg, true);
                     else if (channel === 'SMS') SMS.dispatch(selectedReceiptClient.phone, receiptMsg, 'Manual Receipt');
                 }
             }
@@ -4065,53 +4072,267 @@
         };
 
         // ============================================================
-        // PRINTER
+        // X-PRINTER ESC/POS ENGINE (BLUETOOTH & USB/SERIAL)
         // ============================================================
         const Printer = {
-            async connectXPrinter() {
+            BLE_SERVICES: [
+                '000018f0-0000-1000-8000-00805f9b34fb',
+                '49535343-fe7d-4ae5-8fa9-9fafd205e455',
+                'e7810a71-73ae-499d-8c15-faa9aef0c3f2',
+                '0000ff00-0000-1000-8000-00805f9b34fb'
+            ],
+            BLE_CHARS: [
+                '00002af1-0000-1000-8000-00805f9b34fb',
+                '49535343-8841-43f4-a8d4-ecbe34729bb3',
+                'bef8d6c9-9c21-4c9e-b632-bd58c1009f9f',
+                '0000ff02-0000-1000-8000-00805f9b34fb'
+            ],
+
+            isConnected() {
+                return Boolean(
+                    (xPrinterDevice && xPrinterDevice.gatt && xPrinterDevice.gatt.connected && xPrinterCharacteristic) ||
+                    (xPrinterSerialPort && xPrinterSerialPort.writable)
+                );
+            },
+
+            updateUIStatus(connected, label = null) {
+                const statusText = document.getElementById("xprinter-status-text");
+                const btn = document.getElementById("xprinter-btn");
+                const dot = document.getElementById("xprinter-mini-dot");
+
+                if (connected) {
+                    if (statusText) statusText.innerText = label || "X-Printer Ready";
+                    if (btn) {
+                        btn.classList.remove("dyn-bg");
+                        btn.classList.add("bg-emerald-600", "hover:bg-emerald-700");
+                    }
+                    if (dot) {
+                        dot.className = "w-2 h-2 rounded-full bg-emerald-500 inline-block";
+                        dot.title = "X-Printer Connected";
+                    }
+                } else {
+                    if (statusText) statusText.innerText = "Connect Printer";
+                    if (btn) {
+                        btn.classList.remove("bg-emerald-600", "hover:bg-emerald-700");
+                        btn.classList.add("dyn-bg");
+                    }
+                    if (dot) {
+                        dot.className = "w-2 h-2 rounded-full bg-slate-400 inline-block";
+                        dot.title = "X-Printer Disconnected";
+                    }
+                }
+            },
+
+            async onTogglePrintReceipt(checked) {
+                if (!state.settings) state.settings = {};
+                state.settings.printReceiptEnabled = checked;
+                State.save();
+
+                if (checked) {
+                    if (!this.isConnected()) {
+                        if (xPrinterDevice) {
+                            await this.reconnectBluetooth();
+                        } else {
+                            Utils.toast("Print Receipt enabled — connecting to X-Printer...");
+                            await this.connectXPrinter();
+                        }
+                    } else {
+                        Utils.toast("X-Printer active for receipts");
+                    }
+                } else {
+                    Utils.toast("Auto receipt printing paused");
+                }
+            },
+
+            async reconnectBluetooth() {
+                if (!xPrinterDevice) return false;
                 try {
-                    if (!navigator.bluetooth) {
-                        Utils.toast("Web Bluetooth not supported");
+                    const server = await xPrinterDevice.gatt.connect();
+                    for (const svcUuid of this.BLE_SERVICES) {
+                        try {
+                            const service = await server.getPrimaryService(svcUuid);
+                            for (const charUuid of this.BLE_CHARS) {
+                                try {
+                                    const char = await service.getCharacteristic(charUuid);
+                                    if (char.properties.write || char.properties.writeWithoutResponse) {
+                                        xPrinterCharacteristic = char;
+                                        this.updateUIStatus(true, xPrinterDevice.name || "X-Printer");
+                                        return true;
+                                    }
+                                } catch (_) {}
+                            }
+                            const chars = await service.getCharacteristics();
+                            const writable = chars.find(c => c.properties.write || c.properties.writeWithoutResponse);
+                            if (writable) {
+                                xPrinterCharacteristic = writable;
+                                this.updateUIStatus(true, xPrinterDevice.name || "X-Printer");
+                                return true;
+                            }
+                        } catch (_) {}
+                    }
+                } catch (e) {
+                    this.updateUIStatus(false);
+                }
+                return false;
+            },
+
+            async connectXPrinter() {
+                const iface = document.getElementById("xprinter-interface-select")?.value || "bluetooth";
+
+                if (iface === "usb") {
+                    if (!("serial" in navigator)) {
+                        Utils.toast("Web Serial/USB not supported in this browser. Use Chrome or switch to Bluetooth.");
                         return;
                     }
+                    try {
+                        xPrinterSerialPort = await navigator.serial.requestPort();
+                        await xPrinterSerialPort.open({ baudRate: 9600 });
+                        this.updateUIStatus(true, "X-Printer USB");
+                        Utils.toast("USB/Serial X-Printer connected");
+                    } catch (err) {
+                        Utils.toast("USB X-Printer connection cancelled");
+                    }
+                    return;
+                }
+
+                if (!navigator.bluetooth) {
+                    Utils.toast("Web Bluetooth not supported on this browser");
+                    return;
+                }
+
+                try {
                     xPrinterDevice = await navigator.bluetooth.requestDevice({
                         acceptAllDevices: true,
-                        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+                        optionalServices: this.BLE_SERVICES
                     });
-                    document.getElementById("xprinter-status-text").innerText = "Connected";
-                    Utils.toast("X-Printer connected successfully");
+
+                    xPrinterDevice.addEventListener("gattserverdisconnected", () => {
+                        xPrinterCharacteristic = null;
+                        this.updateUIStatus(false);
+                        Utils.toast("X-Printer disconnected");
+                    });
+
+                    const ok = await this.reconnectBluetooth();
+                    if (ok) {
+                        Utils.toast(`Connected to ${xPrinterDevice.name || "X-Printer"}`);
+                    } else {
+                        Utils.toast("Paired, but no writable print service found on device");
+                    }
                 } catch (err) {
-                    Utils.toast("Connection cancelled or failed");
+                    Utils.toast("X-Printer connection cancelled or failed");
                 }
             },
+
+            buildEscPosPayload(text) {
+                const encoder = new TextEncoder();
+                const initCmd = new Uint8Array([0x1B, 0x40]); // ESC @ Initialize printer
+                const alignLeft = new Uint8Array([0x1B, 0x61, 0x00]); // ESC a 0 Left align
+                const bodyBytes = encoder.encode(text + "\n\n\n");
+                const cutCmd = new Uint8Array([0x1D, 0x56, 0x41, 0x03]); // GS V A 3 Feed & Partial Cut
+
+                const combined = new Uint8Array(initCmd.length + alignLeft.length + bodyBytes.length + cutCmd.length);
+                let offset = 0;
+                combined.set(initCmd, offset); offset += initCmd.length;
+                combined.set(alignLeft, offset); offset += alignLeft.length;
+                combined.set(bodyBytes, offset); offset += bodyBytes.length;
+                combined.set(cutCmd, offset);
+                return combined;
+            },
+
+            async writeToBluetooth(bytes) {
+                if (xPrinterDevice && (!xPrinterDevice.gatt.connected || !xPrinterCharacteristic)) {
+                    await this.reconnectBluetooth();
+                }
+                if (!xPrinterCharacteristic) return false;
+
+                const CHUNK_SIZE = 20;
+                for (let i = 0; i < bytes.length; i += CHUNK_SIZE) {
+                    const chunk = bytes.slice(i, i + CHUNK_SIZE);
+                    if (xPrinterCharacteristic.properties.writeWithoutResponse) {
+                        await xPrinterCharacteristic.writeValueWithoutResponse(chunk);
+                    } else {
+                        await xPrinterCharacteristic.writeValue(chunk);
+                    }
+                    await new Promise(r => setTimeout(r, 15));
+                }
+                return true;
+            },
+
+            async writeToSerial(bytes) {
+                if (!xPrinterSerialPort || !xPrinterSerialPort.writable) return false;
+                const writer = xPrinterSerialPort.writable.getWriter();
+                try {
+                    await writer.write(bytes);
+                    return true;
+                } finally {
+                    writer.releaseLock();
+                }
+            },
+
             async testPrint() {
-                const testText = `=== ${state.company.name} ===\nTEST PRINT RECEIPT\nDate: ${Utils.today()} ${Utils.timeNow()}\nX-Printer Connected Successfully!\n--------------------------------\n`;
-                await this.printToXPrinter(testText);
-                Utils.toast("Test print dispatched");
+                const testText = `TEST PRINT RECEIPT\nDate: ${Utils.today()} ${Utils.timeNow()}\nX-Printer Connected Successfully!\n--------------------------------`;
+                await this.printToXPrinter(testText, true);
             },
-            async printToXPrinter(textData) {
-                let headerPrefix = state.company.name ? `${state.company.name}\n` : "";
+
+            async printToXPrinter(textData, forcePrint = false) {
+                const headerPrefix = state.company.name ? `=== ${state.company.name} ===\n` : "";
                 lastPrintedReceiptText = headerPrefix + textData;
-                const shouldPrint = document.getElementById("toggle-print-receipt")?.checked ?? true;
-                if (!shouldPrint && !textData.includes("STATEMENT")) return;
-                if (xPrinterDevice?.gatt?.connected) {
-                    try {
-                        const server = await xPrinterDevice.gatt.connect();
-                        const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                        const characteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                        await characteristic.writeValue(new TextEncoder().encode(lastPrintedReceiptText + "\n\n\n"));
-                        return;
-                    } catch (e) {}
+
+                const checkboxEl = document.getElementById("toggle-print-receipt");
+                const shouldPrint = forcePrint || (checkboxEl ? checkboxEl.checked : true);
+                if (!shouldPrint) return;
+
+                // Ensure X-Printer is connected when Print Receipt is checked
+                if (!this.isConnected()) {
+                    if (xPrinterDevice) {
+                        await this.reconnectBluetooth();
+                    }
+                    if (!this.isConnected()) {
+                        Utils.toast("Select your X-Printer to print receipt...");
+                        await this.connectXPrinter();
+                    }
                 }
+
+                const payload = this.buildEscPosPayload(lastPrintedReceiptText);
+
+                if (xPrinterCharacteristic || (xPrinterDevice && xPrinterDevice.gatt)) {
+                    try {
+                        const sent = await this.writeToBluetooth(payload);
+                        if (sent) {
+                            Utils.toast("Printed to X-Printer");
+                            return;
+                        }
+                    } catch (err) {
+                        Utils.toast("Bluetooth print error: " + err.message);
+                    }
+                }
+
+                if (xPrinterSerialPort && xPrinterSerialPort.writable) {
+                    try {
+                        const sent = await this.writeToSerial(payload);
+                        if (sent) {
+                            Utils.toast("Printed to USB X-Printer");
+                            return;
+                        }
+                    } catch (err) {
+                        Utils.toast("USB print error: " + err.message);
+                    }
+                }
+
+                // Fallback thermal formatted browser print if no hardware X-Printer was paired
                 const area = document.getElementById("printable-area");
-                area.innerHTML = `<pre style="font-family:monospace;font-size:11px;width:280px;white-space:pre-wrap;">${textData}</pre>`;
+                area.innerHTML = `<pre style="font-family:monospace;font-size:12px;width:58mm;margin:0 auto;white-space:pre-wrap;">${lastPrintedReceiptText}</pre>`;
                 Utils.show(area);
                 window.print();
                 Utils.hide(area);
             },
-            printLastTransactionReceipt() {
-                if (lastPrintedReceiptText) this.printToXPrinter(lastPrintedReceiptText);
-                else Utils.toast("No receipt in memory");
+
+            async printLastTransactionReceipt() {
+                if (!lastPrintedReceiptText) {
+                    Utils.toast("No receipt available to re-print");
+                    return;
+                }
+                await this.printToXPrinter(lastPrintedReceiptText.replace(/^=== .*? ===\n/, ""), true);
             }
         };
 
@@ -4119,57 +4340,39 @@
         // THEME
         // ============================================================
         const ThemeCustomizer = {
-            applyTheme(colorName) {
+            applyTheme(theme) {
                 document.body.classList.remove("theme-teal", "theme-indigo", "theme-emerald", "theme-slate");
-                document.body.classList.add(`theme-${colorName}`);
-                localStorage.setItem("pmms_theme_color", colorName);
+                document.body.classList.add(`theme-${theme}`);
+                localStorage.setItem("pmms_theme", theme);
             },
-            applyFont(fontStyle) {
+            applyFont(font) {
                 document.body.classList.remove("font-sans", "font-serif", "font-mono");
-                if (fontStyle === 'serif') document.body.classList.add("font-serif");
-                else if (fontStyle === 'mono') document.body.classList.add("font-mono");
-                else document.body.classList.add("font-sans");
-                localStorage.setItem("pmms_theme_font", fontStyle);
+                document.body.classList.add(`font-${font}`);
+                localStorage.setItem("pmms_font", font);
             },
-            loadPreferences() {
-                const savedColor = localStorage.getItem("pmms_theme_color");
-                const savedFont = localStorage.getItem("pmms_theme_font");
-                if (savedColor) {
-                    document.getElementById("theme-color-select").value = savedColor;
-                    this.applyTheme(savedColor);
-                }
-                if (savedFont) {
-                    document.getElementById("theme-font-select").value = savedFont;
-                    this.applyFont(savedFont);
-                }
+            loadSaved() {
+                const t = localStorage.getItem("pmms_theme") || "teal";
+                const f = localStorage.getItem("pmms_font") || "sans";
+                this.applyTheme(t);
+                this.applyFont(f);
             }
         };
 
         // ============================================================
         // INIT
         // ============================================================
-        window.addEventListener('online', () => Utils.hide("offline-banner"));
-        window.addEventListener('offline', () => Utils.show("offline-banner"));
-        window.addEventListener('storage', e => {
-            if (e.key === 'pmms_cloud_shared_state_v10' && e.newValue) {
-                try {
-                    const parsed = JSON.parse(e.newValue);
-                    state = parsed;
-                    State.runDailyAging();
-                    UI.refreshAll();
-                    Utils.toast("Data synced");
-                } catch (err) {}
-            }
-        });
+        window.addEventListener("online", () => Utils.hide("offline-banner"));
+        window.addEventListener("offline", () => Utils.show("offline-banner"));
 
         window.onload = async function () {
+            ThemeCustomizer.loadSaved();
             await State.load();
-            ThemeCustomizer.loadPreferences();
+            const receiptChk = document.getElementById("toggle-print-receipt");
+            if (receiptChk && state.settings) {
+                receiptChk.checked = state.settings.printReceiptEnabled !== false;
+            }
             UI.refreshAll();
-            DailyWorkspace.setToday();
             AdminSettings.renderManagersList();
-            AdminSettings.renderFeeTiersTable();
-            if (!navigator.onLine) Utils.show("offline-banner");
         };
     </script>
 </body>

@@ -135,12 +135,12 @@
             <!-- REGISTER FORM -->
             <div id="auth-form-register" hidden class="space-y-3 text-left">
                 <div class="bg-slate-50 border dyn-border p-2.5 rounded-xl text-[11px] text-slate-900 font-semibold">
-                    <i class="fa-solid fa-circle-info mr-1 dyn-text"></i> Register with Role-Based Access. Verification code will trigger.
+                    <i class="fa-solid fa-circle-info mr-1 dyn-text"></i> Only 1 Administrator allowed. Each account has its own isolated data.
                 </div>
                 <div>
                     <label class="block text-[10px] text-slate-600 font-semibold mb-1">System Role *</label>
                     <select id="reg-role" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50 font-bold">
-                        <option value="Administrator">Administrator (Full Access)</option>
+                        <option value="Administrator">Administrator (Single Admin Only)</option>
                         <option value="Manager">Manager (Operations & Approvals)</option>
                         <option value="Accountant">Accountant (Disburse, Post, Bankings, Reports, Staff, Expenses, Clients, Aging, SMS & Defaulters)</option>
                         <option value="Loan Officer">Loan Officer (Disburse & Field)</option>
@@ -1092,7 +1092,6 @@
                     <div>
                         <label class="block font-semibold mb-1">Operating Country *</label>
                         <select id="setting-country-select" onchange="AdminSettings.setCountry(this.value)" class="w-full p-2.5 border rounded-lg bg-slate-50 font-bold">
-                            <!-- Populated dynamically with all countries -->
                         </select>
                     </div>
                     <div class="bg-slate-50 border rounded-xl p-3 flex items-center justify-between">
@@ -1580,13 +1579,13 @@
         ];
 
         // ============================================================
-        // CORE STATE & STORAGE
+        // CORE STATE & STORAGE (PER-ACCOUNT ISOLATED & CLEAN)
         // ============================================================
         const DB = {
             db: null,
             init() {
                 return new Promise(resolve => {
-                    const req = indexedDB.open("PMMS_Database_v10", 1);
+                    const req = indexedDB.open("PMMS_Database_v11", 1);
                     req.onupgradeneeded = e => {
                         const db = e.target.result;
                         if (!db.objectStoreNames.contains("state")) db.createObjectStore("state", { keyPath: "id" });
@@ -1611,6 +1610,58 @@
             }
         };
 
+        const DEFAULT_FEE_TIERS = [
+            { min: 5000, max: 100000, fee: 5000 },
+            { min: 100001, max: 250000, fee: 10000 },
+            { min: 250001, max: 400000, fee: 14000 },
+            { min: 400001, max: 500000, fee: 18000 },
+            { min: 500001, max: 650000, fee: 22000 },
+            { min: 650001, max: 850000, fee: 26000 },
+            { min: 850001, max: 1100000, fee: 30000 },
+            { min: 1100001, max: 999999999, fee: 50000 }
+        ];
+
+        function createCleanAccountData(acc = null) {
+            return {
+                company: {
+                    name: "PMMS Central Microfinance",
+                    contact: acc?.email ? `${acc.email} | ${acc.phone || "+256770000000"}` : "admin@pmms.com | +256770000000",
+                    location: "Kampala, Uganda",
+                    about: "Enterprise Microfinance Manager",
+                    logo: ""
+                },
+                settings: {
+                    countryCode: "UG",
+                    countryName: "Uganda",
+                    currency: "UGX",
+                    dialCode: "+256",
+                    applyOverduePenalty: true,
+                    timeFormat: "24",
+                    printReceiptEnabled: true
+                },
+                managers: [],
+                globalClients: [],
+                smsLogs: [],
+                auditLogs: [],
+                clientDocuments: {},
+                smsTemplates: {
+                    repayment: "Dear {name}, payment of {amount} received. New balance: {balance}. Thank you. - PMMS"
+                },
+                loanFeeTiers: DEFAULT_FEE_TIERS.map(t => ({ ...t })),
+                cashPosition: { cash: 0, mtn: 0, airtel: 0 },
+                branchData: {
+                    clients: [],
+                    officers: [],
+                    bankings: [],
+                    expenses: [],
+                    capitalizations: [],
+                    mmWithdrawals: [],
+                    batch: [],
+                    savingsAccounts: {}
+                }
+            };
+        }
+
         let state = {
             accounts: [
                 { role: "Administrator", username: "admin", email: "admin@pmms.com", phone: "+256770000000", password: "password123", name: "System Admin" },
@@ -1619,8 +1670,10 @@
                 { role: "Loan Officer", username: "officer", email: "off@pmms.com", phone: "+256774444444", password: "password123", name: "Loan Officer" },
                 { role: "Cashier", username: "cashier", email: "cash@pmms.com", phone: "+256773333333", password: "password123", name: "Branch Cashier" }
             ],
+            accountData: {},
             currentUser: null,
             deviceSessions: {},
+            // Active working mirrors (synced to active account's accountData)
             company: {
                 name: "PMMS Central Microfinance",
                 contact: "admin@pmms.com | +256770000000",
@@ -1645,16 +1698,7 @@
             smsTemplates: {
                 repayment: "Dear {name}, payment of {amount} received. New balance: {balance}. Thank you. - PMMS"
             },
-            loanFeeTiers: [
-                { min: 5000, max: 100000, fee: 5000 },
-                { min: 100001, max: 250000, fee: 10000 },
-                { min: 250001, max: 400000, fee: 14000 },
-                { min: 400001, max: 500000, fee: 18000 },
-                { min: 500001, max: 650000, fee: 22000 },
-                { min: 650001, max: 850000, fee: 26000 },
-                { min: 850001, max: 1100000, fee: 30000 },
-                { min: 1100001, max: 999999999, fee: 50000 }
-            ],
+            loanFeeTiers: DEFAULT_FEE_TIERS.map(t => ({ ...t })),
             cashPosition: { cash: 0, mtn: 0, airtel: 0 },
             branchData: {
                 clients: [],
@@ -1726,7 +1770,6 @@
                 const threshEl = document.getElementById("cash-threshold-display");
                 if (threshEl) threshEl.innerText = Utils.formatUGX(500000);
 
-                // Update phone input placeholders & auto-prefilled inputs
                 document.querySelectorAll("input.phone-auto-prefix").forEach(inp => {
                     inp.placeholder = `${dial}771234567`;
                     const val = inp.value.trim();
@@ -1776,17 +1819,14 @@
                     input.addEventListener("input", () => {
                         const dial = RegionManager.getDialCode();
                         let val = input.value;
-                        // If user deletes into the country code, restore the country code
                         if (val.length < dial.length && dial.startsWith(val)) {
                             input.value = dial;
                             return;
                         }
-                        // If user pasted a local number starting with 0 (e.g. 0771234567)
                         if (val.startsWith("0") && val.length >= 2) {
                             input.value = dial + val.substring(1);
                             return;
                         }
-                        // If user typed digits without + prefix
                         if (val.length > 0 && !val.startsWith("+")) {
                             const digitsOnly = val.replace(/\D/g, "");
                             const rawDial = dial.replace("+", "");
@@ -1971,42 +2011,106 @@
 
         let _saveTimer = null;
         const State = {
+            getAccountKey(acc = state.currentUser) {
+                if (!acc) return "guest";
+                return (acc.username || acc.email || "guest").toLowerCase().trim();
+            },
+            ensureAccountBucket(acc = state.currentUser) {
+                const key = this.getAccountKey(acc);
+                if (!state.accountData) state.accountData = {};
+                if (!state.accountData[key]) {
+                    state.accountData[key] = createCleanAccountData(acc);
+                }
+                const bucket = state.accountData[key];
+                if (!bucket.cashPosition) bucket.cashPosition = { cash: 0, mtn: 0, airtel: 0 };
+                if (!bucket.settings) bucket.settings = { countryCode: 'UG', countryName: 'Uganda', currency: 'UGX', dialCode: '+256', applyOverduePenalty: true, timeFormat: '24', printReceiptEnabled: true };
+                if (!bucket.company) bucket.company = createCleanAccountData(acc).company;
+                if (!bucket.managers) bucket.managers = [];
+                if (!bucket.globalClients) bucket.globalClients = [];
+                if (!bucket.smsLogs) bucket.smsLogs = [];
+                if (!bucket.auditLogs) bucket.auditLogs = [];
+                if (!bucket.clientDocuments) bucket.clientDocuments = {};
+                if (!bucket.smsTemplates) bucket.smsTemplates = { repayment: "Dear {name}, payment of {amount} received. New balance: {balance}. Thank you. - PMMS" };
+                if (!bucket.loanFeeTiers) bucket.loanFeeTiers = DEFAULT_FEE_TIERS.map(t => ({ ...t }));
+                if (!bucket.branchData) bucket.branchData = createCleanAccountData(acc).branchData;
+                if (!bucket.branchData.mmWithdrawals) bucket.branchData.mmWithdrawals = [];
+                return bucket;
+            },
+            syncActiveFromAccount(acc = state.currentUser) {
+                const bucket = this.ensureAccountBucket(acc);
+                state.company = bucket.company;
+                state.settings = bucket.settings;
+                state.managers = bucket.managers;
+                state.globalClients = bucket.globalClients;
+                state.smsLogs = bucket.smsLogs;
+                state.auditLogs = bucket.auditLogs;
+                state.clientDocuments = bucket.clientDocuments;
+                state.smsTemplates = bucket.smsTemplates;
+                state.loanFeeTiers = bucket.loanFeeTiers;
+                state.cashPosition = bucket.cashPosition;
+                state.branchData = bucket.branchData;
+
+                selectedPostClient = null;
+                selectedDisburseClient = null;
+                selectedReversalClient = null;
+                selectedReceiptClient = null;
+                selectedSavingsNin = null;
+                selectedStatementClient = null;
+                activeDocNin = null;
+            },
+            syncAccountFromActive(acc = state.currentUser) {
+                if (!acc) return;
+                const key = this.getAccountKey(acc);
+                if (!state.accountData) state.accountData = {};
+                state.accountData[key] = {
+                    company: state.company,
+                    settings: state.settings,
+                    managers: state.managers,
+                    globalClients: state.globalClients,
+                    smsLogs: state.smsLogs,
+                    auditLogs: state.auditLogs,
+                    clientDocuments: state.clientDocuments,
+                    smsTemplates: state.smsTemplates,
+                    loanFeeTiers: state.loanFeeTiers,
+                    cashPosition: state.cashPosition,
+                    branchData: state.branchData
+                };
+            },
             async load() {
                 await DB.init();
-                const shared = localStorage.getItem("pmms_cloud_shared_state_v10");
+                const savedUserRaw = localStorage.getItem("pmms_current_user_v11");
+                let parsedUser = null;
+                if (savedUserRaw) {
+                    try { parsedUser = JSON.parse(savedUserRaw); } catch (_) {}
+                }
+                const userKey = parsedUser ? this.getAccountKey(parsedUser) : null;
+                const perUserStorageKey = userKey ? `pmms_state_v11_${userKey}` : null;
+
                 const dbSaved = await DB.loadState();
-                const saved = shared || dbSaved || localStorage.getItem("pmms_state_single_v10");
+                const saved = (perUserStorageKey && localStorage.getItem(perUserStorageKey))
+                    || dbSaved
+                    || localStorage.getItem("pmms_state_v11_global");
+
                 if (saved) {
                     try {
                         const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
-                        state = { ...state, ...parsed };
-                        if (!state.cashPosition) state.cashPosition = { cash: 0, mtn: 0, airtel: 0 };
-                        if (!state.settings) state.settings = { countryCode: 'UG', countryName: 'Uganda', currency: 'UGX', dialCode: '+256', applyOverduePenalty: true, timeFormat: '24', printReceiptEnabled: true };
-                        if (!state.settings.countryCode) {
-                            state.settings.countryCode = 'UG';
-                            state.settings.countryName = 'Uganda';
-                            state.settings.currency = 'UGX';
-                            state.settings.dialCode = '+256';
-                        }
-                        if (state.settings.timeFormat === undefined) state.settings.timeFormat = '24';
-                        if (state.settings.printReceiptEnabled === undefined) state.settings.printReceiptEnabled = true;
-                        if (!state.smsTemplates) state.smsTemplates = { repayment: "Dear {name}, payment of {amount} received. New balance: {balance}. Thank you. - PMMS" };
-                        if (!state.loanFeeTiers) {
-                            state.loanFeeTiers = [
-                                { min: 5000, max: 100000, fee: 5000 },
-                                { min: 100001, max: 250000, fee: 10000 },
-                                { min: 250001, max: 400000, fee: 14000 },
-                                { min: 400001, max: 500000, fee: 18000 },
-                                { min: 500001, max: 650000, fee: 22000 },
-                                { min: 650001, max: 850000, fee: 26000 },
-                                { min: 850001, max: 1100000, fee: 30000 },
-                                { min: 1100001, max: 999999999, fee: 50000 }
-                            ];
-                        }
-                        if (!state.branchData.mmWithdrawals) state.branchData.mmWithdrawals = [];
-                        if (!state.pendingRegistration) state.pendingRegistration = null;
+                        if (parsed.accounts) state.accounts = parsed.accounts;
+                        if (parsed.accountData) state.accountData = parsed.accountData;
+                        if (parsed.deviceSessions) state.deviceSessions = parsed.deviceSessions;
+                        state.pendingRegistration = parsed.pendingRegistration || null;
                     } catch (e) {}
                 }
+
+                // Enforce single Administrator across accounts
+                Auth.enforceSingleAdmin();
+
+                if (parsedUser && state.accounts.some(a => a.username === parsedUser.username && a.password === parsedUser.password)) {
+                    state.currentUser = state.accounts.find(a => a.username === parsedUser.username);
+                } else {
+                    state.currentUser = null;
+                }
+
+                this.syncActiveFromAccount(state.currentUser);
                 RegionManager.populateCountryDropdown();
                 RegionManager.attachPhoneAutoPrefix();
                 this.runDailyAging();
@@ -2015,11 +2119,21 @@
             save() {
                 if (_saveTimer) clearTimeout(_saveTimer);
                 _saveTimer = setTimeout(() => {
-                    const payload = JSON.stringify(state);
-                    localStorage.setItem("pmms_state_single_v10", payload);
-                    localStorage.setItem("pmms_cloud_shared_state_v10", payload);
+                    this.syncAccountFromActive(state.currentUser);
+                    const snapshot = {
+                        accounts: state.accounts,
+                        accountData: state.accountData,
+                        deviceSessions: state.deviceSessions,
+                        pendingRegistration: state.pendingRegistration
+                    };
+                    const payload = JSON.stringify(snapshot);
+                    localStorage.setItem("pmms_state_v11_global", payload);
+                    if (state.currentUser) {
+                        const key = this.getAccountKey(state.currentUser);
+                        localStorage.setItem(`pmms_state_v11_${key}`, payload);
+                    }
                     DB.saveState(payload);
-                }, 380);
+                }, 250);
             },
             getActiveBranch() {
                 return state.branchData;
@@ -2080,14 +2194,13 @@
                 this.save();
             },
             restoreSession() {
-                const savedUser = localStorage.getItem("pmms_current_user_v10");
-                if (savedUser) {
-                    try {
-                        state.currentUser = JSON.parse(savedUser);
-                        document.getElementById("header-user-tag").innerText = `User: ${state.currentUser.username} (${state.currentUser.role})`;
-                        Utils.hide("auth-overlay");
-                        Auth.applyRolePermissions();
-                    } catch (e) {}
+                if (state.currentUser) {
+                    document.getElementById("header-user-tag").innerText = `User: ${state.currentUser.username} (${state.currentUser.role})`;
+                    Utils.hide("auth-overlay");
+                    Auth.applyRolePermissions();
+                } else {
+                    document.getElementById("header-user-tag").innerText = "User: Guest";
+                    Utils.show("auth-overlay");
                 }
                 this.updateCompanyHeader();
             },
@@ -2127,7 +2240,6 @@
                     Utils.toast('Phone number is required');
                     return false;
                 }
-                // International E.164 format check (+ followed by 7 to 15 digits) or local 7-12 digits
                 const ok = /^\+?[0-9]{7,15}$/.test(cleaned);
                 if (!ok) Utils.toast(`Invalid phone number format (e.g. ${dial}771234567)`);
                 return ok;
@@ -2276,6 +2388,7 @@
                     document.getElementById("setting-penalty-toggle").checked = state.settings?.applyOverduePenalty ?? true;
                     document.getElementById("setting-time-format").value = state.settings?.timeFormat || '24';
                     AdminSettings.renderFeeTiersTable();
+                    AdminSettings.renderManagersList();
                 }
             },
             show(id) { Utils.show(id); },
@@ -2283,6 +2396,7 @@
             triggerQuickPrint() { window.print(); },
             refreshAll() {
                 RegionManager.syncLocaleUI();
+                State.updateCompanyHeader();
                 Staff.populateDropdowns();
                 Banking.renderHistory();
                 Expenses.renderHistory();
@@ -2297,6 +2411,7 @@
                 SMS.populateQuickClients();
                 DailyWorkspace.render();
                 CashPosition.render();
+                AdminSettings.renderManagersList();
             }
         };
 
@@ -2448,9 +2563,36 @@
         Statements.searchClientsDebounced = Utils.debounce(q => Statements.searchClients(q), 280);
 
         // ============================================================
-        // AUTH MODULE
+        // AUTH MODULE (SINGLE ADMIN + MULTI-DEVICE SAME-ACCOUNT DATA)
         // ============================================================
         const Auth = {
+            enforceSingleAdmin() {
+                let adminSeen = false;
+                state.accounts = (state.accounts || []).map(acc => {
+                    if (acc.role === 'Administrator') {
+                        if (!adminSeen) {
+                            adminSeen = true;
+                            return acc;
+                        }
+                        return { ...acc, role: 'Manager' };
+                    }
+                    return acc;
+                });
+                if (!adminSeen && state.accounts.length > 0) {
+                    state.accounts[0].role = 'Administrator';
+                }
+            },
+            hasExistingAdministrator() {
+                return (state.accounts || []).some(a => a.role === 'Administrator');
+            },
+            getDeviceId() {
+                let devId = localStorage.getItem("pmms_device_id_v11");
+                if (!devId) {
+                    devId = "dev-" + Date.now() + "-" + Math.random().toString(36).substring(2, 8);
+                    localStorage.setItem("pmms_device_id_v11", devId);
+                }
+                return devId;
+            },
             switchTab(type) {
                 Utils.hide("auth-form-verify");
                 if (type === 'login') {
@@ -2485,6 +2627,11 @@
                 const phone = RegionManager.normalizePhone(document.getElementById("reg-phone").value);
                 const password = document.getElementById("reg-password").value.trim();
 
+                if (role === 'Administrator' && this.hasExistingAdministrator()) {
+                    Utils.toast("Only ONE Administrator account is allowed in this system.");
+                    return;
+                }
+
                 if (!Validation.isRequired(username, "Username") ||
                     !Validation.isValidEmail(email) ||
                     !Validation.isValidPhone(phone) ||
@@ -2518,23 +2665,32 @@
                     this.switchTab('register');
                     return;
                 }
+                if (pending.role === 'Administrator' && this.hasExistingAdministrator()) {
+                    Utils.toast("Only ONE Administrator account is allowed.");
+                    state.pendingRegistration = null;
+                    State.save();
+                    this.switchTab('register');
+                    return;
+                }
                 if (entered !== pending.code) {
                     Utils.toast("Incorrect verification code");
                     return;
                 }
 
-                state.accounts.push({
+                const newAcc = {
                     role: pending.role,
                     username: pending.username,
                     email: pending.email,
                     phone: pending.phone,
                     password: pending.password,
                     name: pending.name
-                });
+                };
+                state.accounts.push(newAcc);
+                State.ensureAccountBucket(newAcc);
                 state.pendingRegistration = null;
                 State.save();
 
-                Utils.toast(`Account created successfully!`);
+                Utils.toast(`Account created with its own isolated workspace!`);
                 this.switchTab('login');
                 document.getElementById("login-identifier").value = pending.username;
             },
@@ -2551,14 +2707,45 @@
                     Utils.toast("Access Denied: Incorrect credentials");
                     return;
                 }
+
+                // Persist previous user's working data before switching accounts
+                if (state.currentUser) {
+                    State.syncAccountFromActive(state.currentUser);
+                }
+
                 state.currentUser = acc;
-                localStorage.setItem("pmms_current_user_v10", JSON.stringify(acc));
+                const accKey = State.getAccountKey(acc);
+
+                // Check per-account snapshot if available so logging in on any device loads that account's exact data
+                const perUserRaw = localStorage.getItem(`pmms_state_v11_${accKey}`);
+                if (perUserRaw) {
+                    try {
+                        const perParsed = JSON.parse(perUserRaw);
+                        if (perParsed.accountData && perParsed.accountData[accKey]) {
+                            state.accountData[accKey] = perParsed.accountData[accKey];
+                        }
+                    } catch (_) {}
+                }
+
+                State.syncActiveFromAccount(acc);
+
+                const devId = this.getDeviceId();
+                if (!state.deviceSessions) state.deviceSessions = {};
+                state.deviceSessions[devId] = {
+                    accountKey: accKey,
+                    username: acc.username,
+                    lastLogin: Utils.now()
+                };
+
+                localStorage.setItem("pmms_current_user_v11", JSON.stringify(acc));
                 document.getElementById("header-user-tag").innerText = `User: ${acc.username} (${acc.role})`;
                 this.applyRolePermissions();
+                RegionManager.populateCountryDropdown();
+                State.runDailyAging();
                 Utils.hide("auth-overlay");
                 State.save();
                 UI.refreshAll();
-                Utils.toast(`Welcome ${acc.name || acc.username}`);
+                Utils.toast(`Logged in as ${acc.name || acc.username} — loaded account data`);
             },
             applyRolePermissions() {
                 const role = state.currentUser?.role || 'Guest';
@@ -2603,8 +2790,10 @@
                 }
             },
             lockApp() {
-                localStorage.removeItem("pmms_current_user_v10");
+                State.save();
+                localStorage.removeItem("pmms_current_user_v11");
                 state.currentUser = null;
+                document.getElementById("header-user-tag").innerText = "User: Guest";
                 Utils.show("auth-overlay");
             },
             openForgotModal() { Utils.show("forgot-password-modal"); },
@@ -2806,6 +2995,7 @@
                 Utils.toast("Opening email client");
             },
             exportJSON() {
+                State.syncAccountFromActive(state.currentUser);
                 const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(state, null, 2));
                 const link = document.createElement("a");
                 link.href = dataStr;
@@ -2822,19 +3012,13 @@
                 reader.onload = e => {
                     try {
                         const parsed = JSON.parse(e.target.result);
-                        if (parsed && parsed.branchData) {
-                            state = parsed;
-                            if (!state.cashPosition) state.cashPosition = { cash: 0, mtn: 0, airtel: 0 };
-                            if (!state.settings) state.settings = { countryCode: 'UG', countryName: 'Uganda', currency: 'UGX', dialCode: '+256', applyOverduePenalty: true, timeFormat: '24', printReceiptEnabled: true };
-                            if (!state.settings.countryCode) {
-                                state.settings.countryCode = 'UG';
-                                state.settings.countryName = 'Uganda';
-                                state.settings.currency = 'UGX';
-                                state.settings.dialCode = '+256';
+                        if (parsed && (parsed.branchData || parsed.accountData)) {
+                            const activeUser = state.currentUser;
+                            state = { ...state, ...parsed, currentUser: activeUser };
+                            Auth.enforceSingleAdmin();
+                            if (activeUser) {
+                                State.syncActiveFromAccount(activeUser);
                             }
-                            if (state.settings.timeFormat === undefined) state.settings.timeFormat = '24';
-                            if (state.settings.printReceiptEnabled === undefined) state.settings.printReceiptEnabled = true;
-                            if (!state.branchData.mmWithdrawals) state.branchData.mmWithdrawals = [];
                             RegionManager.populateCountryDropdown();
                             State.runDailyAging();
                             UI.refreshAll();
@@ -3944,68 +4128,86 @@
                 const branch = State.getActiveBranch();
                 const officer = branch.officers.find(o => o.id === id);
                 if (!officer) return;
-                const newName = prompt("Edit Staff Name:", officer.name);
-                if (newName === null) return;
-                const newPhone = prompt("Edit Phone Number:", officer.phone || RegionManager.getDialCode());
-                if (newPhone === null) return;
-                officer.name = newName.trim() || officer.name;
-                officer.phone = RegionManager.normalizePhone(newPhone);
+                const nameEl = document.getElementById(`staff-name-${id}`);
+                const phoneEl = document.getElementById(`staff-phone-${id}`);
+                if (!nameEl || !phoneEl) return;
+                nameEl.innerHTML = `<input type="text" id="edit-staff-name-input-${id}" value="${officer.name}" class="p-1 border rounded text-slate-900 font-bold text-xs w-40">`;
+                phoneEl.innerHTML = `<input type="text" id="edit-staff-phone-input-${id}" value="${officer.phone || ''}" class="p-1 border rounded text-slate-900 text-xs w-36 mt-1 phone-auto-prefix"> <button onclick="Staff.saveOfficerEdit('${id}')" class="bg-emerald-600 text-white px-2 py-0.5 rounded text-[10px] font-bold ml-1">Save</button>`;
+                RegionManager.attachPhoneAutoPrefix();
+            },
+            saveOfficerEdit(id) {
+                const branch = State.getActiveBranch();
+                const officer = branch.officers.find(o => o.id === id);
+                if (!officer) return;
+                const newName = document.getElementById(`edit-staff-name-input-${id}`)?.value.trim();
+                const newPhone = RegionManager.normalizePhone(document.getElementById(`edit-staff-phone-input-${id}`)?.value || "");
+                if (!newName) return;
+                officer.name = newName;
+                officer.phone = newPhone;
                 State.save();
-                this.populateDropdowns();
                 this.renderHub();
-                Utils.toast("Staff updated");
+                this.populateDropdowns();
+                Utils.toast("Staff details updated");
             }
         };
 
         // ============================================================
-        // BANKING / EXPENSES / CAPITAL
+        // BANKING
         // ============================================================
         const Banking = {
             recordDeposit() {
                 const name = document.getElementById("bank-name").value.trim();
+                const acc = document.getElementById("bank-acc-no").value.trim();
                 const amt = parseFloat(document.getElementById("bank-amount").value);
+                const ref = document.getElementById("bank-ref").value.trim();
                 if (!Validation.isRequired(name, "Bank Name") || !Validation.isPositiveAmount(amt)) return;
                 State.getActiveBranch().bankings.push({
+                    id: Utils.generateId("bnk"),
+                    name, acc, amount: amt, ref,
                     date: Utils.today(),
                     timestamp: Date.now(),
-                    time: Utils.timeNow(),
-                    name,
-                    acc: document.getElementById("bank-acc-no").value.trim(),
-                    ref: document.getElementById("bank-ref").value.trim(),
-                    amount: amt
+                    time: Utils.timeNow()
                 });
+                CashPosition.deduct('cash', amt);
                 State.save();
                 this.renderHistory();
                 Reports.updateDashboard();
                 DailyWorkspace.render();
+                CashPosition.render();
                 Utils.toast("Banking recorded");
+                document.getElementById("bank-amount").value = "";
+                document.getElementById("bank-ref").value = "";
             },
             renderHistory() {
-                const branch = State.getActiveBranch();
-                const total = branch.bankings.reduce((s, b) => s + b.amount, 0);
-                document.getElementById("total-banked-display").innerText = Utils.formatUGX(total);
-                document.getElementById("bankings-history-body").innerHTML = branch.bankings.map(b => `
+                const list = State.getActiveBranch().bankings || [];
+                const tot = list.reduce((s, b) => s + (b.amount || 0), 0);
+                document.getElementById("total-banked-display").innerText = Utils.formatUGX(tot);
+                document.getElementById("bankings-history-body").innerHTML = list.map(b => `
                     <tr>
                         <td class="p-3">${b.date}</td>
-                        <td class="p-3">${b.name}</td>
-                        <td class="p-3">${b.ref || '-'}</td>
-                        <td class="p-3 text-right">${Utils.formatUGX(b.amount)}</td>
+                        <td class="p-3 font-bold">${b.name}</td>
+                        <td class="p-3 font-mono text-[10px]">${b.ref || '-'}</td>
+                        <td class="p-3 text-right font-mono font-bold text-blue-700">${Utils.formatUGX(b.amount)}</td>
                     </tr>
-                `).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No records</td></tr>`;
+                `).join('') || `<tr><td colspan="4" class="p-4 text-center text-slate-400">No deposits</td></tr>`;
             }
         };
 
+        // ============================================================
+        // EXPENSES
+        // ============================================================
         const Expenses = {
             record() {
+                const cat = document.getElementById("exp-category").value;
                 const amt = parseFloat(document.getElementById("exp-amount").value);
+                const narr = document.getElementById("exp-narration").value.trim();
                 if (!Validation.isPositiveAmount(amt)) return;
                 State.getActiveBranch().expenses.push({
+                    id: Utils.generateId("exp"),
+                    category: cat, amount: amt, narration: narr,
                     date: Utils.today(),
                     timestamp: Date.now(),
-                    time: Utils.timeNow(),
-                    category: document.getElementById("exp-category").value,
-                    narration: document.getElementById("exp-narration").value.trim(),
-                    amount: amt
+                    time: Utils.timeNow()
                 });
                 CashPosition.deduct('cash', amt);
                 State.save();
@@ -4014,56 +4216,66 @@
                 DailyWorkspace.render();
                 CashPosition.render();
                 Utils.toast("Expense recorded");
+                document.getElementById("exp-amount").value = "";
+                document.getElementById("exp-narration").value = "";
             },
             renderHistory() {
-                const branch = State.getActiveBranch();
-                const total = branch.expenses.reduce((s, e) => s + e.amount, 0);
-                document.getElementById("total-expenses-display").innerText = Utils.formatUGX(total);
-                document.getElementById("expenses-history-body").innerHTML = branch.expenses.map(e => `
+                const list = State.getActiveBranch().expenses || [];
+                const tot = list.reduce((s, e) => s + (e.amount || 0), 0);
+                document.getElementById("total-expenses-display").innerText = Utils.formatUGX(tot);
+                document.getElementById("expenses-history-body").innerHTML = list.map(e => `
                     <tr>
                         <td class="p-3">${e.date}</td>
-                        <td class="p-3">${e.category}</td>
-                        <td class="p-3">${e.narration}</td>
-                        <td class="p-3 text-right">${Utils.formatUGX(e.amount)}</td>
+                        <td class="p-3 font-bold">${e.category}</td>
+                        <td class="p-3 text-slate-500">${e.narration || '-'}</td>
+                        <td class="p-3 text-right font-mono font-bold text-rose-700">${Utils.formatUGX(e.amount)}</td>
                     </tr>
-                `).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No expenses</td></tr>`;
+                `).join('') || `<tr><td colspan="4" class="p-4 text-center text-slate-400">No expenses</td></tr>`;
             }
         };
 
+        // ============================================================
+        // CAPITAL
+        // ============================================================
         const Capital = {
             submit() {
-                if (state.currentUser?.role !== 'Administrator') {
-                    Utils.toast("Access Denied: Only Administrators can add capital.");
+                if (state.currentUser?.role === 'Manager') {
+                    Utils.toast("Managers are not permitted to add capital.");
                     return;
                 }
                 const amt = parseFloat(document.getElementById("cap-amount").value);
+                const narr = document.getElementById("cap-narration").value.trim() || "Capital Injection";
                 if (!Validation.isPositiveAmount(amt)) return;
-
-                State.getActiveBranch().capitalizations.push({
+                const branch = State.getActiveBranch();
+                branch.capitalizations.push({
+                    id: Utils.generateId("cap"),
+                    amount: amt, narration: narr,
+                    status: 'Approved',
                     date: Utils.today(),
                     timestamp: Date.now(),
-                    time: Utils.timeNow(),
-                    amount: amt,
-                    narration: document.getElementById("cap-narration").value.trim(),
-                    status: "Approved"
+                    time: Utils.timeNow()
                 });
                 CashPosition.add('cash', amt);
                 State.save();
                 this.renderQueue();
-                Reports.updateDashboard();
                 DailyWorkspace.render();
                 CashPosition.render();
-                Utils.toast("Capital injected directly into Cash at Hand");
+                Utils.toast("Capital added");
                 document.getElementById("cap-amount").value = "";
-                document.getElementById("cap-narration").value = "";
             },
             renderQueue() {
-                const branch = State.getActiveBranch();
-                document.getElementById("capital-approval-list").innerHTML = branch.capitalizations.map(c => `
-                    <div class="bg-white p-2 border rounded text-xs">
-                        ${Utils.formatUGX(c.amount)} — ${c.narration || 'Capital'} (${c.date})
+                const listDiv = document.getElementById("capital-approval-list");
+                const list = State.getActiveBranch().capitalizations || [];
+                if (list.length === 0) {
+                    listDiv.innerHTML = `<p class="text-slate-400 py-2">No capital records</p>`;
+                    return;
+                }
+                listDiv.innerHTML = list.map(c => `
+                    <div class="bg-white p-2.5 rounded border flex justify-between items-center text-xs">
+                        <div><strong>${c.narration}</strong> — ${Utils.formatUGX(c.amount)} <span class="text-slate-400">(${c.date})</span></div>
+                        <span class="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold text-[10px]">${c.status}</span>
                     </div>
-                `).join('') || `<p class="text-slate-400 text-center">No capital records</p>`;
+                `).join('');
             }
         };
 
@@ -4071,358 +4283,320 @@
         // REPORTS
         // ============================================================
         const Reports = {
-            computeFullReport() {
+            getDailyReportData() {
                 const branch = State.getActiveBranch();
                 const today = Utils.today();
-                const activeClients = branch.clients.filter(c => (c.balance || 0) > 0);
-                const totalActiveClients = activeClients.length;
-                const paidToday = new Set();
-                let totalProcessingFeeCollectedToday = 0;
+                let dailyCollections = 0;
+                let dailyDisbursements = 0;
+                let dailyFeesCollected = 0;
                 branch.clients.forEach(c => {
-                    if (c.dateDisbursed === today && c.processingFee) {
-                        totalProcessingFeeCollectedToday += c.processingFee;
+                    if (c.dateDisbursed === today) {
+                        dailyDisbursements += (c.principal || 0);
+                        dailyFeesCollected += (c.processingFee || 0);
                     }
                     (c.history || []).forEach(h => {
-                        if (h.type === 'Repayment' && h.date === today) paidToday.add(c.id);
+                        if (h.date === today && h.type === 'Repayment') dailyCollections += (h.amount || 0);
                     });
                 });
-                const numberOfPaidClients = paidToday.size;
-                let totalCollection = 0;
-                let principalCollected = 0;
-                let interestCollected = 0;
-                branch.clients.forEach(c => {
-                    (c.history || []).forEach(h => {
-                        if (h.type === 'Repayment' && h.date === today) {
-                            totalCollection += h.amount || 0;
-                            const prin = c.principal || 0;
-                            const interest = c.interestAmount || 0;
-                            const totalOrig = prin + interest;
-                            if (totalOrig > 0) {
-                                principalCollected += (h.amount || 0) * (prin / totalOrig);
-                                interestCollected += (h.amount || 0) * (interest / totalOrig);
-                            } else {
-                                principalCollected += (h.amount || 0);
-                            }
-                        }
-                    });
-                });
-                const principalPortfolio = activeClients.reduce((s, c) => s + (c.principal || 0), 0);
-                const interestPortfolio = activeClients.reduce((s, c) => s + (c.interestAmount || 0), 0);
-                const totalPortfolio = activeClients.reduce((s, c) => s + (c.balance || 0), 0);
-                const totalArrears = activeClients.reduce((s, c) => s + (c.arrears || 0), 0);
-                const newClientsDisbursedToday = branch.clients.filter(c => c.dateDisbursed === today);
-                const newLoansCount = newClientsDisbursedToday.length;
-                const newLoansAmount = newClientsDisbursedToday.reduce((s, c) => s + (c.principal || 0), 0);
-                let totalSavings = 0;
-                Object.values(branch.savingsAccounts || {}).forEach(sa => totalSavings += (sa.balance || 0));
-                const totalExpenses = (branch.expenses || []).filter(e => e.date === today).reduce((s, e) => s + (e.amount || 0), 0);
-                const totalBanking = (branch.bankings || []).filter(b => b.date === today).reduce((s, b) => s + (b.amount || 0), 0);
-                const cashAtHand = state.cashPosition.cash || 0;
-                const mtnMoney = state.cashPosition.mtn || 0;
-                const airtelMoney = state.cashPosition.airtel || 0;
+                const dailyExpenses = (branch.expenses || []).filter(e => e.date === today).reduce((s, e) => s + (e.amount || 0), 0);
+                const dailyBankings = (branch.bankings || []).filter(b => b.date === today).reduce((s, b) => s + (b.amount || 0), 0);
+                const totalOutstanding = branch.clients.reduce((s, c) => s + (c.balance || 0), 0);
                 return {
-                    totalActiveClients,
-                    numberOfPaidClients,
-                    totalCollection,
-                    principalCollected: Math.round(principalCollected),
-                    interestCollected: Math.round(interestCollected),
-                    totalProcessingFeeCollectedToday,
-                    principalPortfolio,
-                    interestPortfolio,
-                    totalPortfolio,
-                    totalArrears,
-                    newLoansCount,
-                    newLoansAmount,
-                    totalSavings,
-                    totalExpenses,
-                    totalBanking,
-                    cashAtHand,
-                    mtnMoney,
-                    airtelMoney
+                    date: today,
+                    dailyCollections,
+                    dailyDisbursements,
+                    dailyFeesCollected,
+                    dailyExpenses,
+                    dailyBankings,
+                    cashAtHand: state.cashPosition.cash || 0,
+                    totalOutstanding
                 };
             },
             updateDashboard() {
-                const r = this.computeFullReport();
+                const d = this.getDailyReportData();
                 const grid = document.getElementById("full-report-grid");
                 if (!grid) return;
-                const items = [
-                    { label: "Total Active Clients", value: r.totalActiveClients },
-                    { label: "Number of Paid Clients", value: r.numberOfPaidClients },
-                    { label: "Total Collection", value: Utils.formatUGX(r.totalCollection) },
-                    { label: "Principal Collected", value: Utils.formatUGX(r.principalCollected) },
-                    { label: "Interest Collected", value: Utils.formatUGX(r.interestCollected) },
-                    { label: "Processing Fees Collected", value: Utils.formatUGX(r.totalProcessingFeeCollectedToday) },
-                    { label: "Principal Portfolio", value: Utils.formatUGX(r.principalPortfolio) },
-                    { label: "Interest Portfolio", value: Utils.formatUGX(r.interestPortfolio) },
-                    { label: "Total Portfolio", value: Utils.formatUGX(r.totalPortfolio) },
-                    { label: "Total Arrears", value: Utils.formatUGX(r.totalArrears) },
-                    { label: "New Loans (Count & Amount)", value: `${r.newLoansCount} / ${Utils.formatUGX(r.newLoansAmount)}` },
-                    { label: "Total Savings", value: Utils.formatUGX(r.totalSavings) },
-                    { label: "Total Expenses", value: Utils.formatUGX(r.totalExpenses) },
-                    { label: "Total Banking", value: Utils.formatUGX(r.totalBanking) },
-                    { label: "Cash at Hand", value: Utils.formatUGX(r.cashAtHand) },
-                    { label: "MTN Mobile Money", value: Utils.formatUGX(r.mtnMoney) },
-                    { label: "Airtel Mobile Money", value: Utils.formatUGX(r.airtelMoney) }
-                ];
-                grid.innerHTML = items.map(it => `
-                    <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-700">
-                        <span class="text-slate-400 block text-[11px]">${it.label}</span>
-                        <span class="font-bold text-sm text-white">${it.value}</span>
-                    </div>
-                `).join('');
+                grid.innerHTML = `
+                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-[10px] text-slate-400 block">Daily Collections</span><span class="font-bold text-lg text-emerald-400">${Utils.formatUGX(d.dailyCollections)}</span></div>
+                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-[10px] text-slate-400 block">Daily Disbursements</span><span class="font-bold text-lg text-indigo-400">${Utils.formatUGX(d.dailyDisbursements)}</span></div>
+                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-[10px] text-slate-400 block">Daily Expenses</span><span class="font-bold text-lg text-rose-400">${Utils.formatUGX(d.dailyExpenses)}</span></div>
+                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-[10px] text-slate-400 block">Daily Bankings</span><span class="font-bold text-lg text-blue-400">${Utils.formatUGX(d.dailyBankings)}</span></div>
+                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-[10px] text-slate-400 block">Cash at Hand</span><span class="font-bold text-lg text-amber-300">${Utils.formatUGX(d.cashAtHand)}</span></div>
+                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-[10px] text-slate-400 block">Total Portfolio Balance</span><span class="font-bold text-lg text-cyan-300">${Utils.formatUGX(d.totalOutstanding)}</span></div>
+                `;
             },
-            generateSummaryText() {
-                const r = this.computeFullReport();
-                return `=== ${state.company.name} ===
-DAILY CLOSING REPORT (${Utils.today()} - ${Utils.timeNow()})
------------------------------------------
-Total Active Clients: ${r.totalActiveClients}
-Number of Paid Clients: ${r.numberOfPaidClients}
-Total Collection: ${Utils.formatUGX(r.totalCollection)}
-Principal Collected: ${Utils.formatUGX(r.principalCollected)}
-Interest Collected: ${Utils.formatUGX(r.interestCollected)}
-Processing Fees Collected: ${Utils.formatUGX(r.totalProcessingFeeCollectedToday)}
-Principal Portfolio: ${Utils.formatUGX(r.principalPortfolio)}
-Interest Portfolio: ${Utils.formatUGX(r.interestPortfolio)}
-Total Portfolio: ${Utils.formatUGX(r.totalPortfolio)}
-Total Arrears: ${Utils.formatUGX(r.totalArrears)}
-New Loans: ${r.newLoansCount} (${Utils.formatUGX(r.newLoansAmount)})
-Total Savings: ${Utils.formatUGX(r.totalSavings)}
-Total Expenses: ${Utils.formatUGX(r.totalExpenses)}
-Total Banking: ${Utils.formatUGX(r.totalBanking)}
-Cash at Hand: ${Utils.formatUGX(r.cashAtHand)}
-MTN Mobile Money: ${Utils.formatUGX(r.mtnMoney)}
-Airtel Mobile Money: ${Utils.formatUGX(r.airtelMoney)}
------------------------------------------`;
+            getSummaryString() {
+                const d = this.getDailyReportData();
+                return `📊 *${state.company.name}* — Daily Report (${d.date})\n` +
+                    `• Collections: ${Utils.formatUGX(d.dailyCollections)}\n` +
+                    `• Disbursements: ${Utils.formatUGX(d.dailyDisbursements)}\n` +
+                    `• Expenses: ${Utils.formatUGX(d.dailyExpenses)}\n` +
+                    `• Bankings: ${Utils.formatUGX(d.dailyBankings)}\n` +
+                    `• Cash at Hand: ${Utils.formatUGX(d.cashAtHand)}\n` +
+                    `• Total Balance: ${Utils.formatUGX(d.totalOutstanding)}`;
             },
             copySummaryText() {
-                const text = this.generateSummaryText();
-                navigator.clipboard.writeText(text).then(() => {
-                    Utils.toast("Daily report summary copied to clipboard");
-                }).catch(() => {
-                    Utils.toast("Failed to copy summary");
-                });
+                const text = this.getSummaryString();
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(text).then(() => Utils.toast("Summary copied to clipboard")).catch(() => this._fallbackCopy(text));
+                } else {
+                    this._fallbackCopy(text);
+                }
+            },
+            _fallbackCopy(text) {
+                const ta = document.createElement("textarea");
+                ta.value = text;
+                document.body.appendChild(ta);
+                ta.select();
+                document.execCommand("copy");
+                document.body.removeChild(ta);
+                Utils.toast("Summary copied to clipboard");
             },
             openWhatsAppModal() {
+                const checksDiv = document.getElementById("whatsapp-manager-checkboxes");
                 const managers = state.managers || [];
-                const container = document.getElementById("whatsapp-manager-checkboxes");
                 if (managers.length === 0) {
-                    container.innerHTML = `<p class="text-red-600 font-bold">No managers registered in Settings.</p>`;
+                    checksDiv.innerHTML = `<p class="text-slate-400 text-[11px]">No managers configured in Admin Settings. Add a manager first.</p>`;
                 } else {
-                    container.innerHTML = managers.map(m => `
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" class="mgr-wa-checkbox rounded" value="${m.phone}" checked>
-                            <span class="font-bold">${m.name}</span> (${m.phone})
+                    checksDiv.innerHTML = managers.map(m => `
+                        <label class="flex items-center gap-2 text-xs font-bold cursor-pointer">
+                            <input type="checkbox" value="${m.phone}" checked class="wa-mgr-chk rounded accent-emerald-600">
+                            <span>${m.name} (${m.phone})</span>
                         </label>
                     `).join('');
                 }
-                document.getElementById("whatsapp-report-preview").value = this.generateSummaryText();
-                UI.show("whatsapp-report-modal");
+                document.getElementById("whatsapp-report-preview").value = this.getSummaryString();
+                Utils.show("whatsapp-report-modal");
             },
             async sendSelectedWhatsAppReports() {
-                const checkboxes = document.querySelectorAll(".mgr-wa-checkbox:checked");
-                if (checkboxes.length === 0) {
+                const checked = Array.from(document.querySelectorAll(".wa-mgr-chk:checked")).map(el => el.value);
+                if (checked.length === 0) {
                     Utils.toast("Select at least one manager");
                     return;
                 }
-                const r = this.computeFullReport();
+                const d = this.getDailyReportData();
                 const rows = [
-                    ["Total Active Clients", String(r.totalActiveClients)],
-                    ["Number of Paid Clients", String(r.numberOfPaidClients)],
-                    ["Total Collection", Utils.formatUGX(r.totalCollection)],
-                    ["Principal Collected", Utils.formatUGX(r.principalCollected)],
-                    ["Interest Collected", Utils.formatUGX(r.interestCollected)],
-                    ["Processing Fees Collected", Utils.formatUGX(r.totalProcessingFeeCollectedToday)],
-                    ["Principal Portfolio", Utils.formatUGX(r.principalPortfolio)],
-                    ["Interest Portfolio", Utils.formatUGX(r.interestPortfolio)],
-                    ["Total Portfolio", Utils.formatUGX(r.totalPortfolio)],
-                    ["Total Arrears", Utils.formatUGX(r.totalArrears)],
-                    ["New Loans", `${r.newLoansCount} / ${Utils.formatUGX(r.newLoansAmount)}`],
-                    ["Total Savings", Utils.formatUGX(r.totalSavings)],
-                    ["Total Expenses", Utils.formatUGX(r.totalExpenses)],
-                    ["Total Banking", Utils.formatUGX(r.totalBanking)],
-                    ["Cash at Hand", Utils.formatUGX(r.cashAtHand)],
-                    ["MTN Mobile Money", Utils.formatUGX(r.mtnMoney)],
-                    ["Airtel Mobile Money", Utils.formatUGX(r.airtelMoney)]
+                    ["Daily Collections", Utils.formatUGX(d.dailyCollections)],
+                    ["Daily Disbursements", Utils.formatUGX(d.dailyDisbursements)],
+                    ["Daily Expenses", Utils.formatUGX(d.dailyExpenses)],
+                    ["Daily Bankings", Utils.formatUGX(d.dailyBankings)],
+                    ["Cash at Hand", Utils.formatUGX(d.cashAtHand)],
+                    ["Total Portfolio Balance", Utils.formatUGX(d.totalOutstanding)]
                 ];
-                await PdfEngine.downloadReportPDF("DAILY CLOSING REPORT", ["Metric", "Value"], rows, [`Generated on: ${Utils.today()}`]);
-                const summary = encodeURIComponent(`Daily Closing Report PDF has been generated and downloaded for ${Utils.today()}. Please attach the PDF.`);
-                checkboxes.forEach(cb => {
-                    const waPhone = RegionManager.formatPhoneForWhatsApp(cb.value);
-                    window.open(`https://wa.me/${waPhone}?text=${summary}`, '_blank');
+                await PdfEngine.downloadReportPDF(`DAILY CLOSING REPORT (${d.date})`, ["Metric", "Value"], rows, [`Date: ${d.date}`, `Company: ${state.company.name}`]);
+                const msg = encodeURIComponent(this.getSummaryString() + "\n\n(PDF report generated and downloaded — please attach)");
+                checked.forEach(phone => {
+                    window.open(`https://wa.me/${RegionManager.formatPhoneForWhatsApp(phone)}?text=${msg}`, '_blank');
                 });
-                UI.hide("whatsapp-report-modal");
-                Utils.toast("Daily report PDF downloaded & WhatsApp launched");
+                Utils.hide("whatsapp-report-modal");
+                Utils.toast("PDF downloaded & WhatsApp opened");
             }
         };
 
         // ============================================================
-        // AGING & DEFAULTERS
+        // AGING & PAR
         // ============================================================
         const Aging = {
             render() {
                 const branch = State.getActiveBranch();
-                const filterOfficer = document.getElementById("aging-officer-filter")?.value || "ALL";
-                let active = branch.clients.filter(c => (c.balance || 0) > 0);
-                if (filterOfficer !== "ALL") active = active.filter(c => c.officerId === filterOfficer);
+                const filterId = document.getElementById("aging-officer-filter")?.value || "ALL";
+                const todayMid = new Date();
+                todayMid.setHours(0, 0, 0, 0);
+                branch.clients.forEach(c => State.recalculateClientStatus(c, todayMid));
+                let totalPortfolio = 0, par30Balance = 0, par90Balance = 0;
+                branch.clients.forEach(c => {
+                    if (filterId !== "ALL" && c.officerId !== filterId) return;
+                    const bal = c.balance || 0;
+                    totalPortfolio += bal;
+                    const days = c.overdueDays || 0;
+                    if (days >= 30) par30Balance += bal;
+                    if (days >= 90) par90Balance += bal;
+                });
+                const par30Ratio = totalPortfolio > 0 ? ((par30Balance / totalPortfolio) * 100).toFixed(1) : "0.0";
+                const par90Ratio = totalPortfolio > 0 ? ((par90Balance / totalPortfolio) * 100).toFixed(1) : "0.0";
+                const parBox = document.getElementById("par-metrics-summary-box");
+                if (parBox) {
+                    parBox.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs bg-white p-4 rounded-xl border shadow-sm">
+                        <div class="bg-slate-50 p-3 rounded-lg border"><span class="text-[10px] text-slate-400 uppercase font-bold block">Total Portfolio</span><span class="font-black text-base text-slate-800">${Utils.formatUGX(totalPortfolio)}</span></div>
+                        <div class="bg-amber-50 p-3 rounded-lg border border-amber-200"><span class="text-[10px] text-amber-700 uppercase font-bold block">PAR 30+</span><span class="font-black text-base text-amber-700">${par30Ratio}% (${Utils.formatUGX(par30Balance)})</span></div>
+                        <div class="bg-red-50 p-3 rounded-lg border border-red-200"><span class="text-[10px] text-red-700 uppercase font-bold block">PAR 90+</span><span class="font-black text-base text-red-700">${par90Ratio}% (${Utils.formatUGX(par90Balance)})</span></div>
+                    </div>`;
+                }
+                const targetOfficers = filterId === "ALL" ? branch.officers : branch.officers.filter(o => o.id === filterId);
                 const container = document.getElementById("officer-aging-sections");
                 if (!container) return;
-                if (active.length === 0) {
-                    container.innerHTML = `<p class="text-slate-400 text-center py-8">No active loans</p>`;
-                    return;
-                }
-                const parTotal = active.reduce((s, c) => s + (c.balance || 0), 0);
-                const parOver30 = active.filter(c => (c.overdueDays || 0) > 30).reduce((s, c) => s + (c.balance || 0), 0);
-                const parRatio = parTotal > 0 ? ((parOver30 / parTotal) * 100).toFixed(1) : 0;
-                document.getElementById("par-metrics-summary-box").innerHTML = `
-                    <div class="grid grid-cols-3 gap-3 bg-slate-900 text-white p-4 rounded-xl text-xs">
-                        <div><span class="text-slate-400 block">Portfolio</span><span class="font-bold text-sm">${Utils.formatUGX(parTotal)}</span></div>
-                        <div><span class="text-slate-400 block">PAR > 30 Days</span><span class="font-bold text-amber-400 text-sm">${Utils.formatUGX(parOver30)}</span></div>
-                        <div><span class="text-slate-400 block">PAR Ratio</span><span class="font-bold text-red-400 text-sm">${parRatio}%</span></div>
-                    </div>
-                `;
-                container.innerHTML = `<div class="bg-white border rounded-xl overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-xs">
-                        <thead>
-                            <tr class="bg-slate-800 text-white">
-                                <th class="p-3">Client</th>
-                                <th class="p-3">NIN</th>
-                                <th class="p-3">Arrears</th>
-                                <th class="p-3">Overdue Days</th>
-                                <th class="p-3 text-right">Balance</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y">
-                            ${active.map(c => `
-                                <tr>
-                                    <td class="p-3 font-bold">${c.name}</td>
-                                    <td class="p-3 font-mono">${c.nin || '-'}</td>
-                                    <td class="p-3 text-red-600 font-bold">${Utils.formatUGX(c.arrears || 0)}</td>
-                                    <td class="p-3 font-bold">${c.overdueDays || 0}d</td>
-                                    <td class="p-3 text-right font-bold">${Utils.formatUGX(c.balance || 0)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>`;
+                container.innerHTML = targetOfficers.map(o => {
+                    const oClients = branch.clients.filter(c => c.officerId === o.id && (c.balance || 0) > 0);
+                    return `<div class="bg-white border rounded-xl overflow-hidden shadow-sm">
+                        <div class="bg-slate-800 text-white px-4 py-3 font-bold text-xs flex justify-between">
+                            <span>${o.name}</span>
+                            <span>${oClients.length} active loans</span>
+                        </div>
+                        <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs">
+                            <thead><tr class="bg-slate-100 text-slate-600 text-[10px] uppercase border-b">
+                                <th class="p-2.5">Client</th><th class="p-2.5">Overdue</th><th class="p-2.5 text-right">Arrears</th><th class="p-2.5 text-right">Balance</th>
+                            </tr></thead>
+                            <tbody class="divide-y">${oClients.map(c => `<tr>
+                                <td class="p-2.5 font-bold">${c.name}</td>
+                                <td class="p-2.5 font-mono font-bold ${(c.overdueDays || 0) > 0 ? 'text-red-600' : 'text-emerald-600'}">${c.overdueDays || 0}d</td>
+                                <td class="p-2.5 text-right font-mono text-red-600">${Utils.formatUGX(c.arrears || 0)}</td>
+                                <td class="p-2.5 text-right font-mono font-bold">${Utils.formatUGX(c.balance || 0)}</td>
+                            </tr>`).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No active loans</td></tr>`}</tbody>
+                        </table></div>
+                    </div>`;
+                }).join('');
             },
             exportCSV() {
                 const branch = State.getActiveBranch();
-                const rows = [["Client", "NIN", "Balance", "Arrears", "Overdue Days"]];
+                const filterId = document.getElementById("aging-officer-filter")?.value || "ALL";
+                let csv = "Staff,Client,NIN,Phone,OverdueDays,Arrears,Balance\n";
                 branch.clients.forEach(c => {
-                    if ((c.balance || 0) > 0) rows.push([c.name, c.nin || '', c.balance, c.arrears || 0, c.overdueDays || 0]);
+                    if (filterId !== "ALL" && c.officerId !== filterId) return;
+                    const off = branch.officers.find(o => o.id === c.officerId);
+                    csv += `"${off ? off.name : '-'}","${c.name}","${c.nin || ''}","${c.phone || ''}",${c.overdueDays || 0},${c.arrears || 0},${c.balance || 0}\n`;
                 });
-                const csv = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement("a");
-                link.href = encodeURI(csv);
-                link.download = `PMMS_AGING_${Utils.today()}.csv`;
+                link.href = URL.createObjectURL(blob);
+                link.download = `PMMS_Aging_${Utils.today()}.csv`;
                 link.click();
             },
             async exportPDF() {
                 const branch = State.getActiveBranch();
-                const active = branch.clients.filter(c => (c.balance || 0) > 0);
-                const rows = active.map(c => [c.name, c.nin || '-', Utils.formatUGX(c.arrears || 0), `${c.overdueDays || 0}d`, Utils.formatUGX(c.balance || 0)]);
-                await PdfEngine.downloadReportPDF("AGING & PAR PORTFOLIO REPORT", ["Client", "NIN", "Arrears", "Days", "Balance"], rows, [`Total Active Loans: ${active.length}`]);
+                const filterId = document.getElementById("aging-officer-filter")?.value || "ALL";
+                const rows = [];
+                branch.clients.forEach(c => {
+                    if (filterId !== "ALL" && c.officerId !== filterId) return;
+                    const off = branch.officers.find(o => o.id === c.officerId);
+                    rows.push([off ? off.name : '-', c.name, c.nin || '-', `${c.overdueDays || 0}d`, Utils.formatUGX(c.arrears || 0), Utils.formatUGX(c.balance || 0)]);
+                });
+                await PdfEngine.downloadReportPDF("AGING & PAR REPORT", ["Staff", "Client", "NIN", "Overdue", "Arrears", "Balance"], rows, [`Date: ${Utils.today()}`]);
                 Utils.toast("Aging PDF downloaded");
             }
         };
 
+        // ============================================================
+        // DEFAULTERS
+        // ============================================================
         const Defaulters = {
             render() {
                 const branch = State.getActiveBranch();
                 const list = branch.clients.filter(c => (c.balance || 0) > 0 && (c.overdueDays || 0) >= 90);
                 const container = document.getElementById("demand-list-container");
                 if (!container) return;
-                if (list.length === 0) {
-                    container.innerHTML = `<p class="text-slate-400 col-span-full text-center py-8">No defaulters (90+ days)</p>`;
-                    return;
-                }
                 container.innerHTML = list.map(c => `
-                    <div class="bg-white border-2 border-red-200 p-4 rounded-xl text-xs space-y-1">
-                        <div class="font-bold text-red-700 text-sm">${c.name} (${c.nin || '-'})</div>
-                        <div>Overdue: <strong>${c.overdueDays} days</strong> | Balance: <strong>${Utils.formatUGX(c.balance)}</strong></div>
-                        <div>Phone: ${c.phone || '-'} | Guarantor: ${c.guarantor || '-'}</div>
+                    <div class="bg-white border-2 border-red-200 p-4 rounded-xl text-xs space-y-2 shadow-sm">
+                        <div class="flex justify-between font-bold text-slate-900">
+                            <span>${c.name} (${c.nin || 'N/A'})</span>
+                            <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded font-mono">${c.overdueDays}d</span>
+                        </div>
+                        <div class="text-slate-600">Guarantor: <strong>${c.guarantor || '-'}</strong> (${c.guarantorPhone || '-'})</div>
+                        <div class="flex justify-between items-center pt-2 border-t">
+                            <span class="font-bold text-red-700">Balance: ${Utils.formatUGX(c.balance || 0)}</span>
+                            <button onclick="SMS.dispatch('${c.phone}', 'URGENT: Dear ${c.name}, loan balance ${Utils.formatUGX(c.balance)} is ${c.overdueDays} days overdue.', 'Defaulter Notice')" class="bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg font-bold">
+                                Send Notice
+                            </button>
+                        </div>
                     </div>
-                `).join('');
+                `).join('') || `<p class="text-slate-400 col-span-full py-4 text-center">No 90+ day defaulters</p>`;
             }
         };
 
         // ============================================================
-        // SMS
+        // LOCAL SMS
         // ============================================================
         const SMS = {
-            dispatch(phone, message, trigger = 'Manual', silent = false) {
+            dispatch(phone, message, trigger = 'System') {
                 if (!phone) return;
-                const carrier = document.getElementById("sms-preferred-network")?.value || 'Standard SIM';
+                const cleanPhone = RegionManager.normalizePhone(phone);
+                const network = document.getElementById("sms-preferred-network")?.value || "MTN";
                 state.smsLogs.unshift({
                     id: Utils.generateId("sms"),
                     timestamp: Utils.now(),
-                    recipient: phone,
-                    carrier,
+                    recipient: cleanPhone,
+                    network,
                     trigger,
                     message
                 });
                 State.save();
                 this.renderLogs();
-                if (!silent) Utils.toast(`SMS queued for ${phone}`);
-            },
-            toggleTargetDropdown(val) {
-                const box = document.getElementById("sms-single-client-container");
-                if (val === 'SINGLE') Utils.show(box);
-                else Utils.hide(box);
             },
             populateQuickClients() {
-                const branch = State.getActiveBranch();
                 const sel = document.getElementById("sms-quick-client-select");
                 if (!sel) return;
-                sel.innerHTML = branch.clients.map(c => `<option value="${c.id}">${c.name} (${c.phone})</option>`).join('');
+                sel.innerHTML = `<option value="">-- Select Client --</option>` +
+                    state.globalClients.map(c => `<option value="${c.phone}">${c.name} (${c.phone})</option>`).join('');
+            },
+            toggleTargetDropdown(target) {
+                const container = document.getElementById("sms-single-client-container");
+                if (target === "SINGLE") Utils.show(container);
+                else Utils.hide(container);
             },
             dispatchBroadcast() {
                 const target = document.getElementById("sms-broadcast-target").value;
                 const template = document.getElementById("sms-quick-message").value.trim();
                 if (!Validation.isRequired(template, "Message")) return;
                 const branch = State.getActiveBranch();
-                let targets = [];
-                if (target === 'SINGLE') {
-                    const id = document.getElementById("sms-quick-client-select").value;
-                    const c = branch.clients.find(cl => cl.id === id);
-                    if (c) targets.push(c);
-                } else if (target === 'ALL') targets = branch.clients;
-                else if (target === 'DEFAULTERS') targets = branch.clients.filter(c => (c.overdueDays || 0) >= 90 && c.balance > 0);
-                else if (target === 'ACTIVE') targets = branch.clients.filter(c => c.balance > 0);
-                else if (target === 'BODABODA') targets = branch.clients.filter(c => c.category === 'BODABODA');
-                if (targets.length === 0) {
-                    Utils.toast("No clients in selected group");
+                let recipients = [];
+                if (target === "SINGLE") {
+                    const phone = document.getElementById("sms-quick-client-select").value;
+                    if (!phone) {
+                        Utils.toast("Select a client");
+                        return;
+                    }
+                    const cl = state.globalClients.find(c => c.phone === phone);
+                    recipients.push({ phone, name: cl ? cl.name : "Client", nin: cl ? cl.nin : "", balance: 0 });
+                } else if (target === "ALL") {
+                    recipients = state.globalClients.map(c => ({ phone: c.phone, name: c.name, nin: c.nin, balance: 0 }));
+                } else if (target === "DEFAULTERS") {
+                    recipients = branch.clients.filter(c => (c.overdueDays || 0) >= 90 && (c.balance || 0) > 0).map(c => ({ phone: c.phone, name: c.name, nin: c.nin, balance: c.balance }));
+                } else if (target === "ACTIVE") {
+                    recipients = branch.clients.filter(c => (c.balance || 0) > 0).map(c => ({ phone: c.phone, name: c.name, nin: c.nin, balance: c.balance }));
+                } else if (target === "BODABODA") {
+                    recipients = state.globalClients.filter(c => c.category === "BODABODA").map(c => ({ phone: c.phone, name: c.name, nin: c.nin, balance: 0 }));
+                }
+                if (recipients.length === 0) {
+                    Utils.toast("No matching recipients");
                     return;
                 }
-                targets.forEach(c => {
-                    const msg = template
-                        .replace(/{name}/g, c.name)
-                        .replace(/{balance}/g, Utils.formatUGX(c.balance || 0))
-                        .replace(/{nin}/g, c.nin || '');
-                    this.dispatch(c.phone, msg, `Bulk (${target})`, true);
+                recipients.forEach(r => {
+                    const personalized = template
+                        .replace(/{name}/g, r.name)
+                        .replace(/{balance}/g, Utils.formatUGX(r.balance || 0))
+                        .replace(/{nin}/g, r.nin || '');
+                    this.dispatch(r.phone, personalized, `Broadcast (${target})`);
                 });
-                Utils.toast(`Dispatched ${targets.length} SMS`);
+                const firstPhone = RegionManager.normalizePhone(recipients[0].phone);
+                const firstMsg = template
+                    .replace(/{name}/g, recipients[0].name)
+                    .replace(/{balance}/g, Utils.formatUGX(recipients[0].balance || 0))
+                    .replace(/{nin}/g, recipients[0].nin || '');
+                window.location.href = `sms:${firstPhone}?body=${encodeURIComponent(firstMsg)}`;
+                Utils.toast(`Dispatched (${recipients.length})`);
+                document.getElementById("sms-quick-message").value = "";
             },
             renderLogs() {
+                const countEl = document.getElementById("sms-log-count");
+                if (countEl) countEl.innerText = state.smsLogs.length;
                 const tbody = document.getElementById("sms-logs-table-body");
                 if (!tbody) return;
-                document.getElementById("sms-log-count").innerText = (state.smsLogs || []).length;
-                tbody.innerHTML = (state.smsLogs || []).map(l => `
+                tbody.innerHTML = state.smsLogs.slice(0, 50).map(log => `
                     <tr>
-                        <td class="p-3 text-[11px]">${l.timestamp}</td>
-                        <td class="p-3 font-mono">${l.recipient}</td>
-                        <td class="p-3">${l.carrier}</td>
-                        <td class="p-3">${l.trigger}</td>
-                        <td class="p-3 text-xs">${l.message}</td>
+                        <td class="p-3 font-mono text-[10px]">${log.timestamp}</td>
+                        <td class="p-3 font-bold">${log.recipient}</td>
+                        <td class="p-3 text-sky-700 font-bold text-[10px]">${log.network || 'MTN'}</td>
+                        <td class="p-3 font-semibold text-slate-600">${log.trigger}</td>
+                        <td class="p-3 max-w-xs truncate">${log.message}</td>
                         <td class="p-3 text-right">
-                            <a href="sms:${l.recipient}?body=${encodeURIComponent(l.message)}" class="bg-sky-600 text-white px-2 py-1 rounded text-[10px]">Send Now</a>
+                            <button onclick="window.location.href='sms:${log.recipient}?body=${encodeURIComponent(log.message)}'" class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] font-bold">
+                                <i class="fa-solid fa-paper-plane"></i> Send
+                            </button>
                         </td>
                     </tr>
-                `).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">No SMS logs</td></tr>`;
+                `).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">No logs</td></tr>`;
             },
             clearLogs() {
-                if (!Utils.confirmAction("Clear all SMS logs?")) return;
+                if (!Utils.confirmAction("Clear SMS logs?")) return;
                 state.smsLogs = [];
                 State.save();
                 this.renderLogs();
@@ -4430,144 +4604,171 @@ Airtel Mobile Money: ${Utils.formatUGX(r.airtelMoney)}
         };
 
         // ============================================================
-        // PRINTER (X-PRINTER)
+        // X-PRINTER & RECEIPT PRINTING
         // ============================================================
         const Printer = {
-            onTogglePrintReceipt(checked) {
-                state.settings.printReceiptEnabled = checked;
+            onTogglePrintReceipt(isChecked) {
+                if (!state.settings) state.settings = {};
+                state.settings.printReceiptEnabled = isChecked;
                 State.save();
-                Utils.toast(`Auto receipt printing ${checked ? 'enabled' : 'disabled'}`);
+                Utils.toast(isChecked ? "Receipt printing enabled" : "Receipt printing disabled");
             },
-            updateConnectionIndicator(connected, labelText) {
-                const statusText = document.getElementById("xprinter-status-text");
-                const miniDot = document.getElementById("xprinter-mini-dot");
-                const btn = document.getElementById("xprinter-btn");
-
-                if (statusText) statusText.innerText = labelText || (connected ? "Connected" : "Connect Printer");
-                if (miniDot) {
-                    miniDot.className = connected
-                        ? "w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"
-                        : "w-2 h-2 rounded-full bg-slate-400 inline-block";
-                    miniDot.title = connected ? "X-Printer Connected" : "X-Printer Disconnected";
-                }
-                if (btn) {
-                    if (connected) {
-                        btn.classList.remove("dyn-bg");
-                        btn.classList.add("bg-emerald-600", "hover:bg-emerald-700");
-                    } else {
-                        btn.classList.remove("bg-emerald-600", "hover:bg-emerald-700");
-                        btn.classList.add("dyn-bg");
-                    }
+            updateStatusUI(connected) {
+                const textEl = document.getElementById("xprinter-status-text");
+                const dotEl = document.getElementById("xprinter-mini-dot");
+                const btnEl = document.getElementById("xprinter-btn");
+                if (connected) {
+                    if (textEl) textEl.innerText = "Printer Connected";
+                    if (dotEl) { dotEl.className = "w-2 h-2 rounded-full bg-emerald-500 inline-block"; dotEl.title = "X-Printer Connected"; }
+                    if (btnEl) btnEl.className = "bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1";
+                } else {
+                    if (textEl) textEl.innerText = "Connect Printer";
+                    if (dotEl) { dotEl.className = "w-2 h-2 rounded-full bg-slate-400 inline-block"; dotEl.title = "X-Printer Disconnected"; }
+                    if (btnEl) btnEl.className = "dyn-bg text-white text-xs px-2.5 py-1.5 rounded-lg font-bold flex items-center gap-1";
                 }
             },
             async connectXPrinter() {
+                const iface = document.getElementById("xprinter-interface-select")?.value || "bluetooth";
                 try {
-                    const iface = document.getElementById("xprinter-interface-select")?.value || 'bluetooth';
-                    if (iface === 'bluetooth' && navigator.bluetooth) {
-                        xPrinterDevice = await navigator.bluetooth.requestDevice({
+                    if (iface === "bluetooth" && navigator.bluetooth) {
+                        const device = await navigator.bluetooth.requestDevice({
                             acceptAllDevices: true,
                             optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
                         });
-                        const server = await xPrinterDevice.gatt.connect();
-                        const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                        xPrinterCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                        this.updateConnectionIndicator(true, "XPrinter (BT)");
-                        Utils.toast("Bluetooth X-Printer Connected");
-                    } else if (navigator.serial) {
-                        xPrinterSerialPort = await navigator.serial.requestPort();
-                        await xPrinterSerialPort.open({ baudRate: 9600 });
-                        this.updateConnectionIndicator(true, "XPrinter (USB)");
-                        Utils.toast("USB/Serial X-Printer Connected");
+                        const server = await device.gatt.connect();
+                        const services = await server.getPrimaryServices();
+                        for (let s of services) {
+                            const chars = await s.getCharacteristics();
+                            for (let ch of chars) {
+                                if (ch.properties.write || ch.properties.writeWithoutResponse) {
+                                    xPrinterCharacteristic = ch;
+                                    break;
+                                }
+                            }
+                            if (xPrinterCharacteristic) break;
+                        }
+                        xPrinterDevice = device;
+                        this.updateStatusUI(true);
+                        Utils.toast("X-Printer connected via Web Bluetooth");
+                    } else if (iface === "usb" && navigator.serial) {
+                        const port = await navigator.serial.requestPort();
+                        await port.open({ baudRate: 9600 });
+                        xPrinterSerialPort = port;
+                        this.updateStatusUI(true);
+                        Utils.toast("X-Printer connected via Web Serial");
                     } else {
-                        Utils.toast("Bluetooth/Serial not supported in this browser; fallback print active.");
+                        this.updateStatusUI(true);
+                        Utils.toast("X-Printer ready (Browser print fallback active)");
                     }
-                } catch (e) {
-                    this.updateConnectionIndicator(false, "Connect Printer");
-                    Utils.toast("Printer connection cancelled");
+                } catch (err) {
+                    this.updateStatusUI(true);
+                    Utils.toast("X-Printer configured (Browser print fallback active)");
                 }
             },
+            async testPrint() {
+                const testText = `=== ${state.company.name} ===\nX-PRINTER TEST PAGE\nDate: ${Utils.today()} ${Utils.timeNow()}\n--------------------------------\nConnection Verified!\n--------------------------------\n`;
+                await this.printToXPrinter(testText, true);
+            },
             async printToXPrinter(text, forcePrint = false) {
+                const toggleEl = document.getElementById("toggle-print-receipt");
+                const isEnabled = toggleEl ? toggleEl.checked : (state.settings?.printReceiptEnabled ?? true);
+                if (!forcePrint && !isEnabled) {
+                    return;
+                }
                 lastPrintedReceiptText = text;
-                const shouldPrint = forcePrint || document.getElementById("toggle-print-receipt")?.checked;
-                if (!shouldPrint) return;
-
-                const headerStr = `${state.company.name}\n${state.company.location}\n--------------------------------\n`;
-                const fullText = headerStr + text + "\n\n\n";
+                const fullReceipt = `=== ${state.company.name} ===\n${state.company.location || ''}\n================================\n` + text;
                 try {
-                    const encoder = new TextEncoder();
-                    const data = encoder.encode(fullText);
                     if (xPrinterCharacteristic) {
-                        await xPrinterCharacteristic.writeValue(data);
-                        Utils.toast("Printed to X-Printer");
+                        const encoder = new TextEncoder();
+                        const initCmd = new Uint8Array([0x1B, 0x40]);
+                        const cutCmd = new Uint8Array([0x1D, 0x56, 0x41, 0x00]);
+                        await xPrinterCharacteristic.writeValue(initCmd);
+                        const bytes = encoder.encode(fullReceipt + "\n\n\n");
+                        for (let i = 0; i < bytes.length; i += 20) {
+                            await xPrinterCharacteristic.writeValue(bytes.slice(i, i + 20));
+                        }
+                        await xPrinterCharacteristic.writeValue(cutCmd);
+                        Utils.toast("Sent to X-Printer");
                         return;
                     }
                     if (xPrinterSerialPort && xPrinterSerialPort.writable) {
                         const writer = xPrinterSerialPort.writable.getWriter();
-                        await writer.write(data);
+                        const encoder = new TextEncoder();
+                        await writer.write(new Uint8Array([0x1B, 0x40]));
+                        await writer.write(encoder.encode(fullReceipt + "\n\n\n"));
+                        await writer.write(new Uint8Array([0x1D, 0x56, 0x41, 0x00]));
                         writer.releaseLock();
-                        Utils.toast("Printed to X-Printer");
+                        Utils.toast("Sent to X-Printer via Serial");
                         return;
                     }
-                } catch (err) {
-                    console.warn("Direct printer write error, falling back to browser print:", err);
+                } catch (e) {
+                    console.warn("Direct printer write fallback to browser print:", e);
                 }
                 const printArea = document.getElementById("printable-area");
-                printArea.innerHTML = `<pre style="font-family: monospace; font-size: 12px; white-space: pre-wrap;">${fullText}</pre>`;
+                printArea.innerHTML = `<pre style="font-family:monospace; font-size:12px; white-space:pre-wrap;">${fullReceipt}</pre>`;
                 Utils.show(printArea);
                 window.print();
-                Utils.hide(printArea);
-            },
-            async testPrint() {
-                await this.printToXPrinter("TEST PRINT RECEIPT\nStatus: X-Printer Ready\nDate: " + Utils.now(), true);
+                setTimeout(() => Utils.hide(printArea), 600);
             }
         };
 
         // ============================================================
-        // THEME CUSTOMIZER (15 COLORS & 15 FONTS)
+        // THEME CUSTOMIZER
         // ============================================================
         const ThemeCustomizer = {
-            ALL_THEMES: [
-                'theme-teal', 'theme-indigo', 'theme-emerald', 'theme-slate', 'theme-blue',
-                'theme-rose', 'theme-amber', 'theme-purple', 'theme-cyan', 'theme-orange',
-                'theme-crimson', 'theme-forest', 'theme-navy', 'theme-gold', 'theme-magenta'
-            ],
-            ALL_FONTS: [
-                'font-sans', 'font-serif', 'font-mono', 'font-inter', 'font-poppins',
-                'font-roboto', 'font-montserrat', 'font-lato', 'font-opensans', 'font-nunito',
-                'font-raleway', 'font-merriweather', 'font-playfair', 'font-oswald', 'font-firacode'
-            ],
-            applyTheme(theme) {
-                this.ALL_THEMES.forEach(cls => document.body.classList.remove(cls));
-                document.body.classList.add('theme-' + theme);
-                localStorage.setItem('pmms_theme_v10', theme);
-                const sel = document.getElementById('theme-color-select');
-                if (sel) sel.value = theme;
+            applyTheme(themeName) {
+                if (!themeName) themeName = "teal";
+                document.body.className = document.body.className.replace(/theme-\S+/g, '').trim();
+                document.body.classList.add(`theme-${themeName}`);
+                if (!state.settings) state.settings = {};
+                state.settings.theme = themeName;
+                State.save();
+                const sel = document.getElementById("theme-color-select");
+                if (sel) sel.value = themeName;
             },
-            applyFont(font) {
-                this.ALL_FONTS.forEach(cls => document.body.classList.remove(cls));
-                document.body.classList.add('font-' + font);
-                localStorage.setItem('pmms_font_v10', font);
-                const sel = document.getElementById('theme-font-select');
-                if (sel) sel.value = font;
+            applyFont(fontName) {
+                if (!fontName) fontName = "sans";
+                document.body.className = document.body.className.replace(/font-\S+/g, '').trim();
+                document.body.classList.add(`font-${fontName}`);
+                if (!state.settings) state.settings = {};
+                state.settings.font = fontName;
+                State.save();
+                const sel = document.getElementById("theme-font-select");
+                if (sel) sel.value = fontName;
             }
         };
 
+        // ============================================================
+        // INITIALIZATION
+        // ============================================================
         window.addEventListener("DOMContentLoaded", async () => {
             await State.load();
-            const savedTheme = localStorage.getItem('pmms_theme_v10') || 'teal';
-            const savedFont = localStorage.getItem('pmms_font_v10') || 'sans';
-            ThemeCustomizer.applyTheme(savedTheme);
-            ThemeCustomizer.applyFont(savedFont);
-
-            const receiptToggle = document.getElementById("toggle-print-receipt");
-            if (receiptToggle) {
-                receiptToggle.checked = state.settings?.printReceiptEnabled ?? true;
+            if (!state.currentUser) {
+                Utils.show("auth-overlay");
             }
-
-            AdminSettings.renderManagersList();
+            if (state.settings?.theme) ThemeCustomizer.applyTheme(state.settings.theme);
+            if (state.settings?.font) ThemeCustomizer.applyFont(state.settings.font);
+            const togglePrintEl = document.getElementById("toggle-print-receipt");
+            if (togglePrintEl && state.settings?.printReceiptEnabled !== undefined) {
+                togglePrintEl.checked = state.settings.printReceiptEnabled;
+            }
+            const mrDate = document.getElementById("manual-receipt-date");
+            if (mrDate && !mrDate.value) mrDate.value = Utils.today();
             UI.refreshAll();
-            window.addEventListener("offline", () => Utils.show("offline-banner"));
-            window.addEventListener("online", () => Utils.hide("offline-banner"));
+            setTimeout(() => State.runDailyAging(), 100);
+            if (!navigator.onLine) Utils.show("offline-banner");
+        });
+
+        window.addEventListener("online", () => {
+            Utils.hide("offline-banner");
+            Utils.toast("Back online");
+        });
+        window.addEventListener("offline", () => {
+            Utils.show("offline-banner");
+            Utils.toast("Offline mode active");
+        });
+        window.addEventListener("beforeunload", () => {
+            State.save();
         });
     </script>
 </body>

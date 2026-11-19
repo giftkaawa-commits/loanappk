@@ -140,7 +140,6 @@
                 <div>
                     <label class="block text-[10px] text-slate-600 font-semibold mb-1">System Role *</label>
                     <select id="reg-role" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50 font-bold">
-                        <option value="Administrator">Administrator (Full Access)</option>
                         <option value="Manager">Manager (Operations & Approvals)</option>
                         <option value="Accountant">Accountant (Disburse, Post, Bankings, Reports, Staff, Expenses, Clients, Aging, SMS & Defaulters)</option>
                         <option value="Loan Officer">Loan Officer (Disburse & Field)</option>
@@ -1726,7 +1725,6 @@
                 const threshEl = document.getElementById("cash-threshold-display");
                 if (threshEl) threshEl.innerText = Utils.formatUGX(500000);
 
-                // Update phone input placeholders & auto-prefilled inputs
                 document.querySelectorAll("input.phone-auto-prefix").forEach(inp => {
                     inp.placeholder = `${dial}771234567`;
                     const val = inp.value.trim();
@@ -1776,17 +1774,14 @@
                     input.addEventListener("input", () => {
                         const dial = RegionManager.getDialCode();
                         let val = input.value;
-                        // If user deletes into the country code, restore the country code
                         if (val.length < dial.length && dial.startsWith(val)) {
                             input.value = dial;
                             return;
                         }
-                        // If user pasted a local number starting with 0 (e.g. 0771234567)
                         if (val.startsWith("0") && val.length >= 2) {
                             input.value = dial + val.substring(1);
                             return;
                         }
-                        // If user typed digits without + prefix
                         if (val.length > 0 && !val.startsWith("+")) {
                             const digitsOnly = val.replace(/\D/g, "");
                             const rawDial = dial.replace("+", "");
@@ -2127,7 +2122,6 @@
                     Utils.toast('Phone number is required');
                     return false;
                 }
-                // International E.164 format check (+ followed by 7 to 15 digits) or local 7-12 digits
                 const ok = /^\+?[0-9]{7,15}$/.test(cleaned);
                 if (!ok) Utils.toast(`Invalid phone number format (e.g. ${dial}771234567)`);
                 return ok;
@@ -2463,6 +2457,10 @@
                     Utils.show("auth-form-register");
                     document.getElementById("tab-btn-register").className = "w-1/2 py-2 rounded-lg bg-white text-slate-900 shadow-sm";
                     document.getElementById("tab-btn-login").className = "w-1/2 py-2 rounded-lg text-slate-500";
+                    const regRole = document.getElementById("reg-role");
+                    if (regRole && regRole.value === "Administrator") {
+                        regRole.value = "Manager";
+                    }
                     const regPhone = document.getElementById("reg-phone");
                     if (regPhone && !regPhone.value.trim()) regPhone.value = RegionManager.getDialCode();
                 }
@@ -2480,6 +2478,15 @@
             },
             handleRegister() {
                 const role = document.getElementById("reg-role").value;
+                if (role === "Administrator") {
+                    Utils.toast("Registration of new Administrator accounts is not allowed.");
+                    return;
+                }
+                const allowedRoles = ["Manager", "Accountant", "Loan Officer", "Cashier"];
+                if (!allowedRoles.includes(role)) {
+                    Utils.toast("Invalid role selected.");
+                    return;
+                }
                 const username = document.getElementById("reg-username").value.trim();
                 const email = document.getElementById("reg-email").value.trim().toLowerCase();
                 const phone = RegionManager.normalizePhone(document.getElementById("reg-phone").value);
@@ -2515,6 +2522,13 @@
 
                 if (!pending) {
                     Utils.toast("No pending registration.");
+                    this.switchTab('register');
+                    return;
+                }
+                if (pending.role === "Administrator") {
+                    state.pendingRegistration = null;
+                    State.save();
+                    Utils.toast("Registration of new Administrator accounts is not allowed.");
                     this.switchTab('register');
                     return;
                 }
@@ -4088,262 +4102,199 @@
                 });
                 const numberOfPaidClients = paidToday.size;
                 let totalCollection = 0;
-                let principalCollected = 0;
-                let interestCollected = 0;
+                branch.clients.forEach(c => (c.history || []).forEach(h => {
+                    if (h.type === 'Repayment') totalCollection += (h.amount || 0);
+                }));
+                let totalDisbursedAmount = 0;
                 branch.clients.forEach(c => {
-                    (c.history || []).forEach(h => {
-                        if (h.type === 'Repayment' && h.date === today) {
-                            totalCollection += h.amount || 0;
-                            const prin = c.principal || 0;
-                            const interest = c.interestAmount || 0;
-                            const totalOrig = prin + interest;
-                            if (totalOrig > 0) {
-                                principalCollected += (h.amount || 0) * (prin / totalOrig);
-                                interestCollected += (h.amount || 0) * (interest / totalOrig);
-                            } else {
-                                principalCollected += (h.amount || 0);
-                            }
-                        }
-                    });
+                    if (c.dateDisbursed === today) totalDisbursedAmount += (c.principal || 0);
                 });
-                const principalPortfolio = activeClients.reduce((s, c) => s + (c.principal || 0), 0);
-                const interestPortfolio = activeClients.reduce((s, c) => s + (c.interestAmount || 0), 0);
-                const totalPortfolio = activeClients.reduce((s, c) => s + (c.balance || 0), 0);
-                const totalArrears = activeClients.reduce((s, c) => s + (c.arrears || 0), 0);
-                const newClientsDisbursedToday = branch.clients.filter(c => c.dateDisbursed === today);
-                const newLoansCount = newClientsDisbursedToday.length;
-                const newLoansAmount = newClientsDisbursedToday.reduce((s, c) => s + (c.principal || 0), 0);
-                let totalSavings = 0;
-                Object.values(branch.savingsAccounts || {}).forEach(sa => totalSavings += (sa.balance || 0));
-                const totalExpenses = (branch.expenses || []).filter(e => e.date === today).reduce((s, e) => s + (e.amount || 0), 0);
-                const totalBanking = (branch.bankings || []).filter(b => b.date === today).reduce((s, b) => s + (b.amount || 0), 0);
                 const cashAtHand = state.cashPosition.cash || 0;
-                const mtnMoney = state.cashPosition.mtn || 0;
-                const airtelMoney = state.cashPosition.airtel || 0;
+                const totalExpenses = (branch.expenses || []).reduce((s, e) => s + (e.amount || 0), 0);
+                const totalBanked = (branch.bankings || []).reduce((s, b) => s + (b.amount || 0), 0);
+                const totalArrears = activeClients.reduce((s, c) => s + (c.arrears || 0), 0);
+                const totalPortfolio = activeClients.reduce((s, c) => s + (c.balance || 0), 0);
+                const totalCapitalInjected = (branch.capitalizations || []).reduce((s, c) => s + (c.amount || 0), 0);
+                let totalInterestEarned = 0;
+                branch.clients.forEach(c => {
+                    if (c.interestAmount) totalInterestEarned += c.interestAmount;
+                });
                 return {
-                    totalActiveClients,
-                    numberOfPaidClients,
-                    totalCollection,
-                    principalCollected: Math.round(principalCollected),
-                    interestCollected: Math.round(interestCollected),
-                    totalProcessingFeeCollectedToday,
-                    principalPortfolio,
-                    interestPortfolio,
-                    totalPortfolio,
-                    totalArrears,
-                    newLoansCount,
-                    newLoansAmount,
-                    totalSavings,
-                    totalExpenses,
-                    totalBanking,
-                    cashAtHand,
-                    mtnMoney,
-                    airtelMoney
+                    totalActiveClients, numberOfPaidClients, totalCollection, totalDisbursedAmount,
+                    cashAtHand, totalExpenses, totalBanked, totalArrears, totalPortfolio,
+                    totalCapitalInjected, totalProcessingFeeCollectedToday, totalInterestEarned
                 };
             },
             updateDashboard() {
-                const r = this.computeFullReport();
+                const rep = this.computeFullReport();
                 const grid = document.getElementById("full-report-grid");
                 if (!grid) return;
-                const items = [
-                    { label: "Total Active Clients", value: r.totalActiveClients },
-                    { label: "Number of Paid Clients", value: r.numberOfPaidClients },
-                    { label: "Total Collection", value: Utils.formatUGX(r.totalCollection) },
-                    { label: "Principal Collected", value: Utils.formatUGX(r.principalCollected) },
-                    { label: "Interest Collected", value: Utils.formatUGX(r.interestCollected) },
-                    { label: "Processing Fees Collected", value: Utils.formatUGX(r.totalProcessingFeeCollectedToday) },
-                    { label: "Principal Portfolio", value: Utils.formatUGX(r.principalPortfolio) },
-                    { label: "Interest Portfolio", value: Utils.formatUGX(r.interestPortfolio) },
-                    { label: "Total Portfolio", value: Utils.formatUGX(r.totalPortfolio) },
-                    { label: "Total Arrears", value: Utils.formatUGX(r.totalArrears) },
-                    { label: "New Loans (Count & Amount)", value: `${r.newLoansCount} / ${Utils.formatUGX(r.newLoansAmount)}` },
-                    { label: "Total Savings", value: Utils.formatUGX(r.totalSavings) },
-                    { label: "Total Expenses", value: Utils.formatUGX(r.totalExpenses) },
-                    { label: "Total Banking", value: Utils.formatUGX(r.totalBanking) },
-                    { label: "Cash at Hand", value: Utils.formatUGX(r.cashAtHand) },
-                    { label: "MTN Mobile Money", value: Utils.formatUGX(r.mtnMoney) },
-                    { label: "Airtel Mobile Money", value: Utils.formatUGX(r.airtelMoney) }
-                ];
-                grid.innerHTML = items.map(it => `
-                    <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-700">
-                        <span class="text-slate-400 block text-[11px]">${it.label}</span>
-                        <span class="font-bold text-sm text-white">${it.value}</span>
-                    </div>
-                `).join('');
+                grid.innerHTML = `
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 block">Total Active Clients</span><span class="font-bold text-white text-sm">${rep.totalActiveClients}</span></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 block">Paid Clients Today</span><span class="font-bold text-emerald-400 text-sm">${rep.numberOfPaidClients}</span></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 block">Total Collections</span><span class="font-bold text-emerald-300 text-sm">${Utils.formatUGX(rep.totalCollection)}</span></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 block">Disbursed Today</span><span class="font-bold text-indigo-300 text-sm">${Utils.formatUGX(rep.totalDisbursedAmount)}</span></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 block">Processing Fees (Today)</span><span class="font-bold text-amber-300 text-sm">${Utils.formatUGX(rep.totalProcessingFeeCollectedToday)}</span></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 block">Interest Earned</span><span class="font-bold text-cyan-300 text-sm">${Utils.formatUGX(rep.totalInterestEarned)}</span></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 block">Cash at Hand</span><span class="font-bold text-amber-300 text-sm">${Utils.formatUGX(rep.cashAtHand)}</span></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 block">Total Expenses</span><span class="font-bold text-rose-300 text-sm">${Utils.formatUGX(rep.totalExpenses)}</span></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 block">Total Banked</span><span class="font-bold text-blue-300 text-sm">${Utils.formatUGX(rep.totalBanked)}</span></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 block">Total Arrears</span><span class="font-bold text-red-400 text-sm">${Utils.formatUGX(rep.totalArrears)}</span></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 block">Portfolio Balance</span><span class="font-bold text-purple-300 text-sm">${Utils.formatUGX(rep.totalPortfolio)}</span></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 block">Capital Injected</span><span class="font-bold text-teal-300 text-sm">${Utils.formatUGX(rep.totalCapitalInjected)}</span></div>
+                `;
             },
-            generateSummaryText() {
-                const r = this.computeFullReport();
-                return `=== ${state.company.name} ===
-DAILY CLOSING REPORT (${Utils.today()} - ${Utils.timeNow()})
------------------------------------------
-Total Active Clients: ${r.totalActiveClients}
-Number of Paid Clients: ${r.numberOfPaidClients}
-Total Collection: ${Utils.formatUGX(r.totalCollection)}
-Principal Collected: ${Utils.formatUGX(r.principalCollected)}
-Interest Collected: ${Utils.formatUGX(r.interestCollected)}
-Processing Fees Collected: ${Utils.formatUGX(r.totalProcessingFeeCollectedToday)}
-Principal Portfolio: ${Utils.formatUGX(r.principalPortfolio)}
-Interest Portfolio: ${Utils.formatUGX(r.interestPortfolio)}
-Total Portfolio: ${Utils.formatUGX(r.totalPortfolio)}
-Total Arrears: ${Utils.formatUGX(r.totalArrears)}
-New Loans: ${r.newLoansCount} (${Utils.formatUGX(r.newLoansAmount)})
-Total Savings: ${Utils.formatUGX(r.totalSavings)}
-Total Expenses: ${Utils.formatUGX(r.totalExpenses)}
-Total Banking: ${Utils.formatUGX(r.totalBanking)}
-Cash at Hand: ${Utils.formatUGX(r.cashAtHand)}
-MTN Mobile Money: ${Utils.formatUGX(r.mtnMoney)}
-Airtel Mobile Money: ${Utils.formatUGX(r.airtelMoney)}
------------------------------------------`;
+            formatReportText() {
+                const rep = this.computeFullReport();
+                return [
+                    `${state.company.name.toUpperCase()} — DAILY REPORT (${Utils.today()} ${Utils.timeNow()})`,
+                    `--------------------------------------------------`,
+                    `Total Active Clients: ${rep.totalActiveClients}`,
+                    `Paid Clients Today: ${rep.numberOfPaidClients}`,
+                    `Total Collections: ${Utils.formatUGX(rep.totalCollection)}`,
+                    `Disbursed Today: ${Utils.formatUGX(rep.totalDisbursedAmount)}`,
+                    `Processing Fees Today: ${Utils.formatUGX(rep.totalProcessingFeeCollectedToday)}`,
+                    `Interest Earned: ${Utils.formatUGX(rep.totalInterestEarned)}`,
+                    `Cash at Hand: ${Utils.formatUGX(rep.cashAtHand)}`,
+                    `Total Expenses: ${Utils.formatUGX(rep.totalExpenses)}`,
+                    `Total Banked: ${Utils.formatUGX(rep.totalBanked)}`,
+                    `Total Arrears: ${Utils.formatUGX(rep.totalArrears)}`,
+                    `Portfolio Balance: ${Utils.formatUGX(rep.totalPortfolio)}`,
+                    `Capital Injected: ${Utils.formatUGX(rep.totalCapitalInjected)}`
+                ].join('\n');
             },
             copySummaryText() {
-                const text = this.generateSummaryText();
-                navigator.clipboard.writeText(text).then(() => {
-                    Utils.toast("Daily report summary copied to clipboard");
-                }).catch(() => {
-                    Utils.toast("Failed to copy summary");
+                const text = this.formatReportText();
+                navigator.clipboard?.writeText(text).then(() => Utils.toast("Report copied to clipboard")).catch(() => {
+                    const ta = document.createElement("textarea");
+                    ta.value = text;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand("copy");
+                    ta.remove();
+                    Utils.toast("Report copied");
                 });
             },
             openWhatsAppModal() {
-                const managers = state.managers || [];
-                const container = document.getElementById("whatsapp-manager-checkboxes");
-                if (managers.length === 0) {
-                    container.innerHTML = `<p class="text-red-600 font-bold">No managers registered in Settings.</p>`;
+                const chkDiv = document.getElementById("whatsapp-manager-checkboxes");
+                if (!state.managers || state.managers.length === 0) {
+                    chkDiv.innerHTML = `<p class="text-slate-500 italic">No managers added in Settings.</p>`;
                 } else {
-                    container.innerHTML = managers.map(m => `
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="checkbox" class="mgr-wa-checkbox rounded" value="${m.phone}" checked>
-                            <span class="font-bold">${m.name}</span> (${m.phone})
+                    chkDiv.innerHTML = state.managers.map(m => `
+                        <label class="flex items-center gap-2 p-1.5 bg-white rounded border cursor-pointer">
+                            <input type="checkbox" class="wa-mgr-chk rounded accent-emerald-600" value="${m.phone}" data-name="${m.name}" checked>
+                            <span class="font-bold">${m.name}</span> <span class="text-slate-400">(${m.phone})</span>
                         </label>
                     `).join('');
                 }
-                document.getElementById("whatsapp-report-preview").value = this.generateSummaryText();
-                UI.show("whatsapp-report-modal");
+                document.getElementById("whatsapp-report-preview").value = this.formatReportText();
+                Utils.show("whatsapp-report-modal");
             },
             async sendSelectedWhatsAppReports() {
-                const checkboxes = document.querySelectorAll(".mgr-wa-checkbox:checked");
-                if (checkboxes.length === 0) {
-                    Utils.toast("Select at least one manager");
+                const rep = this.computeFullReport();
+                const rows = [
+                    ["Total Active Clients", String(rep.totalActiveClients)],
+                    ["Paid Clients Today", String(rep.numberOfPaidClients)],
+                    ["Total Collections", Utils.formatUGX(rep.totalCollection)],
+                    ["Disbursed Today", Utils.formatUGX(rep.totalDisbursedAmount)],
+                    ["Processing Fees Today", Utils.formatUGX(rep.totalProcessingFeeCollectedToday)],
+                    ["Interest Earned", Utils.formatUGX(rep.totalInterestEarned)],
+                    ["Cash at Hand", Utils.formatUGX(rep.cashAtHand)],
+                    ["Total Expenses", Utils.formatUGX(rep.totalExpenses)],
+                    ["Total Banked", Utils.formatUGX(rep.totalBanked)],
+                    ["Total Arrears", Utils.formatUGX(rep.totalArrears)],
+                    ["Portfolio Balance", Utils.formatUGX(rep.totalPortfolio)],
+                    ["Capital Injected", Utils.formatUGX(rep.totalCapitalInjected)]
+                ];
+                await PdfEngine.downloadReportPDF("DAILY CLOSING REPORT", ["Metric", "Value"], rows, [`Date: ${Utils.today()} ${Utils.timeNow()}`]);
+
+                const checked = Array.from(document.querySelectorAll(".wa-mgr-chk:checked"));
+                if (checked.length === 0) {
+                    Utils.toast("Daily report PDF downloaded");
+                    UI.hide("whatsapp-report-modal");
                     return;
                 }
-                const r = this.computeFullReport();
-                const rows = [
-                    ["Total Active Clients", String(r.totalActiveClients)],
-                    ["Number of Paid Clients", String(r.numberOfPaidClients)],
-                    ["Total Collection", Utils.formatUGX(r.totalCollection)],
-                    ["Principal Collected", Utils.formatUGX(r.principalCollected)],
-                    ["Interest Collected", Utils.formatUGX(r.interestCollected)],
-                    ["Processing Fees Collected", Utils.formatUGX(r.totalProcessingFeeCollectedToday)],
-                    ["Principal Portfolio", Utils.formatUGX(r.principalPortfolio)],
-                    ["Interest Portfolio", Utils.formatUGX(r.interestPortfolio)],
-                    ["Total Portfolio", Utils.formatUGX(r.totalPortfolio)],
-                    ["Total Arrears", Utils.formatUGX(r.totalArrears)],
-                    ["New Loans", `${r.newLoansCount} / ${Utils.formatUGX(r.newLoansAmount)}`],
-                    ["Total Savings", Utils.formatUGX(r.totalSavings)],
-                    ["Total Expenses", Utils.formatUGX(r.totalExpenses)],
-                    ["Total Banking", Utils.formatUGX(r.totalBanking)],
-                    ["Cash at Hand", Utils.formatUGX(r.cashAtHand)],
-                    ["MTN Mobile Money", Utils.formatUGX(r.mtnMoney)],
-                    ["Airtel Mobile Money", Utils.formatUGX(r.airtelMoney)]
-                ];
-                await PdfEngine.downloadReportPDF("DAILY CLOSING REPORT", ["Metric", "Value"], rows, [`Generated on: ${Utils.today()}`]);
-                const summary = encodeURIComponent(`Daily Closing Report PDF has been generated and downloaded for ${Utils.today()}. Please attach the PDF.`);
-                checkboxes.forEach(cb => {
-                    const waPhone = RegionManager.formatPhoneForWhatsApp(cb.value);
-                    window.open(`https://wa.me/${waPhone}?text=${summary}`, '_blank');
-                });
+                const first = checked[0];
+                const phone = RegionManager.formatPhoneForWhatsApp(first.value);
+                const text = encodeURIComponent(`Hello ${first.dataset.name}, the Daily Closing Report PDF (${Utils.today()}) has been generated and downloaded. Please find attached.`);
+                window.open(`https://wa.me/${phone}?text=${text}`, '_blank');
+                Utils.toast("Report PDF downloaded & WhatsApp opened");
                 UI.hide("whatsapp-report-modal");
-                Utils.toast("Daily report PDF downloaded & WhatsApp launched");
             }
         };
 
         // ============================================================
-        // AGING & DEFAULTERS
+        // AGING & PAR
         // ============================================================
         const Aging = {
+            getBucket(days) {
+                if (days <= 0) return { label: "Current / On-Time", tier: 0 };
+                if (days <= 30) return { label: "1–30 Days Overdue", tier: 1 };
+                if (days <= 60) return { label: "31–60 Days Overdue", tier: 2 };
+                if (days <= 90) return { label: "61–90 Days Overdue", tier: 3 };
+                return { label: "90+ Days Default", tier: 4 };
+            },
             render() {
-                const branch = State.getActiveBranch();
-                const filterOfficer = document.getElementById("aging-officer-filter")?.value || "ALL";
-                let active = branch.clients.filter(c => (c.balance || 0) > 0);
-                if (filterOfficer !== "ALL") active = active.filter(c => c.officerId === filterOfficer);
                 const container = document.getElementById("officer-aging-sections");
+                const parBox = document.getElementById("par-metrics-summary-box");
                 if (!container) return;
-                if (active.length === 0) {
-                    container.innerHTML = `<p class="text-slate-400 text-center py-8">No active loans</p>`;
-                    return;
+                const branch = State.getActiveBranch();
+                branch.clients.forEach(c => State.recalculateClientStatus(c));
+                const filterVal = document.getElementById("aging-officer-filter")?.value || "ALL";
+                const allActive = branch.clients.filter(c => (c.balance || 0) > 0);
+                const totalPortfolio = allActive.reduce((s, c) => s + (c.balance || 0), 0);
+                const par30Portfolio = allActive.filter(c => (c.overdueDays || 0) > 30).reduce((s, c) => s + (c.balance || 0), 0);
+                const par30Ratio = totalPortfolio > 0 ? ((par30Portfolio / totalPortfolio) * 100).toFixed(1) : "0.0";
+                if (parBox) {
+                    parBox.innerHTML = `<div class="bg-slate-900 text-white p-4 rounded-2xl grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs mb-6">
+                        <div><span class="text-slate-400 block">Portfolio</span><span class="font-bold text-lg text-white">${Utils.formatUGX(totalPortfolio)}</span></div>
+                        <div><span class="text-slate-400 block">PAR 30+</span><span class="font-bold text-lg text-amber-400">${Utils.formatUGX(par30Portfolio)}</span></div>
+                        <div><span class="text-slate-400 block">PAR 30 Ratio</span><span class="font-bold text-lg text-red-400">${par30Ratio}%</span></div>
+                    </div>`;
                 }
-                const parTotal = active.reduce((s, c) => s + (c.balance || 0), 0);
-                const parOver30 = active.filter(c => (c.overdueDays || 0) > 30).reduce((s, c) => s + (c.balance || 0), 0);
-                const parRatio = parTotal > 0 ? ((parOver30 / parTotal) * 100).toFixed(1) : 0;
-                document.getElementById("par-metrics-summary-box").innerHTML = `
-                    <div class="grid grid-cols-3 gap-3 bg-slate-900 text-white p-4 rounded-xl text-xs">
-                        <div><span class="text-slate-400 block">Portfolio</span><span class="font-bold text-sm">${Utils.formatUGX(parTotal)}</span></div>
-                        <div><span class="text-slate-400 block">PAR > 30 Days</span><span class="font-bold text-amber-400 text-sm">${Utils.formatUGX(parOver30)}</span></div>
-                        <div><span class="text-slate-400 block">PAR Ratio</span><span class="font-bold text-red-400 text-sm">${parRatio}%</span></div>
-                    </div>
-                `;
-                container.innerHTML = `<div class="bg-white border rounded-xl overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-xs">
-                        <thead>
-                            <tr class="bg-slate-800 text-white">
-                                <th class="p-3">Client</th>
-                                <th class="p-3">NIN</th>
-                                <th class="p-3">Arrears</th>
-                                <th class="p-3">Overdue Days</th>
-                                <th class="p-3 text-right">Balance</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y">
-                            ${active.map(c => `
-                                <tr>
-                                    <td class="p-3 font-bold">${c.name}</td>
-                                    <td class="p-3 font-mono">${c.nin || '-'}</td>
-                                    <td class="p-3 text-red-600 font-bold">${Utils.formatUGX(c.arrears || 0)}</td>
-                                    <td class="p-3 font-bold">${c.overdueDays || 0}d</td>
-                                    <td class="p-3 text-right font-bold">${Utils.formatUGX(c.balance || 0)}</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>`;
+                const officersToRender = filterVal === "ALL" ? branch.officers : branch.officers.filter(o => o.id === filterVal);
+                container.innerHTML = officersToRender.map(off => {
+                    const clients = allActive.filter(c => c.officerId === off.id);
+                    const totalBal = clients.reduce((s, c) => s + (c.balance || 0), 0);
+                    return `<div class="border rounded-2xl p-4 bg-white">
+                        <div class="flex justify-between font-bold text-sm mb-2"><span>${off.name} (${clients.length})</span><span>${Utils.formatUGX(totalBal)}</span></div>
+                        <div class="space-y-1 text-xs">` +
+                        clients.map(c => `<div class="flex justify-between p-2 bg-slate-50 rounded"><span>${c.name} (${c.overdueDays || 0}d)</span><span class="font-bold">${Utils.formatUGX(c.balance)}</span></div>`).join('') +
+                    `</div></div>`;
+                }).join('') || `<p class="text-slate-400 text-center py-6">No aging data</p>`;
             },
             exportCSV() {
                 const branch = State.getActiveBranch();
-                const rows = [["Client", "NIN", "Balance", "Arrears", "Overdue Days"]];
-                branch.clients.forEach(c => {
-                    if ((c.balance || 0) > 0) rows.push([c.name, c.nin || '', c.balance, c.arrears || 0, c.overdueDays || 0]);
+                const rows = ["Client,NIN,Phone,Overdue Days,Arrears,Balance"];
+                branch.clients.filter(c => (c.balance || 0) > 0).forEach(c => {
+                    rows.push(`"${c.name}","${c.nin || ''}","${c.phone || ''}",${c.overdueDays || 0},${c.arrears || 0},${c.balance || 0}`);
                 });
-                const csv = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
+                const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
                 const link = document.createElement("a");
-                link.href = encodeURI(csv);
+                link.href = URL.createObjectURL(blob);
                 link.download = `PMMS_AGING_${Utils.today()}.csv`;
                 link.click();
+                Utils.toast("CSV exported");
             },
             async exportPDF() {
                 const branch = State.getActiveBranch();
                 const active = branch.clients.filter(c => (c.balance || 0) > 0);
-                const rows = active.map(c => [c.name, c.nin || '-', Utils.formatUGX(c.arrears || 0), `${c.overdueDays || 0}d`, Utils.formatUGX(c.balance || 0)]);
-                await PdfEngine.downloadReportPDF("AGING & PAR PORTFOLIO REPORT", ["Client", "NIN", "Arrears", "Days", "Balance"], rows, [`Total Active Loans: ${active.length}`]);
-                Utils.toast("Aging PDF downloaded");
+                const rows = active.map(c => [c.name, c.nin || '', c.phone || '', `${c.overdueDays || 0}d`, Utils.formatUGX(c.arrears || 0), Utils.formatUGX(c.balance || 0)]);
+                await PdfEngine.downloadReportPDF("AGING & PAR REPORT", ["Client", "NIN", "Phone", "Overdue", "Arrears", "Balance"], rows, [`Date: ${Utils.today()}`, `Active Loans: ${active.length}`]);
+                Utils.toast("Aging PDF exported");
             }
         };
 
+        // ============================================================
+        // DEFAULTERS
+        // ============================================================
         const Defaulters = {
             render() {
-                const branch = State.getActiveBranch();
-                const list = branch.clients.filter(c => (c.balance || 0) > 0 && (c.overdueDays || 0) >= 90);
                 const container = document.getElementById("demand-list-container");
                 if (!container) return;
-                if (list.length === 0) {
-                    container.innerHTML = `<p class="text-slate-400 col-span-full text-center py-8">No defaulters (90+ days)</p>`;
-                    return;
-                }
-                container.innerHTML = list.map(c => `
-                    <div class="bg-white border-2 border-red-200 p-4 rounded-xl text-xs space-y-1">
-                        <div class="font-bold text-red-700 text-sm">${c.name} (${c.nin || '-'})</div>
-                        <div>Overdue: <strong>${c.overdueDays} days</strong> | Balance: <strong>${Utils.formatUGX(c.balance)}</strong></div>
-                        <div>Phone: ${c.phone || '-'} | Guarantor: ${c.guarantor || '-'}</div>
-                    </div>
-                `).join('');
+                const branch = State.getActiveBranch();
+                const defaulters = branch.clients.filter(c => (c.balance || 0) > 0 && (c.overdueDays || 0) >= 90);
+                container.innerHTML = defaulters.map(c => `<div class="bg-red-50 border border-red-200 p-3 rounded-xl text-xs"><strong>${c.name}</strong> — Bal: ${Utils.formatUGX(c.balance)}</div>`).join('') || `<p class="text-slate-400 text-xs col-span-full">No 90+ day defaulters</p>`;
             }
         };
 
@@ -4351,81 +4302,127 @@ Airtel Mobile Money: ${Utils.formatUGX(r.airtelMoney)}
         // SMS
         // ============================================================
         const SMS = {
-            dispatch(phone, message, trigger = 'Manual', silent = false) {
-                if (!phone) return;
+            populateQuickClients() {
+                const sel = document.getElementById("sms-quick-client-select");
+                if (!sel) return;
+                const branch = State.getActiveBranch();
+                sel.innerHTML = `<option value="">-- Select Client --</option>` +
+                    branch.clients.map(c => `<option value="${c.phone}">${c.name} (${c.phone || 'No phone'})</option>`).join('');
+            },
+            toggleTargetDropdown(val) {
+                const container = document.getElementById("sms-single-client-container");
+                if (val === 'SINGLE') Utils.show(container);
+                else Utils.hide(container);
+            },
+            dispatch(phone, message, triggerType = 'Manual') {
+                const normPhone = RegionManager.normalizePhone(phone);
+                if (!normPhone) return;
                 const carrier = document.getElementById("sms-preferred-network")?.value || 'Standard SIM';
                 state.smsLogs.unshift({
                     id: Utils.generateId("sms"),
-                    timestamp: Utils.now(),
-                    recipient: phone,
+                    time: Utils.now(),
+                    phone: normPhone,
                     carrier,
-                    trigger,
+                    triggerType,
                     message
                 });
                 State.save();
                 this.renderLogs();
-                if (!silent) Utils.toast(`SMS queued for ${phone}`);
-            },
-            toggleTargetDropdown(val) {
-                const box = document.getElementById("sms-single-client-container");
-                if (val === 'SINGLE') Utils.show(box);
-                else Utils.hide(box);
-            },
-            populateQuickClients() {
-                const branch = State.getActiveBranch();
-                const sel = document.getElementById("sms-quick-client-select");
-                if (!sel) return;
-                sel.innerHTML = branch.clients.map(c => `<option value="${c.id}">${c.name} (${c.phone})</option>`).join('');
             },
             dispatchBroadcast() {
                 const target = document.getElementById("sms-broadcast-target").value;
-                const template = document.getElementById("sms-quick-message").value.trim();
-                if (!Validation.isRequired(template, "Message")) return;
+                const rawTemplate = document.getElementById("sms-quick-message").value.trim();
+                if (!Validation.isRequired(rawTemplate, "Message")) return;
                 const branch = State.getActiveBranch();
-                let targets = [];
+                let recipients = [];
                 if (target === 'SINGLE') {
-                    const id = document.getElementById("sms-quick-client-select").value;
-                    const c = branch.clients.find(cl => cl.id === id);
-                    if (c) targets.push(c);
-                } else if (target === 'ALL') targets = branch.clients;
-                else if (target === 'DEFAULTERS') targets = branch.clients.filter(c => (c.overdueDays || 0) >= 90 && c.balance > 0);
-                else if (target === 'ACTIVE') targets = branch.clients.filter(c => c.balance > 0);
-                else if (target === 'BODABODA') targets = branch.clients.filter(c => c.category === 'BODABODA');
-                if (targets.length === 0) {
-                    Utils.toast("No clients in selected group");
+                    const phone = document.getElementById("sms-quick-client-select").value;
+                    if (!phone) {
+                        Utils.toast("Select a client");
+                        return;
+                    }
+                    const cl = branch.clients.find(c => c.phone === phone);
+                    recipients = cl ? [cl] : [{ phone, name: 'Client', balance: 0, nin: '' }];
+                } else if (target === 'ALL') recipients = branch.clients;
+                else if (target === 'DEFAULTERS') recipients = branch.clients.filter(c => (c.balance || 0) > 0 && (c.overdueDays || 0) >= 90);
+                else if (target === 'ACTIVE') recipients = branch.clients.filter(c => (c.balance || 0) > 0);
+                else if (target === 'BODABODA') recipients = branch.clients.filter(c => c.category === 'BODABODA');
+                if (recipients.length === 0) {
+                    Utils.toast("No recipients matched target group");
                     return;
                 }
-                targets.forEach(c => {
-                    const msg = template
-                        .replace(/{name}/g, c.name)
-                        .replace(/{balance}/g, Utils.formatUGX(c.balance || 0))
-                        .replace(/{nin}/g, c.nin || '');
-                    this.dispatch(c.phone, msg, `Bulk (${target})`, true);
+                recipients.forEach(r => {
+                    if (!r.phone) return;
+                    const personalized = rawTemplate
+                        .replace(/{name}/g, r.name || 'Client')
+                        .replace(/{balance}/g, Utils.formatUGX(r.balance || 0))
+                        .replace(/{nin}/g, r.nin || '');
+                    this.dispatch(r.phone, personalized, `Broadcast (${target})`);
                 });
-                Utils.toast(`Dispatched ${targets.length} SMS`);
+                const firstPhone = encodeURIComponent(recipients[0].phone);
+                const firstMsg = encodeURIComponent(rawTemplate
+                    .replace(/{name}/g, recipients[0].name || 'Client')
+                    .replace(/{balance}/g, Utils.formatUGX(recipients[0].balance || 0))
+                    .replace(/{nin}/g, recipients[0].nin || ''));
+                window.location.href = `sms:${firstPhone}?body=${firstMsg}`;
+                Utils.toast(`SMS logged & native SIM SMS opened (${recipients.length} recipient(s))`);
+                document.getElementById("sms-quick-message").value = "";
             },
             renderLogs() {
                 const tbody = document.getElementById("sms-logs-table-body");
+                const countEl = document.getElementById("sms-log-count");
+                if (countEl) countEl.innerText = state.smsLogs.length;
                 if (!tbody) return;
-                document.getElementById("sms-log-count").innerText = (state.smsLogs || []).length;
-                tbody.innerHTML = (state.smsLogs || []).map(l => `
+                tbody.innerHTML = state.smsLogs.slice(0, 50).map(l => `
                     <tr>
-                        <td class="p-3 text-[11px]">${l.timestamp}</td>
-                        <td class="p-3 font-mono">${l.recipient}</td>
+                        <td class="p-3 text-[10px]">${l.time}</td>
+                        <td class="p-3 font-mono">${l.phone}</td>
                         <td class="p-3">${l.carrier}</td>
-                        <td class="p-3">${l.trigger}</td>
-                        <td class="p-3 text-xs">${l.message}</td>
+                        <td class="p-3">${l.triggerType}</td>
+                        <td class="p-3 max-w-xs truncate">${l.message}</td>
                         <td class="p-3 text-right">
-                            <a href="sms:${l.recipient}?body=${encodeURIComponent(l.message)}" class="bg-sky-600 text-white px-2 py-1 rounded text-[10px]">Send Now</a>
+                            <a href="sms:${encodeURIComponent(l.phone)}?body=${encodeURIComponent(l.message)}" class="bg-sky-600 text-white px-2 py-1 rounded text-[10px] font-bold">Send SIM</a>
                         </td>
                     </tr>
                 `).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">No SMS logs</td></tr>`;
             },
             clearLogs() {
-                if (!Utils.confirmAction("Clear all SMS logs?")) return;
                 state.smsLogs = [];
                 State.save();
                 this.renderLogs();
+                Utils.toast("SMS logs cleared");
+            }
+        };
+
+        // ============================================================
+        // THEME CUSTOMIZER
+        // ============================================================
+        const ThemeCustomizer = {
+            applyTheme(themeName) {
+                document.body.className = document.body.className.replace(/\btheme-\S+/g, '').trim();
+                document.body.classList.add(`theme-${themeName}`);
+                localStorage.setItem("pmms_theme_color", themeName);
+                Utils.toast(`Theme changed to ${themeName}`);
+            },
+            applyFont(fontName) {
+                document.body.className = document.body.className.replace(/\bfont-\S+/g, '').trim();
+                document.body.classList.add(`font-${fontName}`);
+                localStorage.setItem("pmms_theme_font", fontName);
+                Utils.toast(`Font changed to ${fontName}`);
+            },
+            loadSaved() {
+                const c = localStorage.getItem("pmms_theme_color");
+                const f = localStorage.getItem("pmms_theme_font");
+                if (c) {
+                    this.applyTheme(c);
+                    const selC = document.getElementById("theme-color-select");
+                    if (selC) selC.value = c;
+                }
+                if (f) {
+                    this.applyFont(f);
+                    const selF = document.getElementById("theme-font-select");
+                    if (selF) selF.value = f;
+                }
             }
         };
 
@@ -4434,141 +4431,156 @@ Airtel Mobile Money: ${Utils.formatUGX(r.airtelMoney)}
         // ============================================================
         const Printer = {
             onTogglePrintReceipt(checked) {
+                if (!state.settings) state.settings = {};
                 state.settings.printReceiptEnabled = checked;
                 State.save();
-                Utils.toast(`Auto receipt printing ${checked ? 'enabled' : 'disabled'}`);
+                Utils.toast(checked ? "Receipt printing enabled" : "Receipt printing disabled");
             },
-            updateConnectionIndicator(connected, labelText) {
-                const statusText = document.getElementById("xprinter-status-text");
-                const miniDot = document.getElementById("xprinter-mini-dot");
-                const btn = document.getElementById("xprinter-btn");
-
-                if (statusText) statusText.innerText = labelText || (connected ? "Connected" : "Connect Printer");
-                if (miniDot) {
-                    miniDot.className = connected
-                        ? "w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"
-                        : "w-2 h-2 rounded-full bg-slate-400 inline-block";
-                    miniDot.title = connected ? "X-Printer Connected" : "X-Printer Disconnected";
-                }
-                if (btn) {
-                    if (connected) {
-                        btn.classList.remove("dyn-bg");
-                        btn.classList.add("bg-emerald-600", "hover:bg-emerald-700");
-                    } else {
-                        btn.classList.remove("bg-emerald-600", "hover:bg-emerald-700");
-                        btn.classList.add("dyn-bg");
+            updateStatusUI(connected) {
+                const txt = document.getElementById("xprinter-status-text");
+                const dot = document.getElementById("xprinter-mini-dot");
+                if (connected) {
+                    if (txt) txt.innerText = "X-Printer Connected";
+                    if (dot) {
+                        dot.className = "w-2 h-2 rounded-full bg-emerald-500 inline-block";
+                        dot.title = "X-Printer Connected";
+                    }
+                } else {
+                    if (txt) txt.innerText = "Connect Printer";
+                    if (dot) {
+                        dot.className = "w-2 h-2 rounded-full bg-slate-400 inline-block";
+                        dot.title = "X-Printer Disconnected";
                     }
                 }
             },
             async connectXPrinter() {
+                const iface = document.getElementById("xprinter-interface-select")?.value || "bluetooth";
                 try {
-                    const iface = document.getElementById("xprinter-interface-select")?.value || 'bluetooth';
-                    if (iface === 'bluetooth' && navigator.bluetooth) {
-                        xPrinterDevice = await navigator.bluetooth.requestDevice({
+                    if (iface === "bluetooth") {
+                        if (!navigator.bluetooth) {
+                            Utils.toast("Web Bluetooth is not supported on this browser/device.");
+                            return;
+                        }
+                        Utils.toast("Scanning for Bluetooth X-Printer...");
+                        const device = await navigator.bluetooth.requestDevice({
                             acceptAllDevices: true,
-                            optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
+                            optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
                         });
-                        const server = await xPrinterDevice.gatt.connect();
-                        const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                        xPrinterCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                        this.updateConnectionIndicator(true, "XPrinter (BT)");
-                        Utils.toast("Bluetooth X-Printer Connected");
-                    } else if (navigator.serial) {
-                        xPrinterSerialPort = await navigator.serial.requestPort();
-                        await xPrinterSerialPort.open({ baudRate: 9600 });
-                        this.updateConnectionIndicator(true, "XPrinter (USB)");
-                        Utils.toast("USB/Serial X-Printer Connected");
+                        xPrinterDevice = device;
+                        const server = await device.gatt.connect();
+                        const services = await server.getPrimaryServices();
+                        for (let svc of services) {
+                            const chars = await svc.getCharacteristics();
+                            for (let ch of chars) {
+                                if (ch.properties.write || ch.properties.writeWithoutResponse) {
+                                    xPrinterCharacteristic = ch;
+                                    break;
+                                }
+                            }
+                            if (xPrinterCharacteristic) break;
+                        }
+                        this.updateStatusUI(true);
+                        Utils.toast(`Connected to Bluetooth X-Printer: ${device.name || 'Thermal Printer'}`);
                     } else {
-                        Utils.toast("Bluetooth/Serial not supported in this browser; fallback print active.");
-                    }
-                } catch (e) {
-                    this.updateConnectionIndicator(false, "Connect Printer");
-                    Utils.toast("Printer connection cancelled");
-                }
-            },
-            async printToXPrinter(text, forcePrint = false) {
-                lastPrintedReceiptText = text;
-                const shouldPrint = forcePrint || document.getElementById("toggle-print-receipt")?.checked;
-                if (!shouldPrint) return;
-
-                const headerStr = `${state.company.name}\n${state.company.location}\n--------------------------------\n`;
-                const fullText = headerStr + text + "\n\n\n";
-                try {
-                    const encoder = new TextEncoder();
-                    const data = encoder.encode(fullText);
-                    if (xPrinterCharacteristic) {
-                        await xPrinterCharacteristic.writeValue(data);
-                        Utils.toast("Printed to X-Printer");
-                        return;
-                    }
-                    if (xPrinterSerialPort && xPrinterSerialPort.writable) {
-                        const writer = xPrinterSerialPort.writable.getWriter();
-                        await writer.write(data);
-                        writer.releaseLock();
-                        Utils.toast("Printed to X-Printer");
-                        return;
+                        if (!navigator.serial) {
+                            Utils.toast("Web Serial / USB is not supported on this browser.");
+                            return;
+                        }
+                        const port = await navigator.serial.requestPort();
+                        await port.open({ baudRate: 9600 });
+                        xPrinterSerialPort = port;
+                        this.updateStatusUI(true);
+                        Utils.toast("Connected to USB/Serial X-Printer");
                     }
                 } catch (err) {
-                    console.warn("Direct printer write error, falling back to browser print:", err);
+                    Utils.toast("Printer connection cancelled or failed: " + (err.message || err));
                 }
-                const printArea = document.getElementById("printable-area");
-                printArea.innerHTML = `<pre style="font-family: monospace; font-size: 12px; white-space: pre-wrap;">${fullText}</pre>`;
-                Utils.show(printArea);
-                window.print();
-                Utils.hide(printArea);
             },
             async testPrint() {
-                await this.printToXPrinter("TEST PRINT RECEIPT\nStatus: X-Printer Ready\nDate: " + Utils.now(), true);
-            }
-        };
-
-        // ============================================================
-        // THEME CUSTOMIZER (15 COLORS & 15 FONTS)
-        // ============================================================
-        const ThemeCustomizer = {
-            ALL_THEMES: [
-                'theme-teal', 'theme-indigo', 'theme-emerald', 'theme-slate', 'theme-blue',
-                'theme-rose', 'theme-amber', 'theme-purple', 'theme-cyan', 'theme-orange',
-                'theme-crimson', 'theme-forest', 'theme-navy', 'theme-gold', 'theme-magenta'
-            ],
-            ALL_FONTS: [
-                'font-sans', 'font-serif', 'font-mono', 'font-inter', 'font-poppins',
-                'font-roboto', 'font-montserrat', 'font-lato', 'font-opensans', 'font-nunito',
-                'font-raleway', 'font-merriweather', 'font-playfair', 'font-oswald', 'font-firacode'
-            ],
-            applyTheme(theme) {
-                this.ALL_THEMES.forEach(cls => document.body.classList.remove(cls));
-                document.body.classList.add('theme-' + theme);
-                localStorage.setItem('pmms_theme_v10', theme);
-                const sel = document.getElementById('theme-color-select');
-                if (sel) sel.value = theme;
+                const testMsg = `=== ${state.company.name} ===\nX-PRINTER TEST PRINT\nDate: ${Utils.today()} ${Utils.timeNow()}\nStatus: OK\n--------------------------------\n`;
+                await this.printToXPrinter(testMsg, true);
             },
-            applyFont(font) {
-                this.ALL_FONTS.forEach(cls => document.body.classList.remove(cls));
-                document.body.classList.add('font-' + font);
-                localStorage.setItem('pmms_font_v10', font);
-                const sel = document.getElementById('theme-font-select');
-                if (sel) sel.value = font;
+            async printToXPrinter(textData, forcePrint = false) {
+                lastPrintedReceiptText = textData;
+                const shouldPrint = forcePrint || (document.getElementById("toggle-print-receipt")?.checked ?? state.settings?.printReceiptEnabled ?? true);
+                if (!shouldPrint) {
+                    return;
+                }
+
+                const encoder = new TextEncoder();
+                const initCmd = new Uint8Array([0x1B, 0x40]);
+                const feedCutCmd = new Uint8Array([0x0A, 0x0A, 0x0A, 0x1D, 0x56, 0x42, 0x00]);
+                const payload = new Uint8Array(initCmd.length + encoder.encode(textData).length + feedCutCmd.length);
+                payload.set(initCmd, 0);
+                payload.set(encoder.encode(textData), initCmd.length);
+                payload.set(feedCutCmd, initCmd.length + encoder.encode(textData).length);
+
+                if (xPrinterCharacteristic) {
+                    try {
+                        const chunkSize = 100;
+                        for (let i = 0; i < payload.length; i += chunkSize) {
+                            const slice = payload.slice(i, i + chunkSize);
+                            await xPrinterCharacteristic.writeValue(slice);
+                        }
+                        Utils.toast("Sent to Bluetooth X-Printer");
+                        return;
+                    } catch (e) {
+                        this.updateStatusUI(false);
+                        Utils.toast("Bluetooth write failed; falling back to print view");
+                    }
+                }
+
+                if (xPrinterSerialPort && xPrinterSerialPort.writable) {
+                    try {
+                        const writer = xPrinterSerialPort.writable.getWriter();
+                        await writer.write(payload);
+                        writer.releaseLock();
+                        Utils.toast("Sent to USB/Serial X-Printer");
+                        return;
+                    } catch (e) {
+                        this.updateStatusUI(false);
+                        Utils.toast("Serial write failed; falling back to print view");
+                    }
+                }
+
+                const area = document.getElementById("printable-area");
+                if (area) {
+                    Utils.show(area);
+                    area.innerHTML = `
+                        <div style="font-family: monospace; white-space: pre-wrap; max-width: 80mm; margin: 0 auto; font-size: 12px;">
+                            ${state.company.logo ? `<div style="text-align:center;margin-bottom:8px;"><img src="${state.company.logo}" style="max-height:50px;"></div>` : ''}
+                            <div style="text-align:center;font-weight:bold;font-size:14px;">${state.company.name}</div>
+                            <div style="text-align:center;font-size:11px;margin-bottom:8px;">${state.company.location || ''}</div>
+                            <hr>
+                            ${textData.replace(/\n/g, '<br>')}
+                        </div>
+                    `;
+                    window.print();
+                    setTimeout(() => Utils.hide(area), 1000);
+                }
             }
         };
 
+        // ============================================================
+        // INIT
+        // ============================================================
         window.addEventListener("DOMContentLoaded", async () => {
             await State.load();
-            const savedTheme = localStorage.getItem('pmms_theme_v10') || 'teal';
-            const savedFont = localStorage.getItem('pmms_font_v10') || 'sans';
-            ThemeCustomizer.applyTheme(savedTheme);
-            ThemeCustomizer.applyFont(savedFont);
-
-            const receiptToggle = document.getElementById("toggle-print-receipt");
-            if (receiptToggle) {
-                receiptToggle.checked = state.settings?.printReceiptEnabled ?? true;
+            ThemeCustomizer.loadSaved();
+            const toggleReceipt = document.getElementById("toggle-print-receipt");
+            if (toggleReceipt && state.settings && state.settings.printReceiptEnabled !== undefined) {
+                toggleReceipt.checked = state.settings.printReceiptEnabled;
             }
-
-            AdminSettings.renderManagersList();
+            const receiptDateInput = document.getElementById("manual-receipt-date");
+            if (receiptDateInput && !receiptDateInput.value) {
+                receiptDateInput.value = Utils.today();
+            }
             UI.refreshAll();
-            window.addEventListener("offline", () => Utils.show("offline-banner"));
-            window.addEventListener("online", () => Utils.hide("offline-banner"));
+            AdminSettings.renderManagersList();
+            if (!navigator.onLine) Utils.show("offline-banner");
         });
+        window.addEventListener("online", () => { Utils.hide("offline-banner"); Utils.toast("Back online"); });
+        window.addEventListener("offline", () => { Utils.show("offline-banner"); Utils.toast("Offline mode active"); });
     </script>
 </body>
-    </html>
+</html>

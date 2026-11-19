@@ -140,7 +140,7 @@
                 <div>
                     <label class="block text-[10px] text-slate-600 font-semibold mb-1">System Role *</label>
                     <select id="reg-role" class="w-full p-2.5 border rounded-xl text-xs bg-slate-50 font-bold">
-                        <option id="reg-role-admin-option" value="Administrator">Administrator (Full Access - Single Admin Only)</option>
+                        <option value="Administrator">Administrator (Full Access)</option>
                         <option value="Manager">Manager (Operations & Approvals)</option>
                         <option value="Accountant">Accountant (Disburse, Post, Bankings, Reports, Staff, Expenses, Clients, Aging, SMS & Defaulters)</option>
                         <option value="Loan Officer">Loan Officer (Disburse & Field)</option>
@@ -1726,6 +1726,7 @@
                 const threshEl = document.getElementById("cash-threshold-display");
                 if (threshEl) threshEl.innerText = Utils.formatUGX(500000);
 
+                // Update phone input placeholders & auto-prefilled inputs
                 document.querySelectorAll("input.phone-auto-prefix").forEach(inp => {
                     inp.placeholder = `${dial}771234567`;
                     const val = inp.value.trim();
@@ -1775,14 +1776,17 @@
                     input.addEventListener("input", () => {
                         const dial = RegionManager.getDialCode();
                         let val = input.value;
+                        // If user deletes into the country code, restore the country code
                         if (val.length < dial.length && dial.startsWith(val)) {
                             input.value = dial;
                             return;
                         }
+                        // If user pasted a local number starting with 0 (e.g. 0771234567)
                         if (val.startsWith("0") && val.length >= 2) {
                             input.value = dial + val.substring(1);
                             return;
                         }
+                        // If user typed digits without + prefix
                         if (val.length > 0 && !val.startsWith("+")) {
                             const digitsOnly = val.replace(/\D/g, "");
                             const rawDial = dial.replace("+", "");
@@ -2003,8 +2007,6 @@
                         if (!state.pendingRegistration) state.pendingRegistration = null;
                     } catch (e) {}
                 }
-                Auth.enforceSingleAdministrator();
-                Auth.syncAdminRegistrationOption();
                 RegionManager.populateCountryDropdown();
                 RegionManager.attachPhoneAutoPrefix();
                 this.runDailyAging();
@@ -2081,11 +2083,7 @@
                 const savedUser = localStorage.getItem("pmms_current_user_v10");
                 if (savedUser) {
                     try {
-                        let parsedUser = JSON.parse(savedUser);
-                        const matchedAcc = (state.accounts || []).find(a => a.username === parsedUser.username);
-                        if (matchedAcc) parsedUser = matchedAcc;
-                        state.currentUser = parsedUser;
-                        localStorage.setItem("pmms_current_user_v10", JSON.stringify(parsedUser));
+                        state.currentUser = JSON.parse(savedUser);
                         document.getElementById("header-user-tag").innerText = `User: ${state.currentUser.username} (${state.currentUser.role})`;
                         Utils.hide("auth-overlay");
                         Auth.applyRolePermissions();
@@ -2129,6 +2127,7 @@
                     Utils.toast('Phone number is required');
                     return false;
                 }
+                // International E.164 format check (+ followed by 7 to 15 digits) or local 7-12 digits
                 const ok = /^\+?[0-9]{7,15}$/.test(cleaned);
                 if (!ok) Utils.toast(`Invalid phone number format (e.g. ${dial}771234567)`);
                 return ok;
@@ -2449,54 +2448,9 @@
         Statements.searchClientsDebounced = Utils.debounce(q => Statements.searchClients(q), 280);
 
         // ============================================================
-        // AUTH MODULE (SINGLE ADMINISTRATOR ENFORCED)
+        // AUTH MODULE
         // ============================================================
         const Auth = {
-            hasExistingAdministrator(excludeUsername = null) {
-                return (state.accounts || []).some(a =>
-                    a.role === 'Administrator' &&
-                    (!excludeUsername || a.username.toLowerCase() !== excludeUsername.toLowerCase())
-                );
-            },
-            enforceSingleAdministrator() {
-                if (!Array.isArray(state.accounts)) return;
-                let primaryAdminFound = false;
-                state.accounts.forEach(acc => {
-                    if (acc.role === 'Administrator') {
-                        if (!primaryAdminFound) {
-                            primaryAdminFound = true;
-                        } else {
-                            acc.role = 'Manager';
-                            if (Array.isArray(state.auditLogs)) {
-                                state.auditLogs.unshift({
-                                    id: Utils.generateId('aud'),
-                                    timestamp: Utils.now(),
-                                    user: 'System',
-                                    role: 'Administrator',
-                                    action: 'SINGLE_ADMIN_ENFORCED',
-                                    details: `Demoted duplicate administrator account '${acc.username}' to Manager`
-                                });
-                            }
-                        }
-                    }
-                });
-            },
-            syncAdminRegistrationOption() {
-                const adminOption = document.getElementById("reg-role-admin-option");
-                const roleSelect = document.getElementById("reg-role");
-                if (!adminOption || !roleSelect) return;
-
-                if (this.hasExistingAdministrator()) {
-                    adminOption.disabled = true;
-                    adminOption.textContent = "Administrator (Already Assigned — Only One Allowed)";
-                    if (roleSelect.value === "Administrator") {
-                        roleSelect.value = "Manager";
-                    }
-                } else {
-                    adminOption.disabled = false;
-                    adminOption.textContent = "Administrator (Full Access - Single Admin Only)";
-                }
-            },
             switchTab(type) {
                 Utils.hide("auth-form-verify");
                 if (type === 'login') {
@@ -2505,7 +2459,6 @@
                     document.getElementById("tab-btn-login").className = "w-1/2 py-2 rounded-lg bg-white text-slate-900 shadow-sm";
                     document.getElementById("tab-btn-register").className = "w-1/2 py-2 rounded-lg text-slate-500";
                 } else {
-                    this.syncAdminRegistrationOption();
                     Utils.hide("auth-form-login");
                     Utils.show("auth-form-register");
                     document.getElementById("tab-btn-register").className = "w-1/2 py-2 rounded-lg bg-white text-slate-900 shadow-sm";
@@ -2531,12 +2484,6 @@
                 const email = document.getElementById("reg-email").value.trim().toLowerCase();
                 const phone = RegionManager.normalizePhone(document.getElementById("reg-phone").value);
                 const password = document.getElementById("reg-password").value.trim();
-
-                if (role === 'Administrator' && this.hasExistingAdministrator()) {
-                    this.syncAdminRegistrationOption();
-                    Utils.toast("A system must have only one Administrator. Choose another role.");
-                    return;
-                }
 
                 if (!Validation.isRequired(username, "Username") ||
                     !Validation.isValidEmail(email) ||
@@ -2576,26 +2523,18 @@
                     return;
                 }
 
-                let assignedRole = pending.role;
-                if (assignedRole === 'Administrator' && this.hasExistingAdministrator()) {
-                    Utils.toast("Only one Administrator is allowed per system. Role set to Manager.");
-                    assignedRole = 'Manager';
-                }
-
                 state.accounts.push({
-                    role: assignedRole,
+                    role: pending.role,
                     username: pending.username,
                     email: pending.email,
                     phone: pending.phone,
                     password: pending.password,
                     name: pending.name
                 });
-                this.enforceSingleAdministrator();
                 state.pendingRegistration = null;
                 State.save();
-                this.syncAdminRegistrationOption();
 
-                Utils.toast(`Account created successfully as ${assignedRole}!`);
+                Utils.toast(`Account created successfully!`);
                 this.switchTab('login');
                 document.getElementById("login-identifier").value = pending.username;
             },
@@ -2605,7 +2544,6 @@
                 this.switchTab('register');
             },
             handleLogin() {
-                this.enforceSingleAdministrator();
                 const iden = document.getElementById("login-identifier").value.trim();
                 const pwd = document.getElementById("login-password").value.trim();
                 const acc = state.accounts.find(a => (a.username === iden || a.email === iden) && a.password === pwd);
@@ -2667,7 +2605,6 @@
             lockApp() {
                 localStorage.removeItem("pmms_current_user_v10");
                 state.currentUser = null;
-                this.syncAdminRegistrationOption();
                 Utils.show("auth-overlay");
             },
             openForgotModal() { Utils.show("forgot-password-modal"); },
@@ -2898,8 +2835,6 @@
                             if (state.settings.timeFormat === undefined) state.settings.timeFormat = '24';
                             if (state.settings.printReceiptEnabled === undefined) state.settings.printReceiptEnabled = true;
                             if (!state.branchData.mmWithdrawals) state.branchData.mmWithdrawals = [];
-                            Auth.enforceSingleAdministrator();
-                            Auth.syncAdminRegistrationOption();
                             RegionManager.populateCountryDropdown();
                             State.runDailyAging();
                             UI.refreshAll();
@@ -4091,26 +4026,26 @@
                         <td class="p-3">${e.narration}</td>
                         <td class="p-3 text-right">${Utils.formatUGX(e.amount)}</td>
                     </tr>
-                `).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No records</td></tr>`;
+                `).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No expenses</td></tr>`;
             }
         };
 
         const Capital = {
             submit() {
-                if (!['Administrator', 'Accountant'].includes(state.currentUser?.role)) {
-                    Utils.toast("Not authorized to inject capital");
+                if (state.currentUser?.role !== 'Administrator') {
+                    Utils.toast("Access Denied: Only Administrators can add capital.");
                     return;
                 }
                 const amt = parseFloat(document.getElementById("cap-amount").value);
                 if (!Validation.isPositiveAmount(amt)) return;
+
                 State.getActiveBranch().capitalizations.push({
-                    id: Utils.generateId("cap"),
                     date: Utils.today(),
                     timestamp: Date.now(),
                     time: Utils.timeNow(),
                     amount: amt,
                     narration: document.getElementById("cap-narration").value.trim(),
-                    status: 'Approved'
+                    status: "Approved"
                 });
                 CashPosition.add('cash', amt);
                 State.save();
@@ -4118,17 +4053,17 @@
                 Reports.updateDashboard();
                 DailyWorkspace.render();
                 CashPosition.render();
-                Utils.toast("Capital added to Cash at Hand");
+                Utils.toast("Capital injected directly into Cash at Hand");
+                document.getElementById("cap-amount").value = "";
+                document.getElementById("cap-narration").value = "";
             },
             renderQueue() {
                 const branch = State.getActiveBranch();
-                const list = document.getElementById("capital-approval-list");
-                list.innerHTML = branch.capitalizations.map(c => `
-                    <div class="p-2 border rounded bg-white flex justify-between text-xs">
-                        <span>${Utils.formatUGX(c.amount)} — ${c.narration} (${c.date})</span>
-                        <span class="font-bold text-emerald-700">${c.status}</span>
+                document.getElementById("capital-approval-list").innerHTML = branch.capitalizations.map(c => `
+                    <div class="bg-white p-2 border rounded text-xs">
+                        ${Utils.formatUGX(c.amount)} — ${c.narration || 'Capital'} (${c.date})
                     </div>
-                `).join('') || `<p class="text-slate-400">No records</p>`;
+                `).join('') || `<p class="text-slate-400 text-center">No capital records</p>`;
             }
         };
 
@@ -4136,183 +4071,258 @@
         // REPORTS
         // ============================================================
         const Reports = {
-            getReportData() {
+            computeFullReport() {
                 const branch = State.getActiveBranch();
-                let totalRepayments = 0;
-                let totalProcessingFees = 0;
-                let totalDisbursements = 0;
-                let totalPrincipalDisbursed = 0;
-                let totalInterestExpected = 0;
-                let totalArrears = 0;
+                const today = Utils.today();
+                const activeClients = branch.clients.filter(c => (c.balance || 0) > 0);
+                const totalActiveClients = activeClients.length;
+                const paidToday = new Set();
+                let totalProcessingFeeCollectedToday = 0;
                 branch.clients.forEach(c => {
-                    State.recalculateClientStatus(c);
-                    totalDisbursements += (c.balance || 0);
-                    totalPrincipalDisbursed += (c.principal || 0);
-                    totalInterestExpected += (c.interestAmount || 0);
-                    totalProcessingFees += (c.processingFee || 0);
-                    totalArrears += (c.arrears || 0);
+                    if (c.dateDisbursed === today && c.processingFee) {
+                        totalProcessingFeeCollectedToday += c.processingFee;
+                    }
                     (c.history || []).forEach(h => {
-                        if (h.type === 'Repayment') totalRepayments += (h.amount || 0);
+                        if (h.type === 'Repayment' && h.date === today) paidToday.add(c.id);
                     });
                 });
-                const totalExpenses = branch.expenses.reduce((s, e) => s + e.amount, 0);
-                const totalBanked = branch.bankings.reduce((s, b) => s + b.amount, 0);
-                const totalCapital = branch.capitalizations.reduce((s, c) => s + c.amount, 0);
-                const netCashAvailable = (state.cashPosition.cash || 0) + (state.cashPosition.mtn || 0) + (state.cashPosition.airtel || 0);
-                const realProfit = (totalInterestExpected + totalProcessingFees) - totalExpenses;
+                const numberOfPaidClients = paidToday.size;
+                let totalCollection = 0;
+                let principalCollected = 0;
+                let interestCollected = 0;
+                branch.clients.forEach(c => {
+                    (c.history || []).forEach(h => {
+                        if (h.type === 'Repayment' && h.date === today) {
+                            totalCollection += h.amount || 0;
+                            const prin = c.principal || 0;
+                            const interest = c.interestAmount || 0;
+                            const totalOrig = prin + interest;
+                            if (totalOrig > 0) {
+                                principalCollected += (h.amount || 0) * (prin / totalOrig);
+                                interestCollected += (h.amount || 0) * (interest / totalOrig);
+                            } else {
+                                principalCollected += (h.amount || 0);
+                            }
+                        }
+                    });
+                });
+                const principalPortfolio = activeClients.reduce((s, c) => s + (c.principal || 0), 0);
+                const interestPortfolio = activeClients.reduce((s, c) => s + (c.interestAmount || 0), 0);
+                const totalPortfolio = activeClients.reduce((s, c) => s + (c.balance || 0), 0);
+                const totalArrears = activeClients.reduce((s, c) => s + (c.arrears || 0), 0);
+                const newClientsDisbursedToday = branch.clients.filter(c => c.dateDisbursed === today);
+                const newLoansCount = newClientsDisbursedToday.length;
+                const newLoansAmount = newClientsDisbursedToday.reduce((s, c) => s + (c.principal || 0), 0);
+                let totalSavings = 0;
+                Object.values(branch.savingsAccounts || {}).forEach(sa => totalSavings += (sa.balance || 0));
+                const totalExpenses = (branch.expenses || []).filter(e => e.date === today).reduce((s, e) => s + (e.amount || 0), 0);
+                const totalBanking = (branch.bankings || []).filter(b => b.date === today).reduce((s, b) => s + (b.amount || 0), 0);
+                const cashAtHand = state.cashPosition.cash || 0;
+                const mtnMoney = state.cashPosition.mtn || 0;
+                const airtelMoney = state.cashPosition.airtel || 0;
                 return {
-                    totalRepayments, totalProcessingFees, totalDisbursements, totalPrincipalDisbursed,
-                    totalInterestExpected, totalArrears, totalExpenses, totalBanked, totalCapital,
-                    netCashAvailable, realProfit
+                    totalActiveClients,
+                    numberOfPaidClients,
+                    totalCollection,
+                    principalCollected: Math.round(principalCollected),
+                    interestCollected: Math.round(interestCollected),
+                    totalProcessingFeeCollectedToday,
+                    principalPortfolio,
+                    interestPortfolio,
+                    totalPortfolio,
+                    totalArrears,
+                    newLoansCount,
+                    newLoansAmount,
+                    totalSavings,
+                    totalExpenses,
+                    totalBanking,
+                    cashAtHand,
+                    mtnMoney,
+                    airtelMoney
                 };
             },
             updateDashboard() {
-                const d = this.getReportData();
+                const r = this.computeFullReport();
                 const grid = document.getElementById("full-report-grid");
                 if (!grid) return;
-                grid.innerHTML = `
-                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 text-[10px] block">Collections</span><span class="font-bold text-emerald-400 text-sm">${Utils.formatUGX(d.totalRepayments)}</span></div>
-                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 text-[10px] block">Processing Fees</span><span class="font-bold text-amber-400 text-sm">${Utils.formatUGX(d.totalProcessingFees)}</span></div>
-                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 text-[10px] block">Principal</span><span class="font-bold text-blue-300 text-sm">${Utils.formatUGX(d.totalPrincipalDisbursed)}</span></div>
-                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 text-[10px] block">Interest</span><span class="font-bold text-indigo-300 text-sm">${Utils.formatUGX(d.totalInterestExpected)}</span></div>
-                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 text-[10px] block">Portfolio</span><span class="font-bold text-indigo-400 text-sm">${Utils.formatUGX(d.totalDisbursements)}</span></div>
-                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 text-[10px] block">Arrears</span><span class="font-bold text-red-400 text-sm">${Utils.formatUGX(d.totalArrears)}</span></div>
-                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 text-[10px] block">Expenses</span><span class="font-bold text-rose-400 text-sm">${Utils.formatUGX(d.totalExpenses)}</span></div>
-                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 text-[10px] block">Banked</span><span class="font-bold text-blue-400 text-sm">${Utils.formatUGX(d.totalBanked)}</span></div>
-                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 text-[10px] block">Capital</span><span class="font-bold text-amber-300 text-sm">${Utils.formatUGX(d.totalCapital)}</span></div>
-                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-300 text-[10px] block">Cash Available</span><span class="font-bold text-emerald-300 text-sm">${Utils.formatUGX(d.netCashAvailable)}</span></div>
-                    <div class="bg-slate-700/60 p-3 rounded-xl sm:col-span-2"><span class="text-slate-300 text-[10px] block">Net Profit / Loss</span><span class="font-bold ${d.realProfit >= 0 ? 'text-emerald-400' : 'text-red-400'} text-sm">${Utils.formatUGX(d.realProfit)}</span></div>
-                `;
+                const items = [
+                    { label: "Total Active Clients", value: r.totalActiveClients },
+                    { label: "Number of Paid Clients", value: r.numberOfPaidClients },
+                    { label: "Total Collection", value: Utils.formatUGX(r.totalCollection) },
+                    { label: "Principal Collected", value: Utils.formatUGX(r.principalCollected) },
+                    { label: "Interest Collected", value: Utils.formatUGX(r.interestCollected) },
+                    { label: "Processing Fees Collected", value: Utils.formatUGX(r.totalProcessingFeeCollectedToday) },
+                    { label: "Principal Portfolio", value: Utils.formatUGX(r.principalPortfolio) },
+                    { label: "Interest Portfolio", value: Utils.formatUGX(r.interestPortfolio) },
+                    { label: "Total Portfolio", value: Utils.formatUGX(r.totalPortfolio) },
+                    { label: "Total Arrears", value: Utils.formatUGX(r.totalArrears) },
+                    { label: "New Loans (Count & Amount)", value: `${r.newLoansCount} / ${Utils.formatUGX(r.newLoansAmount)}` },
+                    { label: "Total Savings", value: Utils.formatUGX(r.totalSavings) },
+                    { label: "Total Expenses", value: Utils.formatUGX(r.totalExpenses) },
+                    { label: "Total Banking", value: Utils.formatUGX(r.totalBanking) },
+                    { label: "Cash at Hand", value: Utils.formatUGX(r.cashAtHand) },
+                    { label: "MTN Mobile Money", value: Utils.formatUGX(r.mtnMoney) },
+                    { label: "Airtel Mobile Money", value: Utils.formatUGX(r.airtelMoney) }
+                ];
+                grid.innerHTML = items.map(it => `
+                    <div class="bg-slate-900/90 p-3.5 rounded-xl border border-slate-700">
+                        <span class="text-slate-400 block text-[11px]">${it.label}</span>
+                        <span class="font-bold text-sm text-white">${it.value}</span>
+                    </div>
+                `).join('');
             },
-            formatSummaryText() {
-                const d = this.getReportData();
-                return `📊 *${state.company.name}*\n📅 *${Utils.today()}*\n\n💵 *Collections:* ${Utils.formatUGX(d.totalRepayments)}\n💰 *Processing Fees:* ${Utils.formatUGX(d.totalProcessingFees)}\n📉 *Portfolio:* ${Utils.formatUGX(d.totalDisbursements)}\n⚠️ *Arrears:* ${Utils.formatUGX(d.totalArrears)}\n💸 *Expenses:* ${Utils.formatUGX(d.totalExpenses)}\n🏦 *Banked:* ${Utils.formatUGX(d.totalBanked)}\n💎 *Capital:* ${Utils.formatUGX(d.totalCapital)}\n💵 *Cash Available:* ${Utils.formatUGX(d.netCashAvailable)}\n📈 *Net Profit:* ${Utils.formatUGX(d.realProfit)}`;
+            generateSummaryText() {
+                const r = this.computeFullReport();
+                return `=== ${state.company.name} ===
+DAILY CLOSING REPORT (${Utils.today()} - ${Utils.timeNow()})
+-----------------------------------------
+Total Active Clients: ${r.totalActiveClients}
+Number of Paid Clients: ${r.numberOfPaidClients}
+Total Collection: ${Utils.formatUGX(r.totalCollection)}
+Principal Collected: ${Utils.formatUGX(r.principalCollected)}
+Interest Collected: ${Utils.formatUGX(r.interestCollected)}
+Processing Fees Collected: ${Utils.formatUGX(r.totalProcessingFeeCollectedToday)}
+Principal Portfolio: ${Utils.formatUGX(r.principalPortfolio)}
+Interest Portfolio: ${Utils.formatUGX(r.interestPortfolio)}
+Total Portfolio: ${Utils.formatUGX(r.totalPortfolio)}
+Total Arrears: ${Utils.formatUGX(r.totalArrears)}
+New Loans: ${r.newLoansCount} (${Utils.formatUGX(r.newLoansAmount)})
+Total Savings: ${Utils.formatUGX(r.totalSavings)}
+Total Expenses: ${Utils.formatUGX(r.totalExpenses)}
+Total Banking: ${Utils.formatUGX(r.totalBanking)}
+Cash at Hand: ${Utils.formatUGX(r.cashAtHand)}
+MTN Mobile Money: ${Utils.formatUGX(r.mtnMoney)}
+Airtel Mobile Money: ${Utils.formatUGX(r.airtelMoney)}
+-----------------------------------------`;
             },
             copySummaryText() {
-                const txt = this.formatSummaryText();
-                navigator.clipboard?.writeText(txt).catch(() => {});
-                Utils.toast("Summary copied to clipboard");
+                const text = this.generateSummaryText();
+                navigator.clipboard.writeText(text).then(() => {
+                    Utils.toast("Daily report summary copied to clipboard");
+                }).catch(() => {
+                    Utils.toast("Failed to copy summary");
+                });
             },
             openWhatsAppModal() {
-                const summary = this.formatSummaryText();
-                document.getElementById("whatsapp-report-preview").value = summary;
+                const managers = state.managers || [];
                 const container = document.getElementById("whatsapp-manager-checkboxes");
-                container.innerHTML = (state.managers || []).map(m => `
-                    <label class="flex items-center gap-2 text-xs">
-                        <input type="checkbox" class="mgr-checkbox" value="${m.phone}" checked>
-                        <span>${m.name} (${m.phone})</span>
-                    </label>
-                `).join('') || `<p class="text-slate-400 text-xs">No managers configured</p>`;
-                Utils.show("whatsapp-report-modal");
+                if (managers.length === 0) {
+                    container.innerHTML = `<p class="text-red-600 font-bold">No managers registered in Settings.</p>`;
+                } else {
+                    container.innerHTML = managers.map(m => `
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" class="mgr-wa-checkbox rounded" value="${m.phone}" checked>
+                            <span class="font-bold">${m.name}</span> (${m.phone})
+                        </label>
+                    `).join('');
+                }
+                document.getElementById("whatsapp-report-preview").value = this.generateSummaryText();
+                UI.show("whatsapp-report-modal");
             },
             async sendSelectedWhatsAppReports() {
-                const d = this.getReportData();
-                const rows = [
-                    ["Collections", Utils.formatUGX(d.totalRepayments)],
-                    ["Processing Fees", Utils.formatUGX(d.totalProcessingFees)],
-                    ["Principal Disbursed", Utils.formatUGX(d.totalPrincipalDisbursed)],
-                    ["Interest Expected", Utils.formatUGX(d.totalInterestExpected)],
-                    ["Portfolio Outstanding", Utils.formatUGX(d.totalDisbursements)],
-                    ["Arrears", Utils.formatUGX(d.totalArrears)],
-                    ["Expenses", Utils.formatUGX(d.totalExpenses)],
-                    ["Banked", Utils.formatUGX(d.totalBanked)],
-                    ["Capital", Utils.formatUGX(d.totalCapital)],
-                    ["Cash Available", Utils.formatUGX(d.netCashAvailable)],
-                    ["Net Profit", Utils.formatUGX(d.realProfit)]
-                ];
-                await PdfEngine.downloadReportPDF(`DAILY CLOSING REPORT (${Utils.today()})`, ["Metric", "Value"], rows);
-                const selected = Array.from(document.querySelectorAll(".mgr-checkbox:checked")).map(cb => cb.value);
-                const text = encodeURIComponent(this.formatSummaryText() + "\n\n📎 Daily Report PDF has been downloaded.");
-                if (selected.length > 0) {
-                    const waPhone = RegionManager.formatPhoneForWhatsApp(selected[0]);
-                    window.open(`https://wa.me/${waPhone}?text=${text}`, '_blank');
-                } else {
-                    window.open(`https://wa.me/?text=${text}`, '_blank');
+                const checkboxes = document.querySelectorAll(".mgr-wa-checkbox:checked");
+                if (checkboxes.length === 0) {
+                    Utils.toast("Select at least one manager");
+                    return;
                 }
-                Utils.toast("Report PDF downloaded & WhatsApp opened");
+                const r = this.computeFullReport();
+                const rows = [
+                    ["Total Active Clients", String(r.totalActiveClients)],
+                    ["Number of Paid Clients", String(r.numberOfPaidClients)],
+                    ["Total Collection", Utils.formatUGX(r.totalCollection)],
+                    ["Principal Collected", Utils.formatUGX(r.principalCollected)],
+                    ["Interest Collected", Utils.formatUGX(r.interestCollected)],
+                    ["Processing Fees Collected", Utils.formatUGX(r.totalProcessingFeeCollectedToday)],
+                    ["Principal Portfolio", Utils.formatUGX(r.principalPortfolio)],
+                    ["Interest Portfolio", Utils.formatUGX(r.interestPortfolio)],
+                    ["Total Portfolio", Utils.formatUGX(r.totalPortfolio)],
+                    ["Total Arrears", Utils.formatUGX(r.totalArrears)],
+                    ["New Loans", `${r.newLoansCount} / ${Utils.formatUGX(r.newLoansAmount)}`],
+                    ["Total Savings", Utils.formatUGX(r.totalSavings)],
+                    ["Total Expenses", Utils.formatUGX(r.totalExpenses)],
+                    ["Total Banking", Utils.formatUGX(r.totalBanking)],
+                    ["Cash at Hand", Utils.formatUGX(r.cashAtHand)],
+                    ["MTN Mobile Money", Utils.formatUGX(r.mtnMoney)],
+                    ["Airtel Mobile Money", Utils.formatUGX(r.airtelMoney)]
+                ];
+                await PdfEngine.downloadReportPDF("DAILY CLOSING REPORT", ["Metric", "Value"], rows, [`Generated on: ${Utils.today()}`]);
+                const summary = encodeURIComponent(`Daily Closing Report PDF has been generated and downloaded for ${Utils.today()}. Please attach the PDF.`);
+                checkboxes.forEach(cb => {
+                    const waPhone = RegionManager.formatPhoneForWhatsApp(cb.value);
+                    window.open(`https://wa.me/${waPhone}?text=${summary}`, '_blank');
+                });
                 UI.hide("whatsapp-report-modal");
+                Utils.toast("Daily report PDF downloaded & WhatsApp launched");
             }
         };
 
         // ============================================================
-        // AGING & PAR
+        // AGING & DEFAULTERS
         // ============================================================
         const Aging = {
             render() {
                 const branch = State.getActiveBranch();
-                const officerFilter = document.getElementById("aging-officer-filter")?.value || "ALL";
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                branch.clients.forEach(c => {
-                    State.recalculateClientStatus(c, today);
-                    if (c.deadlineDate && (c.balance || 0) > 0) {
-                        const dDate = new Date(c.deadlineDate + "T00:00:00");
-                        if (today > dDate) {
-                            const diffDays = Math.floor((today - dDate) / (1000 * 60 * 60 * 24));
-                            c.overdueDays = Math.max(c.overdueDays || 0, diffDays);
-                        }
-                    }
-                });
-                const filteredClients = branch.clients.filter(c => (c.balance || 0) > 0 && (officerFilter === "ALL" || c.officerId === officerFilter));
-                const totalPortfolio = filteredClients.reduce((s, c) => s + (c.balance || 0), 0);
-                const par30Portfolio = filteredClients.filter(c => (c.overdueDays || 0) >= 30).reduce((s, c) => s + (c.balance || 0), 0);
-                const parRate = totalPortfolio > 0 ? ((par30Portfolio / totalPortfolio) * 100).toFixed(1) : "0.0";
-                const parBox = document.getElementById("par-metrics-summary-box");
-                if (parBox) {
-                    parBox.innerHTML = `
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                            <div class="bg-slate-800 text-white p-3.5 rounded-xl flex justify-between items-center">
-                                <span>Total Portfolio</span>
-                                <span class="font-bold text-base text-blue-300">${Utils.formatUGX(totalPortfolio)}</span>
-                            </div>
-                            <div class="bg-amber-900 text-white p-3.5 rounded-xl flex justify-between items-center">
-                                <span>PAR 30+ Rate</span>
-                                <span class="font-bold text-base text-amber-300">${parRate}%</span>
-                            </div>
-                        </div>
-                    `;
+                const filterOfficer = document.getElementById("aging-officer-filter")?.value || "ALL";
+                let active = branch.clients.filter(c => (c.balance || 0) > 0);
+                if (filterOfficer !== "ALL") active = active.filter(c => c.officerId === filterOfficer);
+                const container = document.getElementById("officer-aging-sections");
+                if (!container) return;
+                if (active.length === 0) {
+                    container.innerHTML = `<p class="text-slate-400 text-center py-8">No active loans</p>`;
+                    return;
                 }
-                const officerSections = document.getElementById("officer-aging-sections");
-                if (!officerSections) return;
-                const officersToShow = officerFilter === "ALL" ? branch.officers : branch.officers.filter(o => o.id === officerFilter);
-                const unassigned = filteredClients.filter(c => !c.officerId);
-                let html = "";
-                officersToShow.forEach(o => {
-                    const oClients = filteredClients.filter(c => c.officerId === o.id);
-                    const oTotal = oClients.reduce((s, c) => s + (c.balance || 0), 0);
-                    html += `<div class="bg-white border rounded-2xl p-4 shadow-sm space-y-3">
-                        <div class="flex justify-between items-center border-b pb-2">
-                            <div><h3 class="font-bold text-sm text-slate-800">${o.name}</h3><span class="text-xs text-slate-500">${oClients.length} active loans</span></div>
-                            <span class="font-bold text-sm text-blue-700">${Utils.formatUGX(oTotal)}</span>
-                        </div>
-                        <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-slate-100 text-slate-600 text-[10px]"><th class="p-2">Client</th><th class="p-2">Daily</th><th class="p-2">Arrears</th><th class="p-2">Days</th><th class="p-2 text-right">Balance</th></tr></thead><tbody class="divide-y">
-                        ${oClients.map(c => `<tr><td class="p-2"><strong>${c.name}</strong><br><span class="text-slate-400">${c.nin || ''}</span></td><td class="p-2 text-emerald-700 font-bold">${Utils.formatUGX(c.dailyTarget || 0)}</td><td class="p-2 text-red-600 font-bold">${Utils.formatUGX(c.arrears || 0)}</td><td class="p-2 font-bold">${c.overdueDays || 0}d</td><td class="p-2 text-right font-mono font-bold">${Utils.formatUGX(c.balance || 0)}</td></tr>`).join('') || `<tr><td colspan="5" class="p-3 text-center text-slate-400">No active loans</td></tr>`}
-                        </tbody></table></div>
-                    </div>`;
-                });
-                if (unassigned.length > 0 && officerFilter === "ALL") {
-                    html += `<div class="bg-white border rounded-2xl p-4 shadow-sm space-y-3">
-                        <div class="flex justify-between items-center border-b pb-2"><h3 class="font-bold text-sm text-slate-700">Unassigned</h3><span class="text-xs font-bold">${unassigned.length} clients</span></div>
-                        <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs"><tbody class="divide-y">${unassigned.map(c => `<tr><td class="p-2"><strong>${c.name}</strong></td><td class="p-2 text-red-600">${Utils.formatUGX(c.arrears || 0)}</td><td class="p-2 font-bold">${c.overdueDays || 0}d</td><td class="p-2 text-right font-mono font-bold">${Utils.formatUGX(c.balance || 0)}</td></tr>`).join('')}</tbody></table></div>
-                    </div>`;
-                }
-                officerSections.innerHTML = html || `<p class="text-center text-slate-400 py-8">No active loans</p>`;
+                const parTotal = active.reduce((s, c) => s + (c.balance || 0), 0);
+                const parOver30 = active.filter(c => (c.overdueDays || 0) > 30).reduce((s, c) => s + (c.balance || 0), 0);
+                const parRatio = parTotal > 0 ? ((parOver30 / parTotal) * 100).toFixed(1) : 0;
+                document.getElementById("par-metrics-summary-box").innerHTML = `
+                    <div class="grid grid-cols-3 gap-3 bg-slate-900 text-white p-4 rounded-xl text-xs">
+                        <div><span class="text-slate-400 block">Portfolio</span><span class="font-bold text-sm">${Utils.formatUGX(parTotal)}</span></div>
+                        <div><span class="text-slate-400 block">PAR > 30 Days</span><span class="font-bold text-amber-400 text-sm">${Utils.formatUGX(parOver30)}</span></div>
+                        <div><span class="text-slate-400 block">PAR Ratio</span><span class="font-bold text-red-400 text-sm">${parRatio}%</span></div>
+                    </div>
+                `;
+                container.innerHTML = `<div class="bg-white border rounded-xl overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-800 text-white">
+                                <th class="p-3">Client</th>
+                                <th class="p-3">NIN</th>
+                                <th class="p-3">Arrears</th>
+                                <th class="p-3">Overdue Days</th>
+                                <th class="p-3 text-right">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y">
+                            ${active.map(c => `
+                                <tr>
+                                    <td class="p-3 font-bold">${c.name}</td>
+                                    <td class="p-3 font-mono">${c.nin || '-'}</td>
+                                    <td class="p-3 text-red-600 font-bold">${Utils.formatUGX(c.arrears || 0)}</td>
+                                    <td class="p-3 font-bold">${c.overdueDays || 0}d</td>
+                                    <td class="p-3 text-right font-bold">${Utils.formatUGX(c.balance || 0)}</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>`;
             },
             exportCSV() {
                 const branch = State.getActiveBranch();
-                const rows = branch.clients.filter(c => (c.balance || 0) > 0).map(c => `"${c.name}","${c.nin || ''}","${c.phone || ''}",${c.dailyTarget || 0},${c.arrears || 0},${c.overdueDays || 0},${c.balance || 0}`);
-                const csvContent = "data:text/csv;charset=utf-8,Client,NIN,Phone,Daily,Arrears,OverdueDays,Balance\n" + rows.join("\n");
+                const rows = [["Client", "NIN", "Balance", "Arrears", "Overdue Days"]];
+                branch.clients.forEach(c => {
+                    if ((c.balance || 0) > 0) rows.push([c.name, c.nin || '', c.balance, c.arrears || 0, c.overdueDays || 0]);
+                });
+                const csv = "data:text/csv;charset=utf-8," + rows.map(e => e.join(",")).join("\n");
                 const link = document.createElement("a");
-                link.href = encodeURI(csvContent);
+                link.href = encodeURI(csv);
                 link.download = `PMMS_AGING_${Utils.today()}.csv`;
-                document.body.appendChild(link);
                 link.click();
-                link.remove();
             },
             async exportPDF() {
                 const branch = State.getActiveBranch();
-                const rows = branch.clients.filter(c => (c.balance || 0) > 0).map(c => [c.name, c.nin || '', Utils.formatUGX(c.dailyTarget || 0), Utils.formatUGX(c.arrears || 0), `${c.overdueDays || 0}d`, Utils.formatUGX(c.balance || 0)]);
-                await PdfEngine.downloadReportPDF(`PORTFOLIO AGING & PAR REPORT (${Utils.today()})`, ["Client", "NIN", "Daily", "Arrears", "Days", "Balance"], rows);
+                const active = branch.clients.filter(c => (c.balance || 0) > 0);
+                const rows = active.map(c => [c.name, c.nin || '-', Utils.formatUGX(c.arrears || 0), `${c.overdueDays || 0}d`, Utils.formatUGX(c.balance || 0)]);
+                await PdfEngine.downloadReportPDF("AGING & PAR PORTFOLIO REPORT", ["Client", "NIN", "Arrears", "Days", "Balance"], rows, [`Total Active Loans: ${active.length}`]);
                 Utils.toast("Aging PDF downloaded");
             }
         };
@@ -4320,24 +4330,20 @@
         const Defaulters = {
             render() {
                 const branch = State.getActiveBranch();
-                const list = branch.clients.filter(c => (c.overdueDays || 0) >= 90 && (c.balance || 0) > 0);
+                const list = branch.clients.filter(c => (c.balance || 0) > 0 && (c.overdueDays || 0) >= 90);
                 const container = document.getElementById("demand-list-container");
                 if (!container) return;
                 if (list.length === 0) {
-                    container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400">No 90+ day defaulters</div>`;
+                    container.innerHTML = `<p class="text-slate-400 col-span-full text-center py-8">No defaulters (90+ days)</p>`;
                     return;
                 }
-                container.innerHTML = list.map(c => `<div class="bg-white border-2 border-red-200 p-4 rounded-2xl shadow-sm space-y-2 text-xs">
-                    <div class="flex justify-between items-start"><div><strong class="text-sm text-slate-800">${c.name}</strong><br><span class="text-slate-500">NIN: ${c.nin || 'N/A'} | ${c.phone || ''}</span></div><span class="bg-red-100 text-red-700 font-bold px-2.5 py-1 rounded-full">${c.overdueDays}d Overdue</span></div>
-                    <div class="grid grid-cols-2 gap-2 pt-2 border-t text-xs"><div>Arrears: <strong class="text-red-600">${Utils.formatUGX(c.arrears || 0)}</strong></div><div class="text-right">Balance: <strong class="text-blue-700">${Utils.formatUGX(c.balance || 0)}</strong></div></div>
-                    <div class="flex gap-2 pt-2"><button onclick="Defaulters.sendNotice('${c.id}')" class="flex-1 bg-red-600 hover:bg-red-700 text-white py-2 rounded-lg font-bold"><i class="fa-solid fa-comment-sms mr-1"></i> Send Notice</button></div>
-                </div>`).join('');
-            },
-            sendNotice(clientId) {
-                const c = State.getActiveBranch().clients.find(cl => cl.id === clientId);
-                if (!c) return;
-                SMS.dispatch(c.phone, `DEMAND NOTICE: Dear ${c.name}, your loan of ${Utils.formatUGX(c.balance)} is ${c.overdueDays} days overdue. Please settle immediately.`, 'Demand Notice');
-                Utils.toast(`Notice sent to ${c.name}`);
+                container.innerHTML = list.map(c => `
+                    <div class="bg-white border-2 border-red-200 p-4 rounded-xl text-xs space-y-1">
+                        <div class="font-bold text-red-700 text-sm">${c.name} (${c.nin || '-'})</div>
+                        <div>Overdue: <strong>${c.overdueDays} days</strong> | Balance: <strong>${Utils.formatUGX(c.balance)}</strong></div>
+                        <div>Phone: ${c.phone || '-'} | Guarantor: ${c.guarantor || '-'}</div>
+                    </div>
+                `).join('');
             }
         };
 
@@ -4345,95 +4351,78 @@
         // SMS
         // ============================================================
         const SMS = {
-            getCarrier(phone) {
-                const pref = document.getElementById("sms-preferred-network")?.value;
-                if (pref) return pref;
-                return "Standard SIM";
-            },
-            dispatch(phone, message, trigger = 'Manual') {
-                if (!phone || !message) return;
-                const carrier = this.getCarrier(phone);
-                if (!state.smsLogs) state.smsLogs = [];
+            dispatch(phone, message, trigger = 'Manual', silent = false) {
+                if (!phone) return;
+                const carrier = document.getElementById("sms-preferred-network")?.value || 'Standard SIM';
                 state.smsLogs.unshift({
-                    id: Utils.generateId('sms'),
-                    time: Utils.now(),
+                    id: Utils.generateId("sms"),
+                    timestamp: Utils.now(),
                     recipient: phone,
                     carrier,
                     trigger,
-                    message,
-                    status: 'Sent'
+                    message
                 });
-                if (state.smsLogs.length > 300) state.smsLogs.length = 300;
                 State.save();
                 this.renderLogs();
-            },
-            populateQuickClients() {
-                const sel = document.getElementById("sms-quick-client-select");
-                if (!sel) return;
-                sel.innerHTML = state.globalClients.map(c => `<option value="${c.phone}">${c.name} (${c.phone || 'No phone'})</option>`).join('') || `<option value="">No clients</option>`;
+                if (!silent) Utils.toast(`SMS queued for ${phone}`);
             },
             toggleTargetDropdown(val) {
-                if (val === 'SINGLE') Utils.show("sms-single-client-container");
-                else Utils.hide("sms-single-client-container");
+                const box = document.getElementById("sms-single-client-container");
+                if (val === 'SINGLE') Utils.show(box);
+                else Utils.hide(box);
+            },
+            populateQuickClients() {
+                const branch = State.getActiveBranch();
+                const sel = document.getElementById("sms-quick-client-select");
+                if (!sel) return;
+                sel.innerHTML = branch.clients.map(c => `<option value="${c.id}">${c.name} (${c.phone})</option>`).join('');
             },
             dispatchBroadcast() {
                 const target = document.getElementById("sms-broadcast-target").value;
-                const msgTemplate = document.getElementById("sms-quick-message").value.trim();
-                if (!Validation.isRequired(msgTemplate, "Message")) return;
+                const template = document.getElementById("sms-quick-message").value.trim();
+                if (!Validation.isRequired(template, "Message")) return;
                 const branch = State.getActiveBranch();
-                let recipients = [];
+                let targets = [];
                 if (target === 'SINGLE') {
-                    const phone = document.getElementById("sms-quick-client-select").value;
-                    if (!phone) {
-                        Utils.toast("No phone selected");
-                        return;
-                    }
-                    const cl = state.globalClients.find(c => c.phone === phone);
-                    recipients.push({ name: cl ? cl.name : 'Client', phone, nin: cl ? cl.nin : '', balance: 0 });
-                } else if (target === 'ALL') {
-                    recipients = state.globalClients.map(c => ({ name: c.name, phone: c.phone, nin: c.nin, balance: 0 }));
-                } else if (target === 'DEFAULTERS') {
-                    recipients = branch.clients.filter(c => (c.overdueDays || 0) >= 90 && (c.balance || 0) > 0);
-                } else if (target === 'ACTIVE') {
-                    recipients = branch.clients.filter(c => (c.balance || 0) > 0);
-                } else if (target === 'BODABODA') {
-                    recipients = branch.clients.filter(c => c.category === 'BODABODA');
-                }
-                if (recipients.length === 0) {
-                    Utils.toast("No recipients matched target");
+                    const id = document.getElementById("sms-quick-client-select").value;
+                    const c = branch.clients.find(cl => cl.id === id);
+                    if (c) targets.push(c);
+                } else if (target === 'ALL') targets = branch.clients;
+                else if (target === 'DEFAULTERS') targets = branch.clients.filter(c => (c.overdueDays || 0) >= 90 && c.balance > 0);
+                else if (target === 'ACTIVE') targets = branch.clients.filter(c => c.balance > 0);
+                else if (target === 'BODABODA') targets = branch.clients.filter(c => c.category === 'BODABODA');
+                if (targets.length === 0) {
+                    Utils.toast("No clients in selected group");
                     return;
                 }
-                recipients.forEach(r => {
-                    if (r.phone) {
-                        const personalized = msgTemplate
-                            .replace(/{name}/g, r.name || '')
-                            .replace(/{balance}/g, Utils.formatUGX(r.balance || 0))
-                            .replace(/{nin}/g, r.nin || '');
-                        this.dispatch(r.phone, personalized, `Bulk (${target})`);
-                    }
+                targets.forEach(c => {
+                    const msg = template
+                        .replace(/{name}/g, c.name)
+                        .replace(/{balance}/g, Utils.formatUGX(c.balance || 0))
+                        .replace(/{nin}/g, c.nin || '');
+                    this.dispatch(c.phone, msg, `Bulk (${target})`, true);
                 });
-                Utils.toast(`Dispatched to ${recipients.length} recipient(s)`);
-                document.getElementById("sms-quick-message").value = "";
+                Utils.toast(`Dispatched ${targets.length} SMS`);
             },
             renderLogs() {
                 const tbody = document.getElementById("sms-logs-table-body");
                 if (!tbody) return;
-                const logs = state.smsLogs || [];
-                const countEl = document.getElementById("sms-log-count");
-                if (countEl) countEl.innerText = logs.length;
-                if (logs.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No SMS logs</td></tr>`;
-                    return;
-                }
-                tbody.innerHTML = logs.map((l, idx) => `<tr><td class="p-3 font-mono text-[10px]">${l.time}</td><td class="p-3 font-bold">${l.recipient}</td><td class="p-3 text-slate-600 text-[10px]">${l.carrier}</td><td class="p-3"><span class="bg-slate-100 px-2 py-0.5 rounded text-[10px] font-bold">${l.trigger}</span></td><td class="p-3 text-xs font-mono max-w-xs truncate" title="${l.message}">${l.message}</td><td class="p-3 text-right"><button onclick="SMS.openNativeSmsApp(${idx})" class="bg-sky-600 text-white px-2.5 py-1 rounded font-bold text-[10px]">SIM Send</button></td></tr>`).join('');
-            },
-            openNativeSmsApp(idx) {
-                const log = state.smsLogs[idx];
-                if (!log) return;
-                window.location.href = `sms:${encodeURIComponent(log.recipient)}?body=${encodeURIComponent(log.message)}`;
+                document.getElementById("sms-log-count").innerText = (state.smsLogs || []).length;
+                tbody.innerHTML = (state.smsLogs || []).map(l => `
+                    <tr>
+                        <td class="p-3 text-[11px]">${l.timestamp}</td>
+                        <td class="p-3 font-mono">${l.recipient}</td>
+                        <td class="p-3">${l.carrier}</td>
+                        <td class="p-3">${l.trigger}</td>
+                        <td class="p-3 text-xs">${l.message}</td>
+                        <td class="p-3 text-right">
+                            <a href="sms:${l.recipient}?body=${encodeURIComponent(l.message)}" class="bg-sky-600 text-white px-2 py-1 rounded text-[10px]">Send Now</a>
+                        </td>
+                    </tr>
+                `).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">No SMS logs</td></tr>`;
             },
             clearLogs() {
-                if (!Utils.confirmAction("Clear SMS log history?")) return;
+                if (!Utils.confirmAction("Clear all SMS logs?")) return;
                 state.smsLogs = [];
                 State.save();
                 this.renderLogs();
@@ -4441,149 +4430,144 @@
         };
 
         // ============================================================
-        // PRINTER & THEME
+        // PRINTER (X-PRINTER)
         // ============================================================
         const Printer = {
-            onTogglePrintReceipt(isChecked) {
-                if (!state.settings) state.settings = {};
-                state.settings.printReceiptEnabled = isChecked;
+            onTogglePrintReceipt(checked) {
+                state.settings.printReceiptEnabled = checked;
                 State.save();
-                Utils.toast(`Print Receipt ${isChecked ? 'enabled' : 'disabled'}`);
+                Utils.toast(`Auto receipt printing ${checked ? 'enabled' : 'disabled'}`);
+            },
+            updateConnectionIndicator(connected, labelText) {
+                const statusText = document.getElementById("xprinter-status-text");
+                const miniDot = document.getElementById("xprinter-mini-dot");
+                const btn = document.getElementById("xprinter-btn");
+
+                if (statusText) statusText.innerText = labelText || (connected ? "Connected" : "Connect Printer");
+                if (miniDot) {
+                    miniDot.className = connected
+                        ? "w-2 h-2 rounded-full bg-emerald-500 inline-block animate-pulse"
+                        : "w-2 h-2 rounded-full bg-slate-400 inline-block";
+                    miniDot.title = connected ? "X-Printer Connected" : "X-Printer Disconnected";
+                }
+                if (btn) {
+                    if (connected) {
+                        btn.classList.remove("dyn-bg");
+                        btn.classList.add("bg-emerald-600", "hover:bg-emerald-700");
+                    } else {
+                        btn.classList.remove("bg-emerald-600", "hover:bg-emerald-700");
+                        btn.classList.add("dyn-bg");
+                    }
+                }
             },
             async connectXPrinter() {
-                const iface = document.getElementById("xprinter-interface-select")?.value || "bluetooth";
-                if (iface === "bluetooth" && navigator.bluetooth) {
-                    try {
+                try {
+                    const iface = document.getElementById("xprinter-interface-select")?.value || 'bluetooth';
+                    if (iface === 'bluetooth' && navigator.bluetooth) {
                         xPrinterDevice = await navigator.bluetooth.requestDevice({
                             acceptAllDevices: true,
-                            optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+                            optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
                         });
                         const server = await xPrinterDevice.gatt.connect();
-                        const services = await server.getPrimaryServices();
-                        for (const s of services) {
-                            const chars = await s.getCharacteristics();
-                            for (const c of chars) {
-                                if (c.properties.write || c.properties.writeWithoutResponse) {
-                                    xPrinterCharacteristic = c;
-                                    break;
-                                }
-                            }
-                            if (xPrinterCharacteristic) break;
-                        }
-                        this.updatePrinterStatusUI(true, xPrinterDevice.name || "XPrinter BLE");
-                        Utils.toast("Connected to X-Printer via Bluetooth");
-                        return;
-                    } catch (e) {}
-                } else if (iface === "usb" && navigator.serial) {
-                    try {
+                        const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                        xPrinterCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+                        this.updateConnectionIndicator(true, "XPrinter (BT)");
+                        Utils.toast("Bluetooth X-Printer Connected");
+                    } else if (navigator.serial) {
                         xPrinterSerialPort = await navigator.serial.requestPort();
                         await xPrinterSerialPort.open({ baudRate: 9600 });
-                        this.updatePrinterStatusUI(true, "XPrinter USB");
-                        Utils.toast("Connected to X-Printer via USB");
-                        return;
-                    } catch (e) {}
+                        this.updateConnectionIndicator(true, "XPrinter (USB)");
+                        Utils.toast("USB/Serial X-Printer Connected");
+                    } else {
+                        Utils.toast("Bluetooth/Serial not supported in this browser; fallback print active.");
+                    }
+                } catch (e) {
+                    this.updateConnectionIndicator(false, "Connect Printer");
+                    Utils.toast("Printer connection cancelled");
                 }
-                this.updatePrinterStatusUI(true, "XPrinter Ready");
-                Utils.toast("X-Printer ready for printing");
             },
-            updatePrinterStatusUI(connected, label = "XPrinter") {
-                const txt = document.getElementById("xprinter-status-text");
-                const dot = document.getElementById("xprinter-mini-dot");
-                if (txt) txt.innerText = connected ? label : "Connect Printer";
-                if (dot) {
-                    dot.className = connected
-                        ? "w-2 h-2 rounded-full bg-emerald-500 inline-block"
-                        : "w-2 h-2 rounded-full bg-slate-400 inline-block";
-                    dot.title = connected ? `Connected: ${label}` : "Disconnected";
+            async printToXPrinter(text, forcePrint = false) {
+                lastPrintedReceiptText = text;
+                const shouldPrint = forcePrint || document.getElementById("toggle-print-receipt")?.checked;
+                if (!shouldPrint) return;
+
+                const headerStr = `${state.company.name}\n${state.company.location}\n--------------------------------\n`;
+                const fullText = headerStr + text + "\n\n\n";
+                try {
+                    const encoder = new TextEncoder();
+                    const data = encoder.encode(fullText);
+                    if (xPrinterCharacteristic) {
+                        await xPrinterCharacteristic.writeValue(data);
+                        Utils.toast("Printed to X-Printer");
+                        return;
+                    }
+                    if (xPrinterSerialPort && xPrinterSerialPort.writable) {
+                        const writer = xPrinterSerialPort.writable.getWriter();
+                        await writer.write(data);
+                        writer.releaseLock();
+                        Utils.toast("Printed to X-Printer");
+                        return;
+                    }
+                } catch (err) {
+                    console.warn("Direct printer write error, falling back to browser print:", err);
                 }
+                const printArea = document.getElementById("printable-area");
+                printArea.innerHTML = `<pre style="font-family: monospace; font-size: 12px; white-space: pre-wrap;">${fullText}</pre>`;
+                Utils.show(printArea);
+                window.print();
+                Utils.hide(printArea);
             },
             async testPrint() {
-                const testText = `=== ${state.company.name} ===\nX-PRINTER TEST RECEIPT\nDate: ${Utils.today()} ${Utils.timeNow()}\n--------------------------------\nPrinter connection is active.\n--------------------------------\n`;
-                await this.printToXPrinter(testText, true);
-            },
-            async printToXPrinter(textData, force = false) {
-                lastPrintedReceiptText = textData;
-                const toggleEl = document.getElementById("toggle-print-receipt");
-                const shouldPrint = force || (toggleEl ? toggleEl.checked : (state.settings?.printReceiptEnabled ?? true));
-
-                if (!shouldPrint) {
-                    return;
-                }
-
-                if (xPrinterCharacteristic) {
-                    try {
-                        const encoder = new TextEncoder();
-                        await xPrinterCharacteristic.writeValue(encoder.encode(textData + "\n\n\n"));
-                        Utils.toast("Sent to X-Printer (Bluetooth)");
-                        return;
-                    } catch (e) {}
-                }
-
-                if (xPrinterSerialPort && xPrinterSerialPort.writable) {
-                    try {
-                        const writer = xPrinterSerialPort.writable.getWriter();
-                        const encoder = new TextEncoder();
-                        await writer.write(encoder.encode(textData + "\n\n\n"));
-                        writer.releaseLock();
-                        Utils.toast("Sent to X-Printer (USB)");
-                        return;
-                    } catch (e) {}
-                }
-
-                const printArea = document.getElementById("printable-area");
-                if (printArea) {
-                    printArea.innerHTML = `<pre style="font-family: monospace; font-size: 12px; white-space: pre-wrap;">${textData}</pre>`;
-                    Utils.show(printArea);
-                    window.print();
-                    setTimeout(() => Utils.hide(printArea), 500);
-                }
+                await this.printToXPrinter("TEST PRINT RECEIPT\nStatus: X-Printer Ready\nDate: " + Utils.now(), true);
             }
         };
 
+        // ============================================================
+        // THEME CUSTOMIZER (15 COLORS & 15 FONTS)
+        // ============================================================
         const ThemeCustomizer = {
-            applyTheme(themeName) {
-                document.body.className = document.body.className.replace(/theme-\S+/g, '').trim();
-                document.body.classList.add(`theme-${themeName}`);
-                localStorage.setItem("pmms_theme_color_v10", themeName);
+            ALL_THEMES: [
+                'theme-teal', 'theme-indigo', 'theme-emerald', 'theme-slate', 'theme-blue',
+                'theme-rose', 'theme-amber', 'theme-purple', 'theme-cyan', 'theme-orange',
+                'theme-crimson', 'theme-forest', 'theme-navy', 'theme-gold', 'theme-magenta'
+            ],
+            ALL_FONTS: [
+                'font-sans', 'font-serif', 'font-mono', 'font-inter', 'font-poppins',
+                'font-roboto', 'font-montserrat', 'font-lato', 'font-opensans', 'font-nunito',
+                'font-raleway', 'font-merriweather', 'font-playfair', 'font-oswald', 'font-firacode'
+            ],
+            applyTheme(theme) {
+                this.ALL_THEMES.forEach(cls => document.body.classList.remove(cls));
+                document.body.classList.add('theme-' + theme);
+                localStorage.setItem('pmms_theme_v10', theme);
+                const sel = document.getElementById('theme-color-select');
+                if (sel) sel.value = theme;
             },
-            applyFont(fontName) {
-                document.body.className = document.body.className.replace(/font-\S+/g, '').trim();
-                document.body.classList.add(`font-${fontName}`);
-                localStorage.setItem("pmms_theme_font_v10", fontName);
-            },
-            init() {
-                const t = localStorage.getItem("pmms_theme_color_v10");
-                const f = localStorage.getItem("pmms_theme_font_v10");
-                if (t) {
-                    this.applyTheme(t);
-                    const s = document.getElementById("theme-color-select");
-                    if (s) s.value = t;
-                }
-                if (f) {
-                    this.applyFont(f);
-                    const s = document.getElementById("theme-font-select");
-                    if (s) s.value = f;
-                }
+            applyFont(font) {
+                this.ALL_FONTS.forEach(cls => document.body.classList.remove(cls));
+                document.body.classList.add('font-' + font);
+                localStorage.setItem('pmms_font_v10', font);
+                const sel = document.getElementById('theme-font-select');
+                if (sel) sel.value = font;
             }
         };
-
-        // ============================================================
-        // BOOTSTRAP
-        // ============================================================
-        window.addEventListener("online", () => { Utils.hide("offline-banner"); Utils.toast("Online"); });
-        window.addEventListener("offline", () => { Utils.show("offline-banner"); Utils.toast("Offline mode active"); });
 
         window.addEventListener("DOMContentLoaded", async () => {
-            if (!navigator.onLine) Utils.show("offline-banner");
-            ThemeCustomizer.init();
             await State.load();
-            const receiptDateInput = document.getElementById("manual-receipt-date");
-            if (receiptDateInput) receiptDateInput.value = Utils.today();
-            UI.refreshAll();
-            AdminSettings.renderManagersList();
-            if (state.company.logo) {
-                document.getElementById("logo-preview-container").innerHTML = `<img src="${state.company.logo}" class="h-12 w-12 object-contain rounded border mt-1">`;
+            const savedTheme = localStorage.getItem('pmms_theme_v10') || 'teal';
+            const savedFont = localStorage.getItem('pmms_font_v10') || 'sans';
+            ThemeCustomizer.applyTheme(savedTheme);
+            ThemeCustomizer.applyFont(savedFont);
+
+            const receiptToggle = document.getElementById("toggle-print-receipt");
+            if (receiptToggle) {
+                receiptToggle.checked = state.settings?.printReceiptEnabled ?? true;
             }
+
+            AdminSettings.renderManagersList();
+            UI.refreshAll();
+            window.addEventListener("offline", () => Utils.show("offline-banner"));
+            window.addEventListener("online", () => Utils.hide("offline-banner"));
         });
     </script>
 </body>

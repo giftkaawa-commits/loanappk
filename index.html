@@ -314,7 +314,8 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold mb-1 text-slate-600">Payment Channel</label>
-                                <select id="post-channel" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm">
+                                <select id="post-channel
+                                    ="w-full p-2.5 border rounded-lg bg-slate-50 text-sm">
                                     <option value="Cash">Cash</option>
                                     <option value="MTN Mobile Money">MTN Mobile Money</option>
                                     <option value="Airtel Mobile Money">Airtel Mobile Money</option>
@@ -425,7 +426,7 @@
             </div>
         </section>
 
-        <!-- TAB: DISBURSE -->
+<!-- TAB: DISBURSE -->
         <section id="tab-disburse" hidden class="tab-content space-y-4 max-w-3xl mx-auto">
             <h2 class="text-lg font-bold border-b pb-2">Loan Disbursement</h2>
             
@@ -479,10 +480,15 @@
                     </div>
                     <div>
                         <label class="block text-[10px] text-slate-600 font-semibold mb-1">Guarantor Phone *</label>
-                        <input type="tel" id="new-guarantor-phone" placeholder="+256771234567" class="w-full p-2.5 border rounded-lg text-xs bg-slate-50 phone-auto-prefix">
+                        <input type="tel" id="new-guarantor-phone" oninput="Disburse.checkGuarantorPhoneUnique(this.value)" placeholder="+256771234567" class="w-full p-2.5 border rounded-lg text-xs bg-slate-50 phone-auto-prefix">
                     </div>
                 </div>
                 
+                <div id="guarantor-phone-unique-alert-new" hidden class="p-2.5 bg-red-100 border border-red-400 rounded-lg text-xs text-red-800 font-bold">
+                    <i class="fa-solid fa-ban mr-1"></i>
+                    <span id="guarantor-phone-unique-msg-new"></span>
+                </div>
+
                 <div id="guarantor-exposure-alert" hidden class="p-3 bg-red-100 border-2 border-red-500 rounded-xl text-xs space-y-1 text-red-900">
                     <div class="font-bold flex items-center gap-1.5 text-sm">
                         <i class="fa-solid fa-triangle-exclamation text-red-600"></i> GUARANTOR EXPOSURE WARNING
@@ -510,7 +516,62 @@
                 <input type="text" id="disburse-search" oninput="Disburse.searchClientsDebounced(this.value)" placeholder="Search registered client..." class="w-full p-3 border rounded-xl bg-white text-sm shadow-sm">
                 <div id="disburse-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-40 overflow-y-auto shadow-md"></div>
                 <div id="disburse-selected-name" class="text-xs font-bold text-green-700 mt-2"></div>
-                <div id="disburse-guarantor-exposure-existing" hidden class="mt-2 p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 font-bold"></div>
+
+                <!-- Guarantor Selection for Existing Client -->
+                <div id="existing-guarantor-section" hidden class="mt-4 space-y-3 border p-4 rounded-xl bg-white shadow-sm">
+                    <div class="font-bold text-xs text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                        <i class="fa-solid fa-user-shield dyn-text"></i> Guarantor Selection
+                    </div>
+
+                    <div class="flex gap-4 text-xs font-medium">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="existing-guarantor-mode" value="saved" checked
+                                   onchange="Disburse.toggleExistingGuarantorMode('saved')">
+                            Use Saved Guarantor
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="existing-guarantor-mode" value="new"
+                                   onchange="Disburse.toggleExistingGuarantorMode('new')">
+                            Add New Guarantor
+                        </label>
+                    </div>
+
+                    <!-- Saved Guarantors dropdown -->
+                    <div id="saved-guarantor-box">
+                        <label class="block text-[10px] text-slate-600 font-semibold mb-1">Select from previously used guarantors *</label>
+                        <select id="existing-saved-guarantor" onchange="Disburse.onSavedGuarantorChange()"
+                                class="w-full p-2.5 border rounded-lg text-xs bg-slate-50 font-bold">
+                            <option value="">-- Choose a saved guarantor --</option>
+                        </select>
+                        <div id="saved-guarantor-preview" class="mt-2 text-[11px] text-slate-600 hidden"></div>
+                    </div>
+
+                    <!-- New Guarantor fields -->
+                    <div id="new-existing-guarantor-fields" hidden class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] text-slate-600 font-semibold mb-1">Guarantor Name *</label>
+                            <input type="text" id="existing-new-guarantor-name"
+                                   oninput="Disburse.checkGuarantorExposure(this.value)"
+                                   placeholder="Guarantor Full Name"
+                                   class="w-full p-2.5 border rounded-lg text-xs bg-slate-50 font-bold">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] text-slate-600 font-semibold mb-1">Guarantor Phone *</label>
+                            <input type="tel" id="existing-new-guarantor-phone"
+                                   oninput="Disburse.checkGuarantorPhoneUnique(this.value)"
+                                   placeholder="+256771234567"
+                                   class="w-full p-2.5 border rounded-lg text-xs bg-slate-50 phone-auto-prefix">
+                        </div>
+                        <div id="guarantor-phone-unique-alert" hidden
+                             class="sm:col-span-2 p-2.5 bg-red-100 border border-red-400 rounded-lg text-xs text-red-800 font-bold">
+                            <i class="fa-solid fa-ban mr-1"></i>
+                            <span id="guarantor-phone-unique-msg"></span>
+                        </div>
+                    </div>
+
+                    <div id="disburse-guarantor-exposure-existing" hidden
+                         class="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 font-bold"></div>
+                </div>
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">

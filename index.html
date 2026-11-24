@@ -76,6 +76,48 @@
         .dyn-bg:hover { background-color: var(--primary-hover) !important; }
         .dyn-text { color: var(--primary-accent) !important; }
         .dyn-border { border-color: var(--primary-accent) !important; }
+
+        /* Reference Aging & PAR Table Styling */
+        .aging-sheet-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+            background: #ffffff;
+            color: #0f172a;
+        }
+        .aging-sheet-table th {
+            background-color: #00ffff;
+            color: #000000;
+            font-weight: 700;
+            border: 1px solid #0f172a;
+            padding: 6px 7px;
+            text-align: left;
+            vertical-align: middle;
+            line-height: 1.2;
+        }
+        .aging-sheet-table th.col-deadline-hdr {
+            background-color: #ffffff;
+            color: #000000;
+        }
+        .aging-sheet-table td {
+            border: 1px solid #475569;
+            padding: 5px 7px;
+            vertical-align: middle;
+            line-height: 1.25;
+        }
+        .aging-sheet-table tr.group-banner-active td {
+            background-color: #f8fafc;
+            font-weight: 700;
+        }
+        .aging-sheet-table tr.group-banner-bucket td {
+            background-color: #f1f5f9;
+            font-weight: 700;
+        }
+        .aging-sheet-table tr.group-subtotal-row td {
+            background-color: #ecfeff;
+            font-weight: 700;
+            border-top: 1.5px solid #0f172a;
+        }
     </style>
 
     <!-- Tailwind CSS CDN -->
@@ -1038,6 +1080,7 @@
                     <h2 class="text-lg font-bold flex items-center gap-2">
                         <i class="fa-solid fa-clock-rotate-left text-amber-600"></i> Aging & PAR
                     </h2>
+                    <p class="text-[11px] text-slate-500">Grouped by Active Loans, Performing Portfolio, and Aging Buckets (1-30+ Days)</p>
                 </div>
                 <div class="flex flex-wrap items-center gap-2">
                     <select id="aging-officer-filter" onchange="Aging.render()" class="bg-white border-2 border-slate-700 text-xs font-bold p-2.5 rounded-xl">
@@ -1924,53 +1967,57 @@
         // PDF GENERATION ENGINE
         // ============================================================
         const PdfEngine = {
-            async generatePDF(title, headers, rows, summaryLines = []) {
+            async generatePDF(title, headers, rows, summaryLines = [], tableOpts = {}) {
                 const { jsPDF } = window.jspdf;
-                const doc = new jsPDF();
-                let startY = 15;
+                const isLandscape = !!tableOpts.landscape;
+                const doc = new jsPDF({ orientation: isLandscape ? "landscape" : "portrait" });
+                const pageWidth = doc.internal.pageSize.getWidth();
+                let startY = 14;
 
                 if (state.company.logo) {
                     try {
-                        doc.addImage(state.company.logo, 'PNG', 92, startY, 26, 26);
+                        doc.addImage(state.company.logo, 'PNG', (pageWidth / 2) - 13, startY, 26, 26);
                         startY += 30;
                     } catch (e) {
                         startY += 5;
                     }
                 }
 
-                doc.setFontSize(14);
+                doc.setFontSize(13);
                 doc.setFont("helvetica", "bold");
-                doc.text(state.company.name || "PMMS Microfinance", 105, startY, { align: "center" });
+                doc.text(state.company.name || "PMMS Microfinance", pageWidth / 2, startY, { align: "center" });
                 startY += 6;
 
-                doc.setFontSize(10);
+                doc.setFontSize(9.5);
                 doc.setFont("helvetica", "normal");
-                doc.text(`Location / Branch: ${state.company.location || "Kampala, Uganda"}`, 105, startY, { align: "center" });
+                doc.text(`Location / Branch: ${state.company.location || "Kampala, Uganda"}`, pageWidth / 2, startY, { align: "center" });
                 startY += 5;
-                doc.text(`Date Generated: ${Utils.today()} (${Utils.timeNow()})`, 105, startY, { align: "center" });
-                startY += 8;
+                doc.text(`Date Generated: ${Utils.today()} (${Utils.timeNow()})`, pageWidth / 2, startY, { align: "center" });
+                startY += 7;
 
-                doc.setFontSize(12);
+                doc.setFontSize(11.5);
                 doc.setFont("helvetica", "bold");
-                doc.text(title, 105, startY, { align: "center" });
-                startY += 8;
+                doc.text(title, pageWidth / 2, startY, { align: "center" });
+                startY += 7;
 
                 if (summaryLines.length > 0) {
-                    doc.setFontSize(9);
+                    doc.setFontSize(8.5);
                     doc.setFont("helvetica", "normal");
                     summaryLines.forEach(line => {
-                        doc.text(line, 14, startY);
-                        startY += 5;
+                        doc.text(line, 12, startY);
+                        startY += 4.5;
                     });
-                    startY += 3;
+                    startY += 2;
                 }
 
                 doc.autoTable({
                     startY: startY,
                     head: [headers],
                     body: rows,
-                    styles: { fontSize: 9 },
-                    headStyles: { fillColor: [15, 23, 42] }
+                    styles: { fontSize: isLandscape ? 7.5 : 9, cellPadding: isLandscape ? 1.8 : 2.5 },
+                    headStyles: { fillColor: [0, 255, 255], textColor: [0, 0, 0], lineColor: [15, 23, 42], lineWidth: 0.2 },
+                    bodyStyles: { lineColor: [100, 116, 139], lineWidth: 0.15 },
+                    ...(tableOpts.didParseCell ? { didParseCell: tableOpts.didParseCell } : {})
                 });
 
                 return doc;
@@ -1989,8 +2036,8 @@
                 const doc = await this.generatePDF(`${typeLabel.toUpperCase()} STATEMENT`, headers, rows, summary);
                 doc.save(`PMMS_${typeLabel}_${nin}_${Utils.today()}.pdf`);
             },
-            async downloadReportPDF(reportTitle, headers, rows, summaryLines) {
-                const doc = await this.generatePDF(reportTitle, headers, rows, summaryLines);
+            async downloadReportPDF(reportTitle, headers, rows, summaryLines, tableOpts = {}) {
+                const doc = await this.generatePDF(reportTitle, headers, rows, summaryLines, tableOpts);
                 doc.save(`PMMS_Report_${Utils.today()}.pdf`);
             }
         };
@@ -2024,6 +2071,9 @@
             },
             formatUGX(n) {
                 return this.formatCurrency(n);
+            },
+            formatNumber(n) {
+                return (Number(n) || 0).toLocaleString();
             },
             today() {
                 return new Date().toISOString().split('T')[0];
@@ -3964,56 +4014,45 @@
                         label: `${e.date} ${e.time || ''} — ${e.category}: ${e.narration || '-'} — ${Utils.formatUGX(e.amount)}${e.reversed ? ' [REVERSED]' : ''}`
                     }));
                 } else if (cat === "MM_WITHDRAWAL") {
-                    document.getElementById("rev-client-name").innerText = "Mobile Money → Cash Withdrawals";
-                    document.getElementById("rev-client-nin").innerText = "MM-WDR";
-                    document.getElementById("rev-client-id").innerText = "MM-LEDGER";
-                    const totalWdr = (branch.mmWithdrawals || []).filter(w => !w.reversed).reduce((s, w) => s + (Number(w.amount) || 0), 0);
-                    document.getElementById("rev-balance-label").innerHTML = `Active Withdrawals: <span class="curr-code">UGX</span> <span id="rev-client-balance">${totalWdr.toLocaleString()}</span>`;
+                    document.getElementById("rev-client-name").innerText = "Mobile Money Withdrawals";
+                    document.getElementById("rev-client-nin").innerText = "MM → CASH";
+                    document.getElementById("rev-client-id").innerText = "MMW-LEDGER";
+                    const totalW = (branch.mmWithdrawals || []).filter(w => !w.reversed).reduce((s, w) => s + (Number(w.amount) || 0), 0);
+                    document.getElementById("rev-balance-label").innerHTML = `Active Withdrawals: <span class="curr-code">UGX</span> <span id="rev-client-balance">${totalW.toLocaleString()}</span>`;
                     items = (branch.mmWithdrawals || []).map((w, i) => ({
                         value: String(i),
                         disabled: !!w.reversed,
-                        label: `${w.date} ${w.time || ''} — ${w.channel} → Cash — ${Utils.formatUGX(w.amount)}${w.reversed ? ' [REVERSED]' : ''}`
+                        label: `${w.date} ${w.time || ''} — ${w.channel} to Cash — ${Utils.formatUGX(w.amount)}${w.reversed ? ' [REVERSED]' : ''}`
                     }));
                 }
 
                 select.innerHTML = items.length
                     ? items.map(it => `<option value="${it.value}" ${it.disabled ? 'disabled' : ''}>${it.label}</option>`).join('')
-                    : `<option value="">No transactions available</option>`;
-                RegionManager.syncLocaleUI();
+                    : `<option value="">No transactions available to reverse</option>`;
                 Utils.show(card);
             },
             searchReversalClients(query) {
-                if (!['Administrator', 'Manager'].includes(state.currentUser?.role)) {
-                    Utils.toast("Admin/Manager only");
-                    return;
-                }
                 const resultsDiv = document.getElementById("reversal-search-results");
                 if (!query) {
                     Utils.hide(resultsDiv);
                     return;
                 }
-                const cat = document.getElementById("reversal-category")?.value || "LOAN";
                 const branch = State.getActiveBranch();
                 const q = query.toLowerCase();
                 const filtered = branch.clients.filter(c =>
-                    c.name.toLowerCase().includes(q) ||
-                    (c.nin && c.nin.toLowerCase().includes(q))
+                    c.name.toLowerCase().includes(q) || (c.nin && c.nin.toLowerCase().includes(q))
                 );
-                resultsDiv.innerHTML = filtered.map(c => {
-                    const savBal = branch.savingsAccounts?.[c.nin]?.balance || 0;
-                    const info = cat === "SAVINGS" ? `Savings: ${Utils.formatUGX(savBal)}` : `Loan Bal: ${Utils.formatUGX(c.balance)}`;
-                    return `
-                        <div onclick="LoanOps.selectReversalClient('${c.id}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs">
-                            <strong>${c.name}</strong> (${c.nin || 'N/A'}) — ${info}
-                        </div>
-                    `;
-                }).join('') || `<div class="p-2 text-slate-400 text-xs">No clients found</div>`;
+                resultsDiv.innerHTML = filtered.map(c => `
+                    <div onclick="LoanOps.selectReversalClient('${c.id}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs">
+                        <strong>${c.name}</strong> (${c.nin || 'N/A'})
+                    </div>
+                `).join('');
                 Utils.show(resultsDiv);
             },
             searchReversalClientsDebounced: null,
-            selectReversalClient(clientId) {
+            selectReversalClient(id) {
                 const branch = State.getActiveBranch();
-                selectedReversalClient = branch.clients.find(c => c.id === clientId);
+                selectedReversalClient = branch.clients.find(c => c.id === id);
                 Utils.hide("reversal-search-results");
                 const searchInput = document.getElementById("reversal-search");
                 if (searchInput) searchInput.value = "";
@@ -4025,27 +4064,20 @@
                 document.getElementById("rev-client-id").innerText = selectedReversalClient.id;
 
                 const select = document.getElementById("rev-transaction-select");
-                if (cat === "SAVINGS") {
-                    const nin = selectedReversalClient.nin;
-                    const sav = branch.savingsAccounts?.[nin] || { balance: 0, history: [] };
-                    document.getElementById("rev-balance-label").innerHTML = `Savings Balance: <span class="curr-code">UGX</span> <span id="rev-client-balance">${(sav.balance || 0).toLocaleString()}</span>`;
-                    select.innerHTML = (sav.history || []).map((sh, i) => `
-                        <option value="${i}" ${sh.reversed ? 'disabled' : ''}>
-                            ${sh.date} ${sh.time || ''} — Savings ${sh.type} — ${Utils.formatUGX(sh.amount)}${sh.reversed ? ' [REVERSED]' : ''}
-                        </option>
-                    `).join('') || `<option value="">No savings transactions</option>`;
-                } else {
+                if (cat === "LOAN") {
                     document.getElementById("rev-balance-label").innerHTML = `Loan Balance: <span class="curr-code">UGX</span> <span id="rev-client-balance">${(selectedReversalClient.balance || 0).toLocaleString()}</span>`;
-                    select.innerHTML = (selectedReversalClient.history || []).map((h, i) => `
-                        <option value="${i}" ${h.reversed ? 'disabled' : ''}>
-                            ${h.date} ${h.time || ''} — ${h.type} (${h.channel || '-'}) — ${Utils.formatUGX(h.amount)}${h.reversed ? ' [REVERSED]' : ''}
-                        </option>
-                    `).join('') || `<option value="">No loan transactions</option>`;
+                    const txns = (selectedReversalClient.history || []).filter(h => !h.reversed && (h.type === 'Repayment' || h.type === 'Disbursement'));
+                    select.innerHTML = txns.map(t => `<option value="${t.id}">${t.date} ${t.time || ''} — ${t.type} (${t.channel || 'Loan'}) — ${Utils.formatUGX(t.amount)}</option>`).join('') || `<option value="">No reversible loan transactions</option>`;
+                } else if (cat === "SAVINGS") {
+                    const nin = selectedReversalClient.nin || selectedReversalClient.id;
+                    const sav = branch.savingsAccounts[nin] || { balance: 0, history: [] };
+                    document.getElementById("rev-balance-label").innerHTML = `Savings Balance: <span class="curr-code">UGX</span> <span id="rev-client-balance">${(sav.balance || 0).toLocaleString()}</span>`;
+                    const stxns = (sav.history || []).filter(h => !h.reversed && (h.type === 'DEPOSIT' || h.type === 'WITHDRAWAL'));
+                    select.innerHTML = stxns.map(t => `<option value="${t.id}">${t.date} ${t.time || ''} — Savings ${t.type} — ${Utils.formatUGX(t.amount)}</option>`).join('') || `<option value="">No reversible savings transactions</option>`;
                 }
-                RegionManager.syncLocaleUI();
                 Utils.show("reversal-card");
             },
-            logReversalRecord(entry) {
+            recordReversalEntry(entry) {
                 const branch = State.getActiveBranch();
                 if (!branch.reversals) branch.reversals = [];
                 branch.reversals.push({
@@ -4058,104 +4090,158 @@
                 });
             },
             executeReversal() {
-                if (!['Administrator', 'Manager'].includes(state.currentUser?.role)) {
-                    Utils.toast("Admin/Manager only");
+                const role = state.currentUser?.role;
+                if (!['Administrator', 'Manager'].includes(role)) {
+                    Utils.toast("Access Denied: Only Administrator or Manager can reverse transactions.");
                     return;
                 }
                 const cat = document.getElementById("reversal-category")?.value || "LOAN";
-                const idx = parseInt(document.getElementById("rev-transaction-select").value, 10);
+                const txnId = document.getElementById("rev-transaction-select").value;
                 const reason = document.getElementById("rev-reason").value.trim();
-                if (isNaN(idx) || !Validation.isRequired(reason, "Reason")) return;
-                if (!Utils.confirmAction("Execute this transaction reversal and record it in Daily Workspace?")) return;
+                if (!txnId) {
+                    Utils.toast("Select a transaction to reverse");
+                    return;
+                }
+                if (!Validation.isRequired(reason, "Reason")) return;
+                if (!Utils.confirmAction("Are you sure you want to reverse this transaction? This will update balances, cash position, and Daily Workspace.")) return;
 
                 const branch = State.getActiveBranch();
 
                 if (cat === "LOAN") {
                     if (!selectedReversalClient) return;
-                    const txn = selectedReversalClient.history[idx];
-                    if (!txn || txn.reversed) return;
+                    const txn = (selectedReversalClient.history || []).find(t => t.id === txnId);
+                    if (!txn || txn.reversed) {
+                        Utils.toast("Transaction not found or already reversed");
+                        return;
+                    }
+                    const amt = Number(txn.amount) || 0;
                     if (txn.type === 'Repayment') {
-                        selectedReversalClient.balance += txn.amount;
-                        CashPosition.deduct(txn.channel || 'Cash', txn.amount);
+                        selectedReversalClient.balance = (selectedReversalClient.balance || 0) + amt;
+                        CashPosition.deduct(txn.channel || 'Cash', amt);
                     } else if (txn.type === 'Disbursement') {
-                        const netDisb = (txn.principal || txn.amount) - (txn.processingFee || 0);
-                        selectedReversalClient.balance = Math.max(0, selectedReversalClient.balance - txn.amount);
-                        CashPosition.add('cash', netDisb);
+                        selectedReversalClient.balance = Math.max(0, (selectedReversalClient.balance || 0) - amt);
+                        const netDisb = (Number(txn.principal) || amt) - (Number(txn.processingFee) || 0);
+                        CashPosition.add('cash', Math.max(0, netDisb));
                     }
                     txn.reversed = true;
                     State.recalculateClientStatus(selectedReversalClient);
-                    this.logReversalRecord({
+                    this.recordReversalEntry({
                         category: "LOAN",
-                        sourceLabel: `${selectedReversalClient.name} (${selectedReversalClient.nin || 'N/A'})`,
-                        description: `Reversed Loan ${txn.type} (${txn.channel || 'Cash'}) — ${reason}`,
-                        amount: txn.amount
+                        clientName: selectedReversalClient.name,
+                        nin: selectedReversalClient.nin || "",
+                        description: `Reversed Loan ${txn.type} (${txn.channel || 'Loan'})`,
+                        detail: `Reason: ${reason}`,
+                        amount: amt,
+                        isNegative: true
                     });
-                } else if (cat === "BANKING") {
-                    const b = branch.bankings?.[idx];
-                    if (!b || b.reversed) return;
-                    b.reversed = true;
-                    CashPosition.add('cash', Number(b.amount) || 0);
-                    this.logReversalRecord({
-                        category: "BANKING",
-                        sourceLabel: `${b.name} (${b.ref || 'No Ref'})`,
-                        description: `Reversed Banking Deposit — ${reason}`,
-                        amount: b.amount
-                    });
+                    Audit.log("LOAN_TRANSACTION_REVERSED", { client: selectedReversalClient.name, txnId, type: txn.type, amount: amt, reason });
+                    this.selectReversalClient(selectedReversalClient.id);
                 } else if (cat === "SAVINGS") {
                     if (!selectedReversalClient) return;
-                    const nin = selectedReversalClient.nin;
-                    const sav = branch.savingsAccounts?.[nin];
-                    const sh = sav?.history?.[idx];
-                    if (!sh || sh.reversed) return;
-                    const amt = Number(sh.amount) || 0;
-                    if (sh.type === "DEPOSIT") {
-                        sav.balance = Math.max(0, (sav.balance || 0) - amt);
+                    const nin = selectedReversalClient.nin || selectedReversalClient.id;
+                    const sav = branch.savingsAccounts[nin];
+                    const stxn = sav?.history?.find(t => t.id === txnId);
+                    if (!stxn || stxn.reversed) {
+                        Utils.toast("Savings transaction not found or already reversed");
+                        return;
+                    }
+                    const amt = Number(stxn.amount) || 0;
+                    if (stxn.type === 'DEPOSIT') {
+                        if ((sav.balance || 0) < amt) {
+                            Utils.toast("Cannot reverse deposit: insufficient savings balance.");
+                            return;
+                        }
+                        sav.balance -= amt;
                         CashPosition.deduct('cash', amt);
-                    } else if (sh.type === "WITHDRAWAL") {
+                    } else if (stxn.type === 'WITHDRAWAL') {
                         sav.balance = (sav.balance || 0) + amt;
                         CashPosition.add('cash', amt);
                     }
-                    sh.reversed = true;
-                    this.logReversalRecord({
+                    stxn.reversed = true;
+                    this.recordReversalEntry({
                         category: "SAVINGS",
-                        sourceLabel: `${selectedReversalClient.name} (${nin || 'N/A'})`,
-                        description: `Reversed Savings ${sh.type} — ${reason}`,
-                        amount: amt
+                        clientName: selectedReversalClient.name,
+                        nin: selectedReversalClient.nin || "",
+                        description: `Reversed Savings ${stxn.type}`,
+                        detail: `Reason: ${reason}`,
+                        amount: amt,
+                        isNegative: true
                     });
-                } else if (cat === "EXPENSE") {
-                    const exp = branch.expenses?.[idx];
-                    if (!exp || exp.reversed) return;
-                    exp.reversed = true;
-                    CashPosition.add('cash', Number(exp.amount) || 0);
-                    this.logReversalRecord({
-                        category: "EXPENSE",
-                        sourceLabel: exp.category,
-                        description: `Reversed Expense (${exp.narration || '-'}) — ${reason}`,
-                        amount: exp.amount
-                    });
-                } else if (cat === "MM_WITHDRAWAL") {
-                    const wdr = branch.mmWithdrawals?.[idx];
-                    if (!wdr || wdr.reversed) return;
-                    wdr.reversed = true;
-                    const amt = Number(wdr.amount) || 0;
-                    state.cashPosition.cash = Math.max(0, (state.cashPosition.cash || 0) - amt);
-                    if (wdr.channel === 'MTN') {
-                        state.cashPosition.mtn = (state.cashPosition.mtn || 0) + amt;
-                    } else if (wdr.channel === 'AIRTEL') {
-                        state.cashPosition.airtel = (state.cashPosition.airtel || 0) + amt;
+                    Audit.log("SAVINGS_TRANSACTION_REVERSED", { client: selectedReversalClient.name, txnId, type: stxn.type, amount: amt, reason });
+                    this.selectReversalClient(selectedReversalClient.id);
+                } else if (cat === "BANKING") {
+                    const idx = parseInt(txnId, 10);
+                    const b = branch.bankings?.[idx];
+                    if (!b || b.reversed) {
+                        Utils.toast("Banking entry not found or already reversed");
+                        return;
                     }
-                    this.logReversalRecord({
-                        category: "MM_WITHDRAWAL",
-                        sourceLabel: `${wdr.channel} → Cash`,
-                        description: `Reversed MM Withdrawal — ${reason}`,
-                        amount: amt
+                    const amt = Number(b.amount) || 0;
+                    b.reversed = true;
+                    CashPosition.add('cash', amt);
+                    this.recordReversalEntry({
+                        category: "BANKING",
+                        clientName: b.name || "Bank Deposit",
+                        nin: b.ref || "",
+                        description: `Reversed Banking Deposit (${b.name})`,
+                        detail: `Reason: ${reason}`,
+                        amount: amt,
+                        isNegative: false
                     });
+                    Audit.log("BANKING_REVERSED", { bank: b.name, amount: amt, reason });
+                    this.onCategoryChange();
+                } else if (cat === "EXPENSE") {
+                    const idx = parseInt(txnId, 10);
+                    const e = branch.expenses?.[idx];
+                    if (!e || e.reversed) {
+                        Utils.toast("Expense entry not found or already reversed");
+                        return;
+                    }
+                    const amt = Number(e.amount) || 0;
+                    e.reversed = true;
+                    CashPosition.add('cash', amt);
+                    this.recordReversalEntry({
+                        category: "EXPENSE",
+                        clientName: e.category || "Expense",
+                        nin: e.narration || "",
+                        description: `Reversed Expense (${e.category})`,
+                        detail: `Reason: ${reason}`,
+                        amount: amt,
+                        isNegative: false
+                    });
+                    Audit.log("EXPENSE_REVERSED", { category: e.category, amount: amt, reason });
+                    this.onCategoryChange();
+                } else if (cat === "MM_WITHDRAWAL") {
+                    const idx = parseInt(txnId, 10);
+                    const w = branch.mmWithdrawals?.[idx];
+                    if (!w || w.reversed) {
+                        Utils.toast("Mobile money withdrawal not found or already reversed");
+                        return;
+                    }
+                    const amt = Number(w.amount) || 0;
+                    if ((state.cashPosition.cash || 0) < amt) {
+                        Utils.toast("Cannot reverse MM withdrawal: insufficient Cash at Hand.");
+                        return;
+                    }
+                    w.reversed = true;
+                    CashPosition.deduct('cash', amt);
+                    CashPosition.add(w.channel === 'AIRTEL' ? 'airtel' : 'mtn', amt);
+                    this.recordReversalEntry({
+                        category: "MM_WITHDRAWAL",
+                        clientName: `${w.channel} → Cash`,
+                        nin: "MM REVERSAL",
+                        description: `Reversed MM Withdrawal (${w.channel})`,
+                        detail: `Reason: ${reason}`,
+                        amount: amt,
+                        isNegative: true
+                    });
+                    Audit.log("MM_WITHDRAWAL_REVERSED", { channel: w.channel, amount: amt, reason });
+                    this.onCategoryChange();
                 }
 
                 document.getElementById("rev-reason").value = "";
                 State.save();
                 UI.refreshAll();
-                this.onCategoryChange();
                 Utils.toast("Transaction reversed & logged in Daily Workspace");
             }
         };
@@ -4166,55 +4252,62 @@
         // ============================================================
         const Clients = {
             renderMasterDirectory() {
+                const query = (document.getElementById("master-client-search")?.value || "").toLowerCase();
+                const branch = State.getActiveBranch();
                 const tbody = document.getElementById("master-clients-table-body");
                 if (!tbody) return;
-                const branch = State.getActiveBranch();
-                const filter = (document.getElementById("master-client-search")?.value || "").toLowerCase();
-                const uniqueMap = new Map();
-                state.globalClients.forEach(gc => uniqueMap.set(gc.nin, { ...gc }));
-                branch.clients.forEach(bc => {
-                    if (bc.nin) {
-                        const existing = uniqueMap.get(bc.nin) || {};
-                        uniqueMap.set(bc.nin, { ...existing, ...bc });
-                    }
-                });
-                const list = Array.from(uniqueMap.values()).filter(c =>
-                    !filter ||
-                    (c.name && c.name.toLowerCase().includes(filter)) ||
-                    (c.nin && c.nin.toLowerCase().includes(filter)) ||
-                    (c.phone && c.phone.includes(filter)) ||
-                    (c.guarantor && c.guarantor.toLowerCase().includes(filter))
+                const filtered = state.globalClients.filter(c =>
+                    (c.name && c.name.toLowerCase().includes(query)) ||
+                    (c.nin && c.nin.toLowerCase().includes(query)) ||
+                    (c.phone && c.phone.includes(query)) ||
+                    (c.guarantor && c.guarantor.toLowerCase().includes(query))
                 );
-                tbody.innerHTML = list.map(c => {
-                    const savBal = branch.savingsAccounts?.[c.nin]?.balance || 0;
-                    const docCount = (state.clientDocuments[c.nin] || []).length;
-                    const officer = branch.officers.find(o => o.id === c.officerId)?.name || 'Unassigned';
-                    const catDisplay = c.category === 'BODABODA' ? `<span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold text-[10px]">BODABODA${c.plate ? ' (' + c.plate + ')' : ''}</span>` : `<span class="text-slate-600">${c.category || 'OTHERS'}</span>`;
+                tbody.innerHTML = filtered.map(c => {
+                    const clientLoans = branch.clients.filter(bc => bc.nin && bc.nin.toUpperCase() === (c.nin || "").toUpperCase());
+                    const latestLoan = clientLoans.length > 0 ? clientLoans[clientLoans.length - 1] : null;
+                    const officer = latestLoan ? branch.officers.find(o => o.id === latestLoan.officerId) : null;
+                    const savBal = (branch.savingsAccounts[c.nin]?.balance || 0);
+                    const docsCount = (state.clientDocuments[c.nin] || []).length;
                     return `
                         <tr class="hover:bg-slate-50">
-                            <td class="p-3 font-mono font-bold text-purple-800">${c.nin || '-'}</td>
-                            <td class="p-3"><strong>${c.name || '-'}</strong><br><span class="text-slate-500">${c.phone || '-'}</span></td>
-                            <td class="p-3">${c.guarantor || '-'}<br><span class="text-[10px] text-slate-400">${c.guarantorPhone || ''}</span></td>
-                            <td class="p-3">${catDisplay}</td>
-                            <td class="p-3 font-semibold text-slate-700">${officer}</td>
+                            <td class="p-3 font-mono font-bold text-purple-700">${c.nin || 'N/A'}</td>
+                            <td class="p-3">
+                                <div class="font-bold">${c.name}</div>
+                                <div class="text-[11px] text-slate-500">${c.phone || ''}</div>
+                            </td>
+                            <td class="p-3">
+                                <div class="font-semibold">${c.guarantor || '-'}</div>
+                                <div class="text-[10px] text-slate-400">${c.guarantorPhone || ''}</div>
+                            </td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-100 text-slate-700">${c.category || 'OTHERS'}</span></td>
+                            <td class="p-3 text-slate-600">${officer ? officer.name : 'Unassigned'}</td>
                             <td class="p-3 font-mono font-bold text-emerald-700">${Utils.formatUGX(savBal)}</td>
-                            <td class="p-3"><button onclick="Clients.openDocumentModal('${c.nin}', '${(c.name || '').replace(/'/g, "\\'")}')" class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-[10px] font-bold"><i class="fa-solid fa-folder"></i> ${docCount}</button></td>
+                            <td class="p-3">
+                                <button onclick="Clients.openDocumentModal('${c.nin}', '${c.name.replace(/'/g, "\\'")}')" class="bg-purple-100 text-purple-700 px-2 py-1 rounded text-[10px] font-bold">
+                                    <i class="fa-solid fa-folder"></i> (${docsCount})
+                                </button>
+                            </td>
                             <td class="p-3 text-right">
                                 <button onclick="Clients.deleteClient('${c.nin}')" class="bg-red-600 text-white px-2 py-1 rounded text-[10px] font-bold">Delete</button>
                             </td>
                         </tr>
                     `;
-                }).join('') || `<tr><td colspan="8" class="p-4 text-center text-slate-400">No clients found</td></tr>`;
+                }).join('') || `<tr><td colspan="8" class="p-4 text-center text-slate-400">No clients</td></tr>`;
             },
             renderMasterDirectoryDebounced: null,
             deleteClient(nin) {
-                if (!['Administrator', 'Manager'].includes(state.currentUser?.role)) {
-                    Utils.toast("Admin/Manager only");
+                if (state.currentUser?.role !== 'Administrator') {
+                    Utils.toast("Access Denied: Admin only");
+                    return;
+                }
+                const branch = State.getActiveBranch();
+                const hasActive = branch.clients.some(c => c.nin && c.nin.toUpperCase() === nin.toUpperCase() && (c.balance || 0) > 0);
+                if (hasActive) {
+                    Utils.toast("Cannot delete client with active loan balance");
                     return;
                 }
                 if (!Utils.confirmAction("Delete client?")) return;
                 state.globalClients = state.globalClients.filter(c => c.nin !== nin);
-                State.getActiveBranch().clients = State.getActiveBranch().clients.filter(c => c.nin !== nin);
                 State.save();
                 this.renderMasterDirectory();
                 Utils.toast("Client deleted");
@@ -4228,12 +4321,13 @@
             uploadDocument() {
                 if (!activeDocNin) return;
                 const fileInput = document.getElementById("client-file-input");
-                const label = document.getElementById("client-file-label").value.trim() || "Document";
-                const file = fileInput.files[0];
-                if (!file) {
-                    Utils.toast("Choose file");
+                const labelInput = document.getElementById("client-file-label");
+                if (!fileInput.files.length) {
+                    Utils.toast("Select a file");
                     return;
                 }
+                const file = fileInput.files[0];
+                const label = labelInput.value.trim() || file.name;
                 const reader = new FileReader();
                 reader.onload = e => {
                     if (!state.clientDocuments[activeDocNin]) state.clientDocuments[activeDocNin] = [];
@@ -4241,30 +4335,43 @@
                         id: Utils.generateId("doc"),
                         label,
                         name: file.name,
-                        date: Utils.today(),
-                        dataUrl: e.target.result
+                        dataUrl: e.target.result,
+                        date: Utils.today()
                     });
                     State.save();
                     this.renderDocumentsList();
                     this.renderMasterDirectory();
                     fileInput.value = "";
-                    document.getElementById("client-file-label").value = "";
-                    Utils.toast("Uploaded");
+                    labelInput.value = "";
+                    Utils.toast("Document uploaded");
                 };
                 reader.readAsDataURL(file);
             },
             renderDocumentsList() {
-                const list = document.getElementById("doc-modal-list");
+                const container = document.getElementById("doc-modal-list");
                 const docs = state.clientDocuments[activeDocNin] || [];
-                list.innerHTML = docs.map(d => `
-                    <div class="flex justify-between items-center p-2.5 bg-slate-50 border rounded-lg text-xs">
-                        <div><strong>${d.label}</strong><br><span class="text-[10px] text-slate-400">${d.date}</span></div>
-                        <a href="${d.dataUrl}" download="${d.name}" class="bg-blue-600 text-white px-2.5 py-1 rounded text-[10px]">Download</a>
+                container.innerHTML = docs.map(d => `
+                    <div class="bg-slate-50 border p-2.5 rounded-xl flex justify-between items-center text-xs">
+                        <div>
+                            <div class="font-bold">${d.label}</div>
+                            <div class="text-[10px] text-slate-500">${d.date} — ${d.name}</div>
+                        </div>
+                        <div class="flex gap-2">
+                            <a href="${d.dataUrl}" download="${d.name}" class="bg-blue-600 text-white px-2.5 py-1 rounded text-[10px] font-bold">View/Download</a>
+                            <button onclick="Clients.deleteDocument('${d.id}')" class="bg-red-600 text-white px-2 py-1 rounded text-[10px] font-bold">✕</button>
+                        </div>
                     </div>
-                `).join('') || `<p class="text-slate-400 text-xs text-center">No documents</p>`;
+                `).join('') || `<p class="text-slate-400 text-center py-4">No documents uploaded</p>`;
+            },
+            deleteDocument(docId) {
+                if (!activeDocNin) return;
+                state.clientDocuments[activeDocNin] = (state.clientDocuments[activeDocNin] || []).filter(d => d.id !== docId);
+                State.save();
+                this.renderDocumentsList();
+                this.renderMasterDirectory();
             }
         };
-        Clients.renderMasterDirectoryDebounced = Utils.debounce(() => Clients.renderMasterDirectory(), 240);
+        Clients.renderMasterDirectoryDebounced = Utils.debounce(() => Clients.renderMasterDirectory(), 220);
 
         // ============================================================
         // DAILY WORKSPACE
@@ -4276,159 +4383,170 @@
             },
             render() {
                 const dateEl = document.getElementById("daily-workspace-date");
-                if (!dateEl.value) dateEl.value = Utils.today();
-                const targetDate = dateEl.value;
+                if (dateEl && !dateEl.value) dateEl.value = Utils.today();
+                const targetDate = dateEl ? dateEl.value : Utils.today();
                 const search = (document.getElementById("daily-workspace-search")?.value || "").toLowerCase();
                 const branch = State.getActiveBranch();
+                const tbody = document.getElementById("daily-workspace-table-body");
+                if (!tbody) return;
+
                 let activities = [];
                 let totalCol = 0, totalDisb = 0, totalExp = 0, totalBank = 0;
 
-                branch.clients.forEach(c => {
-                    (c.history || []).forEach(h => {
+                (branch.clients || []).forEach(c => {
+                    (c.history || []).forEach((h, idx) => {
                         if (h.date === targetDate) {
-                            const ts = h.timestamp || Date.parse(`${h.date} ${h.time || '00:00:00'}`) || 0;
-                            if (h.type === 'Repayment') {
-                                activities.push({
-                                    timestamp: ts,
-                                    timeStr: h.time || '',
-                                    type: 'Repayment',
-                                    source: `${c.name} (${c.nin || ''})`,
-                                    desc: 'Loan Repayment',
-                                    detail: h.channel || 'Cash',
-                                    amount: h.amount || 0,
-                                    isCredit: true
-                                });
-                                totalCol += (h.amount || 0);
-                            } else if (h.type === 'Disbursement') {
-                                activities.push({
-                                    timestamp: ts,
-                                    timeStr: h.time || '',
-                                    type: 'Disbursement',
-                                    source: `${c.name} (${c.nin || ''})`,
-                                    desc: `Loan (${c.category || 'OTHERS'})`,
-                                    detail: `Fee: ${Utils.formatUGX(h.processingFee || 0)}`,
-                                    amount: h.amount || 0,
-                                    isCredit: false
-                                });
-                                totalDisb += (h.amount || 0);
-                            }
-                        }
-                    });
-                });
-
-                (branch.expenses || []).forEach(e => {
-                    if (e.date === targetDate) {
-                        const ts = e.timestamp || Date.parse(`${e.date} ${e.time || '00:00:00'}`) || 0;
-                        activities.push({
-                            timestamp: ts,
-                            timeStr: e.time || '',
-                            type: 'Expense',
-                            source: e.category || 'Expense',
-                            desc: e.narration || '-',
-                            detail: 'Cash Out',
-                            amount: e.amount || 0,
-                            isCredit: false
-                        });
-                        totalExp += (e.amount || 0);
-                    }
-                });
-
-                (branch.bankings || []).forEach(b => {
-                    if (b.date === targetDate) {
-                        const ts = b.timestamp || Date.parse(`${b.date} ${b.time || '00:00:00'}`) || 0;
-                        activities.push({
-                            timestamp: ts,
-                            timeStr: b.time || '',
-                            type: 'Banking',
-                            source: b.name || 'Bank',
-                            desc: `Ref: ${b.ref || '-'}`,
-                            detail: 'Bank Deposit',
-                            amount: b.amount || 0,
-                            isCredit: false
-                        });
-                        totalBank += (b.amount || 0);
-                    }
-                });
-
-                Object.entries(branch.savingsAccounts || {}).forEach(([nin, sav]) => {
-                    const cli = branch.clients.find(c => c.nin === nin) || state.globalClients.find(c => c.nin === nin);
-                    const cLabel = cli ? `${cli.name} (${nin})` : nin;
-                    (sav.history || []).forEach(sh => {
-                        if (sh.date === targetDate) {
-                            const ts = sh.timestamp || Date.parse(`${sh.date} ${sh.time || '00:00:00'}`) || 0;
-                            const isDep = sh.type === 'DEPOSIT';
+                            const amt = Number(h.amount) || 0;
+                            const isRep = h.type === 'Repayment';
+                            const isDisb = h.type === 'Disbursement';
+                            if (isRep && !h.reversed) totalCol += amt;
+                            if (isDisb && !h.reversed) totalDisb += amt;
                             activities.push({
-                                timestamp: ts,
-                                timeStr: sh.time || '',
-                                type: `Savings ${sh.type}`,
-                                source: cLabel,
-                                desc: isDep ? 'Savings Deposit' : 'Savings Withdrawal',
-                                detail: 'Cash',
-                                amount: sh.amount || 0,
-                                isCredit: isDep
+                                time: h.time || '00:00:00',
+                                sortTs: Number(h.timestamp) || (idx + 1),
+                                type: isRep ? 'COLLECTION' : 'DISBURSEMENT',
+                                client: c.name,
+                                desc: isRep ? `Repayment (${h.channel || 'Cash'})` : `Loan Disbursed (Prin: ${Utils.formatUGX(h.principal || 0)}, Fee: ${Utils.formatUGX(h.processingFee || 0)})`,
+                                detail: h.channel || c.nin || '',
+                                amount: amt,
+                                isNegative: false,
+                                reversed: !!h.reversed
                             });
                         }
                     });
                 });
 
-                (branch.mmWithdrawals || []).forEach(w => {
+                Object.keys(branch.savingsAccounts || {}).forEach(nin => {
+                    const sav = branch.savingsAccounts[nin];
+                    const clientInfo = state.globalClients.find(gc => gc.nin === nin) || branch.clients.find(bc => bc.nin === nin);
+                    (sav.history || []).forEach((sh, idx) => {
+                        if (sh.date === targetDate) {
+                            const amt = Number(sh.amount) || 0;
+                            const isDep = sh.type === 'DEPOSIT';
+                            activities.push({
+                                time: sh.time || '00:00:00',
+                                sortTs: Number(sh.timestamp) || (1000 + idx),
+                                type: 'SAVINGS',
+                                client: clientInfo ? clientInfo.name : nin,
+                                desc: `Savings ${sh.type}`,
+                                detail: nin,
+                                amount: amt,
+                                isNegative: !isDep,
+                                reversed: !!sh.reversed
+                            });
+                        }
+                    });
+                });
+
+                (branch.expenses || []).forEach((e, idx) => {
+                    if (e.date === targetDate) {
+                        const amt = Number(e.amount) || 0;
+                        if (!e.reversed) totalExp += amt;
+                        activities.push({
+                            time: e.time || '00:00:00',
+                            sortTs: Number(e.timestamp) || (2000 + idx),
+                            type: 'EXPENSE',
+                            client: e.category,
+                            desc: e.narration || '-',
+                            detail: e.category,
+                            amount: amt,
+                            isNegative: true,
+                            reversed: !!e.reversed
+                        });
+                    }
+                });
+
+                (branch.bankings || []).forEach((b, idx) => {
+                    if (b.date === targetDate) {
+                        const amt = Number(b.amount) || 0;
+                        if (!b.reversed) totalBank += amt;
+                        activities.push({
+                            time: b.time || '00:00:00',
+                            sortTs: Number(b.timestamp) || (3000 + idx),
+                            type: 'BANKING',
+                            client: b.name,
+                            desc: `Bank Deposit (${b.ref || 'No Ref'})`,
+                            detail: b.accNo || '',
+                            amount: amt,
+                            isNegative: false,
+                            reversed: !!b.reversed
+                        });
+                    }
+                });
+
+                (branch.mmWithdrawals || []).forEach((w, idx) => {
                     if (w.date === targetDate) {
-                        const ts = w.timestamp || Date.parse(`${w.date} ${w.time || '00:00:00'}`) || 0;
+                        const amt = Number(w.amount) || 0;
                         activities.push({
-                            timestamp: ts,
-                            timeStr: w.time || '',
-                            type: 'MM Withdrawal',
-                            source: `${w.channel} Wallet`,
-                            desc: 'Withdraw MM → Cash at Hand',
+                            time: w.time || '00:00:00',
+                            sortTs: Number(w.timestamp) || (4000 + idx),
+                            type: 'MM WITHDRAWAL',
+                            client: `${w.channel} → Cash`,
+                            desc: `Withdrew from ${w.channel} to Cash at Hand`,
                             detail: `By ${w.by || 'Staff'}`,
-                            amount: w.amount || 0,
-                            isCredit: true
+                            amount: amt,
+                            isNegative: false,
+                            reversed: !!w.reversed
                         });
                     }
                 });
 
-                (branch.reversals || []).forEach(rev => {
-                    if (rev.date === targetDate) {
-                        const ts = rev.timestamp || Date.parse(`${rev.date} ${rev.time || '00:00:00'}`) || 0;
+                (branch.reversals || []).forEach((r, idx) => {
+                    if (r.date === targetDate) {
+                        const amt = Number(r.amount) || 0;
                         activities.push({
-                            timestamp: ts,
-                            timeStr: rev.time || '',
-                            type: `Reversal (${rev.category})`,
-                            source: rev.sourceLabel || '-',
-                            desc: rev.description || 'Transaction Reversal',
-                            detail: `By ${rev.by || 'Admin'}`,
-                            amount: rev.amount || 0,
-                            isCredit: false,
-                            isReversal: true
+                            time: r.time || '00:00:00',
+                            sortTs: Number(r.timestamp) || (5000 + idx),
+                            type: 'REVERSAL',
+                            client: r.clientName || 'Reversal',
+                            desc: r.description || 'Transaction Reversed',
+                            detail: `${r.detail || ''} (By ${r.by || 'Admin'})`,
+                            amount: amt,
+                            isNegative: !!r.isNegative,
+                            reversed: false
                         });
                     }
                 });
 
-                activities.sort((a, b) => a.timestamp - b.timestamp);
+                activities.sort((a, b) => a.sortTs - b.sortTs);
 
-                const filtered = activities.filter(act =>
-                    !search ||
-                    (act.source && act.source.toLowerCase().includes(search)) ||
-                    (act.desc && act.desc.toLowerCase().includes(search)) ||
-                    (act.type && act.type.toLowerCase().includes(search))
-                );
+                if (search) {
+                    activities = activities.filter(a =>
+                        (a.client || "").toLowerCase().includes(search) ||
+                        (a.desc || "").toLowerCase().includes(search) ||
+                        (a.type || "").toLowerCase().includes(search) ||
+                        (a.detail || "").toLowerCase().includes(search)
+                    );
+                }
 
                 document.getElementById("dw-total-collections").innerText = Utils.formatUGX(totalCol);
                 document.getElementById("dw-total-disbursements").innerText = Utils.formatUGX(totalDisb);
                 document.getElementById("dw-total-expenses").innerText = Utils.formatUGX(totalExp);
                 document.getElementById("dw-total-bankings").innerText = Utils.formatUGX(totalBank);
 
-                const tbody = document.getElementById("daily-workspace-table-body");
-                tbody.innerHTML = filtered.map((act, idx) => `
-                    <tr class="hover:bg-slate-50 ${act.isReversal ? 'bg-rose-50/60' : ''}">
-                        <td class="p-3 font-mono text-[11px] font-bold">#${idx + 1} <span class="text-slate-400 font-normal">${act.timeStr || ''}</span></td>
-                        <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${act.isReversal ? 'bg-rose-100 text-rose-800' : (act.isCredit ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800')}">${act.type}</span></td>
-                        <td class="p-3 font-semibold">${act.source}</td>
-                        <td class="p-3 text-slate-600">${act.desc}</td>
-                        <td class="p-3 text-slate-500">${act.detail}</td>
-                        <td class="p-3 text-right font-mono font-bold ${act.isReversal ? 'text-rose-700' : (act.isCredit ? 'text-emerald-700' : 'text-slate-800')}">${Utils.formatUGX(act.amount)}</td>
-                    </tr>
-                `).join('') || `<tr><td colspan="6" class="p-6 text-center text-slate-400">No activities on ${targetDate}</td></tr>`;
+                tbody.innerHTML = activities.map((act, index) => {
+                    let badgeClass = "bg-slate-100 text-slate-800";
+                    if (act.type === 'COLLECTION') badgeClass = "bg-emerald-100 text-emerald-800";
+                    if (act.type === 'DISBURSEMENT') badgeClass = "bg-indigo-100 text-indigo-800";
+                    if (act.type === 'EXPENSE') badgeClass = "bg-rose-100 text-rose-800";
+                    if (act.type === 'BANKING') badgeClass = "bg-blue-100 text-blue-800";
+                    if (act.type === 'SAVINGS') badgeClass = "bg-teal-100 text-teal-800";
+                    if (act.type === 'MM WITHDRAWAL') badgeClass = "bg-amber-100 text-amber-800";
+                    if (act.type === 'REVERSAL') badgeClass = "bg-fuchsia-100 text-fuchsia-800";
+
+                    return `
+                        <tr class="hover:bg-slate-50 ${act.reversed ? 'opacity-50 line-through' : ''}">
+                            <td class="p-3 font-mono text-[11px]">${index + 1}. ${act.time}</td>
+                            <td class="p-3"><span class="px-2 py-0.5 rounded font-bold text-[10px] ${badgeClass}">${act.type}</span>${act.reversed ? ' <span class="text-[9px] font-bold text-rose-600 no-underline">[REVERSED]</span>' : ''}</td>
+                            <td class="p-3 font-bold">${act.client}</td>
+                            <td class="p-3">${act.desc}</td>
+                            <td class="p-3 text-slate-500">${act.detail}</td>
+                            <td class="p-3 text-right font-mono font-bold ${act.isNegative || act.type === 'REVERSAL' ? 'text-rose-600' : 'text-slate-900'}">
+                                ${act.isNegative ? '-' : ''}${Utils.formatUGX(act.amount)}
+                            </td>
+                        </tr>
+                    `;
+                }).join('') || `<tr><td colspan="6" class="p-6 text-center text-slate-400">No activities recorded on ${targetDate}</td></tr>`;
             },
             renderDebounced: null
         };
@@ -4440,105 +4558,101 @@
         const Staff = {
             populateDropdowns() {
                 const branch = State.getActiveBranch();
-                const sel = document.getElementById("disburse-officer-select");
-                const ageFilter = document.getElementById("aging-officer-filter");
-                const histSelect = document.getElementById("staff-history-select");
-
-                if (sel) sel.innerHTML = branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('') || `<option value="">-- Add Staff First --</option>`;
-                if (ageFilter) ageFilter.innerHTML = `<option value="ALL">-- ALL STAFF --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
-                if (histSelect) histSelect.innerHTML = `<option value="">-- Select Staff --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+                const opts = `<option value="">-- Select Staff --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+                ["disburse-officer-select", "staff-history-select"].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.innerHTML = opts;
+                });
+                const filterSel = document.getElementById("aging-officer-filter");
+                if (filterSel) {
+                    filterSel.innerHTML = `<option value="ALL">-- ALL STAFF --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+                }
             },
             registerOfficer() {
                 const name = document.getElementById("officer-add-name").value.trim();
                 const phone = RegionManager.normalizePhone(document.getElementById("officer-add-phone").value);
-                if (!Validation.isRequired(name, "Name") || !Validation.isValidPhone(phone) || Validation.isDuplicatePhone(phone)) return;
+                if (!Validation.isRequired(name, "Staff Name") || !Validation.isValidPhone(phone) || Validation.isDuplicatePhone(phone)) return;
                 const branch = State.getActiveBranch();
-                branch.officers.push({ id: Utils.generateId("off"), name, phone });
+                if (branch.officers.some(o => o.name.toLowerCase() === name.toLowerCase())) {
+                    Utils.toast("Staff already exists");
+                    return;
+                }
+                branch.officers.push({ id: Utils.generateId("off"), name, phone, status: 'Active' });
                 State.save();
                 this.populateDropdowns();
                 this.renderHub();
                 document.getElementById("officer-add-name").value = "";
                 document.getElementById("officer-add-phone").value = "";
-                Utils.toast("Staff registered");
+                Utils.toast("Staff added");
+            },
+            renderHistoricalRecords() {
+                const offId = document.getElementById("staff-history-select").value;
+                const dateVal = document.getElementById("staff-history-date").value;
+                const container = document.getElementById("staff-history-results");
+                if (!offId) {
+                    Utils.toast("Select a staff member");
+                    return;
+                }
+                if (!dateVal) {
+                    Utils.toast("Select a date");
+                    return;
+                }
+                const branch = State.getActiveBranch();
+                const officer = branch.officers.find(o => o.id === offId);
+                const offClients = branch.clients.filter(c => c.officerId === offId);
+                let dayCol = 0;
+                const rows = [];
+                offClients.forEach(c => {
+                    (c.history || []).forEach(h => {
+                        if (h.date === dateVal && h.type === 'Repayment') {
+                            const amt = Number(h.amount) || 0;
+                            dayCol += amt;
+                            rows.push(`<div class="flex justify-between p-2 bg-slate-50 rounded border text-xs">
+                                <span><strong>${c.name}</strong> (${h.channel || 'Cash'})</span>
+                                <span class="font-mono font-bold text-emerald-700">${Utils.formatUGX(amt)}</span>
+                            </div>`);
+                        }
+                    });
+                });
+                container.innerHTML = `
+                    <div class="flex justify-between items-center font-bold text-xs bg-slate-800 text-white p-2.5 rounded-lg">
+                        <span>${officer?.name || 'Staff'} — Collections on ${dateVal}</span>
+                        <span class="text-emerald-400 font-mono">${Utils.formatUGX(dayCol)}</span>
+                    </div>
+                    <div class="space-y-1.5 max-h-48 overflow-y-auto">${rows.join('') || `<p class="text-xs text-slate-400 py-2 text-center">No collections found for this staff on ${dateVal}.</p>`}</div>
+                `;
+                Utils.show(container);
             },
             renderHub() {
                 const branch = State.getActiveBranch();
                 const container = document.getElementById("officers-container");
                 if (!container) return;
-                const todayStr = Utils.today();
                 container.innerHTML = branch.officers.map(o => {
-                    const myClients = branch.clients.filter(c => c.officerId === o.id);
-                    const totalPortfolio = myClients.reduce((s, c) => s + (c.balance || 0), 0);
-                    const todayCol = myClients.reduce((s, c) => s + (c.history || []).filter(h => h.type === 'Repayment' && h.date === todayStr).reduce((x, h) => x + h.amount, 0), 0);
+                    const offClients = branch.clients.filter(c => c.officerId === o.id);
+                    const totalLoans = offClients.reduce((s, c) => s + (c.balance || 0), 0);
+                    let totalCollected = 0;
+                    offClients.forEach(c => {
+                        (c.history || []).forEach(h => {
+                            if (h.type === 'Repayment' && !h.reversed) totalCollected += (h.amount || 0);
+                        });
+                    });
                     return `
-                        <div class="bg-white border rounded-xl p-4 space-y-2 shadow-sm text-xs">
-                            <div class="flex justify-between items-start border-b pb-2">
-                                <div><div class="font-bold text-slate-900 text-sm">${o.name}</div><div class="text-slate-500">${o.phone}</div></div>
-                                <span class="bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded">${myClients.length} Clients</span>
+                        <div class="bg-white p-4 rounded-xl border shadow-sm space-y-2 text-xs">
+                            <div class="flex justify-between items-center border-b pb-2">
+                                <span class="font-bold text-sm">${o.name}</span>
+                                <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-semibold">${o.phone || 'No Phone'}</span>
                             </div>
-                            <div class="grid grid-cols-2 gap-2 pt-1">
-                                <div><span class="text-slate-500 block text-[10px]">Portfolio</span><strong class="text-blue-700">${Utils.formatUGX(totalPortfolio)}</strong></div>
-                                <div><span class="text-slate-500 block text-[10px]">Today Collected</span><strong class="text-emerald-700">${Utils.formatUGX(todayCol)}</strong></div>
-                            </div>
+                            <div class="flex justify-between"><span>Portfolio Balance:</span> <strong class="text-blue-700">${Utils.formatUGX(totalLoans)}</strong></div>
+                            <div class="flex justify-between"><span>Total Collected:</span> <strong class="text-emerald-700">${Utils.formatUGX(totalCollected)}</strong></div>
+                            <div class="flex justify-between text-slate-500"><span>Clients:</span> <span>${offClients.length}</span></div>
                         </div>
                     `;
-                }).join('') || `<p class="text-slate-400 text-xs">No staff registered</p>`;
-            },
-            renderHistoricalRecords() {
-                const staffId = document.getElementById("staff-history-select")?.value;
-                const targetDate = document.getElementById("staff-history-date")?.value;
-                const resBox = document.getElementById("staff-history-results");
-                if (!staffId || !targetDate) {
-                    Utils.toast("Please select both a staff member and a date.");
-                    return;
-                }
-                const branch = State.getActiveBranch();
-                const officer = branch.officers.find(o => o.id === staffId);
-                const myClients = branch.clients.filter(c => c.officerId === staffId);
-                let dayRepayments = [];
-                let dayDisbursements = [];
-                let totalCollected = 0;
-                let totalDisbursed = 0;
-
-                myClients.forEach(c => {
-                    (c.history || []).forEach(h => {
-                        if (h.date === targetDate) {
-                            if (h.type === 'Repayment') {
-                                dayRepayments.push({ clientName: c.name, nin: c.nin, amount: h.amount, channel: h.channel, time: h.time });
-                                totalCollected += (h.amount || 0);
-                            } else if (h.type === 'Disbursement') {
-                                dayDisbursements.push({ clientName: c.name, nin: c.nin, amount: h.amount, time: h.time });
-                                totalDisbursed += (h.amount || 0);
-                            }
-                        }
-                    });
-                });
-
-                resBox.innerHTML = `
-                    <div class="flex flex-wrap justify-between items-center gap-2 text-xs bg-slate-50 p-3 rounded-xl border">
-                        <div><strong>Staff:</strong> ${officer?.name || 'Unknown'} | <strong>Date:</strong> ${targetDate}</div>
-                        <div class="flex gap-4">
-                            <span class="text-emerald-700 font-bold">Collected: ${Utils.formatUGX(totalCollected)}</span>
-                            <span class="text-indigo-700 font-bold">Disbursed: ${Utils.formatUGX(totalDisbursed)}</span>
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-                        <div class="border rounded-xl p-3 bg-white">
-                            <div class="font-bold text-slate-800 mb-2">Repayments (${dayRepayments.length})</div>
-                            ${dayRepayments.map(r => `<div class="py-1.5 border-b last:border-b-0 flex justify-between"><span><strong>${r.clientName}</strong> (${r.channel || 'Cash'})</span><strong class="text-emerald-700">${Utils.formatUGX(r.amount)}</strong></div>`).join('') || `<p class="text-slate-400">No repayments on this date.</p>`}
-                        </div>
-                        <div class="border rounded-xl p-3 bg-white">
-                            <div class="font-bold text-slate-800 mb-2">Disbursements (${dayDisbursements.length})</div>
-                            ${dayDisbursements.map(d => `<div class="py-1.5 border-b last:border-b-0 flex justify-between"><span><strong>${d.clientName}</strong> (${d.nin || 'N/A'})</span><strong class="text-indigo-700">${Utils.formatUGX(d.amount)}</strong></div>`).join('') || `<p class="text-slate-400">No disbursements on this date.</p>`}
-                        </div>
-                    </div>
-                `;
-                Utils.show(resBox);
+                }).join('') || `<p class="text-xs text-slate-400">No staff registered yet.</p>`;
             }
         };
 
         // ============================================================
-        // BANKINGS
+        // BANKINGS, EXPENSES, CAPITAL
         // ============================================================
         const Banking = {
             recordDeposit() {
@@ -4550,13 +4664,10 @@
                 const branch = State.getActiveBranch();
                 branch.bankings.push({
                     id: Utils.generateId("bnk"),
-                    name,
-                    accNo,
-                    amount: amt,
-                    ref,
                     date: Utils.today(),
                     timestamp: Date.now(),
-                    time: Utils.timeNow()
+                    time: Utils.timeNow(),
+                    name, accNo, amount: amt, ref
                 });
                 CashPosition.deduct('cash', amt);
                 State.save();
@@ -4571,33 +4682,38 @@
             },
             renderHistory() {
                 const branch = State.getActiveBranch();
-                const activeBankings = branch.bankings.filter(b => !b.reversed);
-                const tot = activeBankings.reduce((s, b) => s + b.amount, 0);
+                const tbody = document.getElementById("bankings-history-body");
+                if (!tbody) return;
+                let tot = 0;
+                const activeBankings = (branch.bankings || []).filter(b => !b.reversed);
+                tot = activeBankings.reduce((s, b) => s + (Number(b.amount) || 0), 0);
                 document.getElementById("total-banked-display").innerText = Utils.formatUGX(tot);
-                document.getElementById("bankings-history-body").innerHTML = activeBankings.slice().reverse().map(b => `
-                    <tr><td class="p-3">${b.date}</td><td class="p-3 font-bold">${b.name}</td><td class="p-3">${b.ref || '-'}</td><td class="p-3 text-right font-mono font-bold text-blue-700">${Utils.formatUGX(b.amount)}</td></tr>
-                `).join('') || `<tr><td colspan="4" class="p-4 text-center text-slate-400">No deposits</td></tr>`;
+                tbody.innerHTML = activeBankings.map(b => `
+                    <tr>
+                        <td class="p-3 font-mono text-[11px]">${b.date}</td>
+                        <td class="p-3 font-bold">${b.name}</td>
+                        <td class="p-3">${b.ref || '-'}</td>
+                        <td class="p-3 text-right font-mono font-bold">${Utils.formatUGX(b.amount)}</td>
+                    </tr>
+                `).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No bankings</td></tr>`;
             }
         };
 
-        // ============================================================
-        // EXPENSES
-        // ============================================================
         const Expenses = {
             record() {
                 const cat = document.getElementById("exp-category").value;
                 const amt = parseFloat(document.getElementById("exp-amount").value);
-                const nar = document.getElementById("exp-narration").value.trim();
+                const narr = document.getElementById("exp-narration").value.trim();
                 if (!Validation.isPositiveAmount(amt)) return;
                 const branch = State.getActiveBranch();
                 branch.expenses.push({
                     id: Utils.generateId("exp"),
-                    category: cat,
-                    amount: amt,
-                    narration: nar,
                     date: Utils.today(),
                     timestamp: Date.now(),
-                    time: Utils.timeNow()
+                    time: Utils.timeNow(),
+                    category: cat,
+                    amount: amt,
+                    narration: narr
                 });
                 CashPosition.deduct('cash', amt);
                 State.save();
@@ -4610,35 +4726,40 @@
             },
             renderHistory() {
                 const branch = State.getActiveBranch();
-                const activeExpenses = branch.expenses.filter(e => !e.reversed);
-                const tot = activeExpenses.reduce((s, e) => s + e.amount, 0);
+                const tbody = document.getElementById("expenses-history-body");
+                if (!tbody) return;
+                let tot = 0;
+                const activeExpenses = (branch.expenses || []).filter(e => !e.reversed);
+                tot = activeExpenses.reduce((s, e) => s + (Number(e.amount) || 0), 0);
                 document.getElementById("total-expenses-display").innerText = Utils.formatUGX(tot);
-                document.getElementById("expenses-history-body").innerHTML = activeExpenses.slice().reverse().map(e => `
-                    <tr><td class="p-3">${e.date}</td><td class="p-3 font-semibold">${e.category}</td><td class="p-3">${e.narration || '-'}</td><td class="p-3 text-right font-mono font-bold text-rose-700">${Utils.formatUGX(e.amount)}</td></tr>
-                `).join('') || `<tr><td colspan="4" class="p-4 text-center text-slate-400">No expenses</td></tr>`;
+                tbody.innerHTML = activeExpenses.map(e => `
+                    <tr>
+                        <td class="p-3 font-mono text-[11px]">${e.date}</td>
+                        <td class="p-3 font-bold">${e.category}</td>
+                        <td class="p-3">${e.narration || '-'}</td>
+                        <td class="p-3 text-right font-mono font-bold text-rose-600">${Utils.formatUGX(e.amount)}</td>
+                    </tr>
+                `).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No expenses</td></tr>`;
             }
         };
 
-        // ============================================================
-        // CAPITAL
-        // ============================================================
         const Capital = {
             submit() {
-                const role = state.currentUser?.role;
-                if (role === 'Manager') {
-                    Utils.toast("Managers are not permitted to add capital.");
+                if (state.currentUser?.role !== 'Administrator') {
+                    Utils.toast("Only Administrator can inject capital.");
                     return;
                 }
                 const amt = parseFloat(document.getElementById("cap-amount").value);
-                const nar = document.getElementById("cap-narration").value.trim() || "Capital Injection";
+                const narr = document.getElementById("cap-narration").value.trim();
                 if (!Validation.isPositiveAmount(amt)) return;
                 const branch = State.getActiveBranch();
                 branch.capitalizations.push({
                     id: Utils.generateId("cap"),
+                    date: Utils.today(),
                     amount: amt,
-                    narration: nar,
-                    status: 'APPROVED',
-                    date: Utils.today()
+                    narration: narr,
+                    by: state.currentUser.username,
+                    status: 'Approved'
                 });
                 CashPosition.add('cash', amt);
                 State.save();
@@ -4646,18 +4767,21 @@
                 CashPosition.render();
                 document.getElementById("cap-amount").value = "";
                 document.getElementById("cap-narration").value = "";
-                Utils.toast("Capital added");
+                Utils.toast("Capital injected & credited to Cash at Hand");
             },
             renderQueue() {
                 const branch = State.getActiveBranch();
-                const list = document.getElementById("capital-approval-list");
-                if (!list) return;
-                list.innerHTML = branch.capitalizations.map(c => `
-                    <div class="p-2.5 bg-white border rounded-xl flex justify-between items-center text-xs">
-                        <div><strong>${Utils.formatUGX(c.amount)}</strong> — ${c.narration}</div>
-                        <span class="px-2 py-0.5 rounded font-bold bg-green-100 text-green-800">${c.status}</span>
+                const container = document.getElementById("capital-approval-list");
+                if (!container) return;
+                container.innerHTML = branch.capitalizations.map(c => `
+                    <div class="bg-white p-2.5 rounded border flex justify-between items-center text-xs">
+                        <div>
+                            <strong>${Utils.formatUGX(c.amount)}</strong> — ${c.narration || 'Capital'}
+                            <div class="text-[10px] text-slate-400">${c.date} by ${c.by}</div>
+                        </div>
+                        <span class="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded font-bold text-[10px]">${c.status}</span>
                     </div>
-                `).join('') || `<p class="text-slate-400 text-xs text-center py-2">No records</p>`;
+                `).join('') || `<p class="text-slate-400 text-center py-2">No capital entries</p>`;
             }
         };
 
@@ -4667,139 +4791,471 @@
         const Reports = {
             getReportData() {
                 const branch = State.getActiveBranch();
-                const todayStr = Utils.today();
-                const totalPortfolio = branch.clients.reduce((s, c) => s + (c.balance || 0), 0);
-                const todayCollected = branch.clients.reduce((s, c) => s + (c.history || []).filter(h => h.type === 'Repayment' && h.date === todayStr).reduce((x, h) => x + h.amount, 0), 0);
-                const todayDisbursed = branch.clients.reduce((s, c) => s + (c.history || []).filter(h => h.type === 'Disbursement' && h.date === todayStr).reduce((x, h) => x + h.amount, 0), 0);
-                const totalBanked = branch.bankings.filter(b => !b.reversed).reduce((s, b) => s + b.amount, 0);
-                const totalExpenses = branch.expenses.filter(e => !e.reversed).reduce((s, e) => s + e.amount, 0);
-                const totalCapital = branch.capitalizations.filter(c => c.status === 'APPROVED').reduce((s, c) => s + c.amount, 0);
-                const totalFees = branch.clients.reduce((s, c) => s + (c.processingFee || 0), 0);
-                const cashAvailable = (state.cashPosition.cash || 0) + (state.cashPosition.mtn || 0) + (state.cashPosition.airtel || 0);
-                return { totalPortfolio, todayCollected, todayDisbursed, totalBanked, totalExpenses, totalCapital, totalFees, cashAvailable };
+                let totLoans = 0, totPrincipal = 0, totFees = 0, totInterest = 0, totRepaid = 0, totArrears = 0;
+                branch.clients.forEach(c => {
+                    State.recalculateClientStatus(c);
+                    totLoans += (c.balance || 0);
+                    totPrincipal += (c.principal || 0);
+                    totFees += (c.processingFee || 0);
+                    totInterest += (c.interestAmount || 0);
+                    totArrears += (c.arrears || 0);
+                    (c.history || []).forEach(h => {
+                        if (h.type === 'Repayment' && !h.reversed) totRepaid += (h.amount || 0);
+                    });
+                });
+                const totExp = (branch.expenses || []).filter(e => !e.reversed).reduce((s, e) => s + (Number(e.amount) || 0), 0);
+                const totBank = (branch.bankings || []).filter(b => !b.reversed).reduce((s, b) => s + (Number(b.amount) || 0), 0);
+                const totCap = branch.capitalizations.reduce((s, c) => s + (c.status === 'Approved' ? (c.amount || 0) : 0), 0);
+                const cashPosTotal = (state.cashPosition.cash || 0) + (state.cashPosition.mtn || 0) + (state.cashPosition.airtel || 0);
+
+                return {
+                    totLoans, totPrincipal, totFees, totInterest, totRepaid, totArrears,
+                    totExp, totBank, totCap, cashPosTotal,
+                    clientCount: branch.clients.length,
+                    officerCount: branch.officers.length
+                };
             },
             updateDashboard() {
                 const d = this.getReportData();
                 const grid = document.getElementById("full-report-grid");
                 if (!grid) return;
-                grid.innerHTML = `
-                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-slate-400 block text-[10px] uppercase">Total Portfolio</span><span class="font-bold text-lg text-blue-300">${Utils.formatUGX(d.totalPortfolio)}</span></div>
-                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-slate-400 block text-[10px] uppercase">Today Collections</span><span class="font-bold text-lg text-emerald-300">${Utils.formatUGX(d.todayCollected)}</span></div>
-                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-slate-400 block text-[10px] uppercase">Today Disbursements</span><span class="font-bold text-lg text-indigo-300">${Utils.formatUGX(d.todayDisbursed)}</span></div>
-                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-slate-400 block text-[10px] uppercase">Total Banked</span><span class="font-bold text-lg text-blue-400">${Utils.formatUGX(d.totalBanked)}</span></div>
-                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-slate-400 block text-[10px] uppercase">Total Expenses</span><span class="font-bold text-lg text-rose-400">${Utils.formatUGX(d.totalExpenses)}</span></div>
-                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-slate-400 block text-[10px] uppercase">Total Capital</span><span class="font-bold text-lg text-amber-300">${Utils.formatUGX(d.totalCapital)}</span></div>
-                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-slate-400 block text-[10px] uppercase">Processing Fees</span><span class="font-bold text-lg text-orange-300">${Utils.formatUGX(d.totalFees)}</span></div>
-                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-slate-400 block text-[10px] uppercase">Cash Available</span><span class="font-bold text-lg text-cyan-300">${Utils.formatUGX(d.cashAvailable)}</span></div>
-                `;
+                const cards = [
+                    { label: "Total Repayments", val: Utils.formatUGX(d.totRepaid), color: "text-emerald-400" },
+                    { label: "Principal Disbursed", val: Utils.formatUGX(d.totPrincipal), color: "text-blue-400" },
+                    { label: "Processing Fees Collected", val: Utils.formatUGX(d.totFees), color: "text-amber-400" },
+                    { label: "Interest Earned", val: Utils.formatUGX(d.totInterest), color: "text-indigo-400" },
+                    { label: "Outstanding Balance", val: Utils.formatUGX(d.totLoans), color: "text-cyan-400" },
+                    { label: "Total Arrears", val: Utils.formatUGX(d.totArrears), color: "text-rose-400" },
+                    { label: "Total Expenses", val: Utils.formatUGX(d.totExp), color: "text-red-400" },
+                    { label: "Total Banked", val: Utils.formatUGX(d.totBank), color: "text-sky-400" },
+                    { label: "Cash Position Total", val: Utils.formatUGX(d.cashPosTotal), color: "text-teal-400" }
+                ];
+                grid.innerHTML = cards.map(c => `
+                    <div class="bg-slate-900/80 p-3.5 rounded-xl border border-slate-700">
+                        <span class="text-slate-400 block text-[10px] uppercase font-bold">${c.label}</span>
+                        <span class="font-mono font-bold text-sm ${c.color}">${c.val}</span>
+                    </div>
+                `).join('');
             },
-            buildSummaryText() {
+            generateSummaryText() {
                 const d = this.getReportData();
-                return `📊 *${state.company.name} — CLOSING REPORT*\nDate: ${Utils.today()} (${Utils.timeNow()})\n--------------------------------\n• Portfolio: ${Utils.formatUGX(d.totalPortfolio)}\n• Today Collections: ${Utils.formatUGX(d.todayCollected)}\n• Today Disbursements: ${Utils.formatUGX(d.todayDisbursed)}\n• Total Banked: ${Utils.formatUGX(d.totalBanked)}\n• Total Expenses: ${Utils.formatUGX(d.totalExpenses)}\n• Total Capital: ${Utils.formatUGX(d.totalCapital)}\n• Processing Fees: ${Utils.formatUGX(d.totalFees)}\n• Cash Available: ${Utils.formatUGX(d.cashAvailable)}\n--------------------------------`;
+                return `📊 *${state.company.name}*\n📅 Daily Closing Report (${Utils.today()} ${Utils.timeNow()})\n--------------------------------\n• Repayments: ${Utils.formatUGX(d.totRepaid)}\n• Principal Disbursed: ${Utils.formatUGX(d.totPrincipal)}\n• Fees Collected: ${Utils.formatUGX(d.totFees)}\n• Outstanding: ${Utils.formatUGX(d.totLoans)}\n• Arrears: ${Utils.formatUGX(d.totArrears)}\n• Expenses: ${Utils.formatUGX(d.totExp)}\n• Banked: ${Utils.formatUGX(d.totBank)}\n• Cash Position: ${Utils.formatUGX(d.cashPosTotal)}\n--------------------------------`;
             },
             copySummaryText() {
-                const text = this.buildSummaryText().replace(/\*/g, '');
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(text).then(() => Utils.toast("Report summary copied")).catch(() => this.fallbackCopy(text));
-                } else {
-                    this.fallbackCopy(text);
-                }
-            },
-            fallbackCopy(text) {
-                const ta = document.createElement("textarea");
-                ta.value = text;
-                document.body.appendChild(ta);
-                ta.select();
-                document.execCommand("copy");
-                ta.remove();
-                Utils.toast("Report summary copied");
+                const text = this.generateSummaryText();
+                navigator.clipboard.writeText(text).then(() => {
+                    Utils.toast("Summary copied to clipboard");
+                }).catch(() => {
+                    Utils.toast("Unable to copy automatically");
+                });
             },
             openWhatsAppModal() {
                 const container = document.getElementById("whatsapp-manager-checkboxes");
-                if (!state.managers || state.managers.length === 0) {
-                    container.innerHTML = `<p class="text-xs text-slate-500">No managers added in Admin Settings.</p>`;
-                } else {
-                    container.innerHTML = state.managers.map((m, i) => `
-                        <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer">
-                            <input type="checkbox" class="wa-mgr-cb rounded" value="${m.phone}" checked>
-                            <span>${m.name} (${m.phone})</span>
-                        </label>
-                    `).join('');
-                }
-                document.getElementById("whatsapp-report-preview").value = this.buildSummaryText();
-                Utils.show("whatsapp-report-modal");
+                const list = state.managers || [];
+                container.innerHTML = list.map((m, i) => `
+                    <label class="flex items-center gap-2 text-xs">
+                        <input type="checkbox" class="wa-mgr-chk" value="${m.phone}" checked>
+                        <span><strong>${m.name}</strong> (${m.phone})</span>
+                    </label>
+                `).join('') || `<p class="text-slate-400 text-xs">No WhatsApp managers configured in Settings.</p>`;
+                document.getElementById("whatsapp-report-preview").value = this.generateSummaryText();
+                UI.show("whatsapp-report-modal");
             },
             async sendSelectedWhatsAppReports() {
-                const checked = Array.from(document.querySelectorAll(".wa-mgr-cb:checked")).map(cb => cb.value);
-                if (checked.length === 0) {
-                    Utils.toast("Select at least one manager");
-                    return;
-                }
                 const d = this.getReportData();
                 const rows = [
-                    ["Total Portfolio", Utils.formatUGX(d.totalPortfolio)],
-                    ["Today Collections", Utils.formatUGX(d.todayCollected)],
-                    ["Today Disbursements", Utils.formatUGX(d.todayDisbursed)],
-                    ["Total Banked", Utils.formatUGX(d.totalBanked)],
-                    ["Total Expenses", Utils.formatUGX(d.totalExpenses)],
-                    ["Total Capital", Utils.formatUGX(d.totalCapital)],
-                    ["Processing Fees", Utils.formatUGX(d.totalFees)],
-                    ["Cash Available", Utils.formatUGX(d.cashAvailable)]
+                    ["Total Repayments", Utils.formatUGX(d.totRepaid)],
+                    ["Principal Disbursed", Utils.formatUGX(d.totPrincipal)],
+                    ["Fees Collected", Utils.formatUGX(d.totFees)],
+                    ["Interest Earned", Utils.formatUGX(d.totInterest)],
+                    ["Outstanding Balance", Utils.formatUGX(d.totLoans)],
+                    ["Total Arrears", Utils.formatUGX(d.totArrears)],
+                    ["Total Expenses", Utils.formatUGX(d.totExp)],
+                    ["Total Banked", Utils.formatUGX(d.totBank)],
+                    ["Cash Position Total", Utils.formatUGX(d.cashPosTotal)]
                 ];
-                await PdfEngine.downloadReportPDF("DAILY CLOSING REPORT", ["Metric", "Value"], rows, [`Date: ${Utils.today()} (${Utils.timeNow()})`]);
-                const textMsg = encodeURIComponent(this.buildSummaryText() + "\n\n(PDF report downloaded—please attach.)");
-                checked.forEach(ph => {
-                    const waPhone = RegionManager.formatPhoneForWhatsApp(ph);
-                    window.open(`https://wa.me/${waPhone}?text=${textMsg}`, '_blank');
-                });
+                await PdfEngine.downloadReportPDF(`Daily Closing Report - ${Utils.today()}`, ["Metric", "Amount"], rows, [
+                    `Branch: ${state.company.location || "Kampala, Uganda"}`,
+                    `Generated: ${Utils.today()} ${Utils.timeNow()}`
+                ]);
+                const checked = Array.from(document.querySelectorAll(".wa-mgr-chk:checked")).map(el => el.value);
+                const text = encodeURIComponent(this.generateSummaryText());
+                if (checked.length > 0) {
+                    checked.forEach(phone => {
+                        const waPhone = RegionManager.formatPhoneForWhatsApp(phone);
+                        window.open(`https://wa.me/${waPhone}?text=${text}`, '_blank');
+                    });
+                } else {
+                    window.open(`https://wa.me/?text=${text}`, '_blank');
+                }
+                Utils.toast("Report PDF downloaded & WhatsApp opened");
                 UI.hide("whatsapp-report-modal");
-                Utils.toast("PDF downloaded & WhatsApp opened");
             }
         };
 
         // ============================================================
-        // AGING
+        // AGING & PAR (GROUPED & FORMATTED TO MATCH REFERENCE IMAGE)
         // ============================================================
         const Aging = {
+            getDueDate(c) {
+                if (c.deadlineDate) return c.deadlineDate;
+                if (c.dateDisbursed) {
+                    const tenure = Number(c.tenureDays || c.days) || 30;
+                    const parts = c.dateDisbursed.split('-');
+                    const d = parts.length === 3
+                        ? new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+                        : new Date(c.dateDisbursed);
+                    d.setDate(d.getDate() + tenure);
+                    return d.toISOString().split('T')[0];
+                }
+                return '-';
+            },
+            getDeadlineText(c) {
+                if (!c.deadlineDate && !c.dateDisbursed) return '-';
+                const todayMid = new Date();
+                todayMid.setHours(0, 0, 0, 0);
+                const dueStr = this.getDueDate(c);
+                if (dueStr === '-') return '-';
+                const parts = dueStr.split('-');
+                const dueMid = parts.length === 3
+                    ? new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+                    : new Date(dueStr);
+                dueMid.setHours(0, 0, 0, 0);
+                const diffDays = Math.round((dueMid - todayMid) / (1000 * 60 * 60 * 24));
+                if (diffDays > 0) return `${diffDays} day${diffDays === 1 ? '' : 's'} left`;
+                if (diffDays === 0) return `Due today`;
+                return `${Math.abs(diffDays)} day${Math.abs(diffDays) === 1 ? '' : 's'} past due`;
+            },
+            classifyLoanGroup(c) {
+                const days = Number(c.overdueDays) || 0;
+                const arrears = Number(c.arrears) || 0;
+                if (days <= 0 && arrears <= 0) {
+                    return { key: 'PERFORMING', label: 'PERFORMING PORTFOLIO' };
+                }
+                if (days <= 30) {
+                    return { key: '1_30', label: '1-30 Days' };
+                }
+                if (days <= 60) {
+                    return { key: '31_60', label: '31-60 Days' };
+                }
+                if (days <= 90) {
+                    return { key: '61_90', label: '61-90 Days' };
+                }
+                return { key: '90_PLUS', label: '90+ Days' };
+            },
+            buildOfficerGroups(clients) {
+                const activeLoans = clients.filter(c => (Number(c.balance) || 0) > 0);
+                activeLoans.forEach(c => State.recalculateClientStatus(c));
+
+                const bucketsMap = new Map();
+                const orderKeys = ['PERFORMING', '1_30', '31_60', '61_90', '90_PLUS'];
+                orderKeys.forEach(k => {
+                    const labels = {
+                        PERFORMING: 'PERFORMING PORTFOLIO',
+                        '1_30': '1-30 Days',
+                        '31_60': '31-60 Days',
+                        '61_90': '61-90 Days',
+                        '90_PLUS': '90+ Days'
+                    };
+                    bucketsMap.set(k, { key: k, label: labels[k], items: [] });
+                });
+
+                activeLoans.forEach(c => {
+                    const grp = this.classifyLoanGroup(c);
+                    bucketsMap.get(grp.key).items.push(c);
+                });
+
+                return orderKeys
+                    .map(k => bucketsMap.get(k))
+                    .filter(b => b.items.length > 0);
+            },
+            computeTotals(items) {
+                return items.reduce((acc, c) => {
+                    acc.disbursed += Number(c.principal) || 0;
+                    acc.outstanding += Number(c.balance) || 0;
+                    acc.arrears += Number(c.arrears) || 0;
+                    return acc;
+                }, { disbursed: 0, outstanding: 0, arrears: 0 });
+            },
             render() {
                 const branch = State.getActiveBranch();
-                branch.clients.forEach(c => State.recalculateClientStatus(c));
-                const filterVal = document.getElementById("aging-officer-filter")?.value || "ALL";
-                const activeLoans = branch.clients.filter(c => (c.balance || 0) > 0);
-                const parLoans = activeLoans.filter(c => (c.overdueDays || 0) > 0);
-                const totalActiveBal = activeLoans.reduce((s, c) => s + (c.balance || 0), 0);
-                const totalParBal = parLoans.reduce((s, c) => s + (c.balance || 0), 0);
-                const parRate = totalActiveBal > 0 ? ((totalParBal / totalActiveBal) * 100).toFixed(1) : "0.0";
-                const sumBox = document.getElementById("par-metrics-summary-box");
-                if (sumBox) {
-                    sumBox.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs"><div class="bg-white p-3.5 rounded-xl border"><span class="text-slate-500 text-[10px] block uppercase">Active Portfolio</span><strong class="text-base text-slate-900">${Utils.formatUGX(totalActiveBal)}</strong></div><div class="bg-white p-3.5 rounded-xl border"><span class="text-slate-500 text-[10px] block uppercase">PAR Portfolio</span><strong class="text-base text-amber-700">${Utils.formatUGX(totalParBal)}</strong></div><div class="bg-white p-3.5 rounded-xl border"><span class="text-slate-500 text-[10px] block uppercase">PAR Ratio</span><strong class="text-base text-red-700">${parRate}%</strong></div></div>`;
-                }
-                const targetOfficers = filterVal === "ALL" ? branch.officers : branch.officers.filter(o => o.id === filterVal);
+                const filterOff = document.getElementById("aging-officer-filter")?.value || "ALL";
                 const container = document.getElementById("officer-aging-sections");
                 if (!container) return;
-                container.innerHTML = targetOfficers.map(o => {
-                    const clients = activeLoans.filter(c => c.officerId === o.id);
-                    return `<div class="bg-white border rounded-xl p-4 space-y-2"><div class="font-bold text-slate-800 text-sm">${o.name} (${clients.length})</div><div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-slate-800 text-white text-[10px]"><th class="p-2">Client</th><th class="p-2">Days</th><th class="p-2 text-right">Arrears</th><th class="p-2 text-right">Balance</th></tr></thead><tbody class="divide-y">${clients.map(c => `<tr><td class="p-2 font-bold">${c.name}</td><td class="p-2 font-bold text-red-600">${c.overdueDays || 0}d</td><td class="p-2 text-right font-mono">${Utils.formatUGX(c.arrears || 0)}</td><td class="p-2 text-right font-mono font-bold">${Utils.formatUGX(c.balance || 0)}</td></tr>`).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No active loans</td></tr>`}</tbody></table></div></div>`;
-                }).join('') || `<p class="text-slate-400 text-xs">No data</p>`;
+
+                let allActive = branch.clients.filter(c => (c.balance || 0) > 0);
+                allActive.forEach(c => State.recalculateClientStatus(c));
+
+                let totalPortfolio = 0, par30Portfolio = 0, totalArrears = 0;
+                allActive.forEach(c => {
+                    const bal = c.balance || 0;
+                    totalPortfolio += bal;
+                    totalArrears += (c.arrears || 0);
+                    if ((c.overdueDays || 0) > 30) par30Portfolio += bal;
+                });
+
+                const par30Rate = totalPortfolio > 0 ? ((par30Portfolio / totalPortfolio) * 100).toFixed(2) : "0.00";
+                document.getElementById("par-metrics-summary-box").innerHTML = `
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                        <div class="bg-white p-3.5 rounded-xl border shadow-sm">
+                            <span class="text-slate-500 block text-[10px] uppercase font-bold">Total Portfolio</span>
+                            <strong class="font-mono text-sm text-blue-700">${Utils.formatUGX(totalPortfolio)}</strong>
+                        </div>
+                        <div class="bg-white p-3.5 rounded-xl border shadow-sm">
+                            <span class="text-slate-500 block text-[10px] uppercase font-bold">Total Arrears</span>
+                            <strong class="font-mono text-sm text-red-600">${Utils.formatUGX(totalArrears)}</strong>
+                        </div>
+                        <div class="bg-white p-3.5 rounded-xl border shadow-sm">
+                            <span class="text-slate-500 block text-[10px] uppercase font-bold">PAR (>30 Days)</span>
+                            <strong class="font-mono text-sm text-amber-700">${par30Rate}% (${Utils.formatUGX(par30Portfolio)})</strong>
+                        </div>
+                    </div>
+                `;
+
+                const officersToShow = filterOff === "ALL"
+                    ? branch.officers
+                    : branch.officers.filter(o => o.id === filterOff);
+
+                const unassignedActive = allActive.filter(c => !c.officerId || !branch.officers.some(o => o.id === c.officerId));
+                const sections = officersToShow.map(o => ({
+                    id: o.id,
+                    name: o.name,
+                    clients: allActive.filter(c => c.officerId === o.id)
+                }));
+
+                if (filterOff === "ALL" && unassignedActive.length > 0) {
+                    sections.push({
+                        id: "UNASSIGNED",
+                        name: "Unassigned / Branch",
+                        clients: unassignedActive
+                    });
+                }
+
+                container.innerHTML = sections.map(sec => {
+                    const buckets = this.buildOfficerGroups(sec.clients);
+                    const officerTotals = this.computeTotals(sec.clients);
+
+                    let rowsHtml = `
+                        <tr class="group-banner-active">
+                            <td colspan="12">ACTIVE LOANS</td>
+                        </tr>
+                    `;
+
+                    if (buckets.length === 0) {
+                        rowsHtml += `
+                            <tr>
+                                <td colspan="12" class="text-center text-slate-400 py-4">No active loans</td>
+                            </tr>
+                        `;
+                    } else {
+                        let globalSn = 0;
+                        buckets.forEach(bucket => {
+                            const bTotals = this.computeTotals(bucket.items);
+                            rowsHtml += `
+                                <tr class="group-banner-bucket">
+                                    <td colspan="12">${bucket.label}</td>
+                                </tr>
+                            `;
+
+                            bucket.items.forEach((c, idx) => {
+                                globalSn += 1;
+                                const snNum = idx + 1;
+                                const dueDate = this.getDueDate(c);
+                                const deadlineText = this.getDeadlineText(c);
+                                rowsHtml += `
+                                    <tr class="hover:bg-slate-50">
+                                        <td class="font-mono text-center">${snNum}</td>
+                                        <td class="font-semibold">${c.name || '-'}</td>
+                                        <td class="font-mono">${c.phone || '-'}</td>
+                                        <td>${c.guarantor || '-'}</td>
+                                        <td class="font-mono">${c.guarantorPhone || '-'}</td>
+                                        <td class="font-mono">${c.dateDisbursed || '-'}</td>
+                                        <td class="font-mono">${dueDate}</td>
+                                        <td class="font-mono text-right">${Utils.formatNumber(c.principal || 0)}</td>
+                                        <td class="font-mono text-right">${Utils.formatNumber(c.balance || 0)}</td>
+                                        <td class="font-mono text-right ${Number(c.arrears) > 0 ? 'text-red-600 font-bold' : ''}">${Utils.formatNumber(c.arrears || 0)}</td>
+                                        <td class="font-mono text-center">${globalSn}</td>
+                                        <td class="font-semibold">${deadlineText}</td>
+                                    </tr>
+                                `;
+                            });
+
+                            rowsHtml += `
+                                <tr class="group-subtotal-row">
+                                    <td colspan="7" class="text-right">${bucket.label} Subtotal</td>
+                                    <td class="font-mono text-right">${Utils.formatNumber(bTotals.disbursed)}</td>
+                                    <td class="font-mono text-right">${Utils.formatNumber(bTotals.outstanding)}</td>
+                                    <td class="font-mono text-right ${bTotals.arrears > 0 ? 'text-red-600' : ''}">${Utils.formatNumber(bTotals.arrears)}</td>
+                                    <td colspan="2"></td>
+                                </tr>
+                            `;
+                        });
+
+                        rowsHtml += `
+                            <tr class="group-subtotal-row">
+                                <td colspan="7" class="text-right">ACTIVE LOANS TOTAL (${sec.name})</td>
+                                <td class="font-mono text-right">${Utils.formatNumber(officerTotals.disbursed)}</td>
+                                <td class="font-mono text-right">${Utils.formatNumber(officerTotals.outstanding)}</td>
+                                <td class="font-mono text-right ${officerTotals.arrears > 0 ? 'text-red-600' : ''}">${Utils.formatNumber(officerTotals.arrears)}</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        `;
+                    }
+
+                    return `
+                        <div class="bg-white rounded-xl border-2 border-slate-700 overflow-x-auto shadow-sm">
+                            <div class="bg-slate-800 text-white px-4 py-2.5 flex flex-wrap justify-between items-center text-xs gap-2">
+                                <span class="font-bold text-sm">LOAN OFFICER: ${sec.name.toUpperCase()}</span>
+                                <span class="font-mono text-amber-300">
+                                    Disbursed: ${Utils.formatUGX(officerTotals.disbursed)} |
+                                    Outstanding: ${Utils.formatUGX(officerTotals.outstanding)} |
+                                    Arrears: ${Utils.formatUGX(officerTotals.arrears)}
+                                </span>
+                            </div>
+                            <table class="aging-sheet-table">
+                                <thead>
+                                    <tr>
+                                        <th>S/N</th>
+                                        <th>Customer<br>Name</th>
+                                        <th>Customer<br>Contact</th>
+                                        <th>Guarantor<br>Name</th>
+                                        <th>Guarantor<br>Contact</th>
+                                        <th>Disburse<br>Date</th>
+                                        <th>Due<br>Date</th>
+                                        <th>Loan<br>Disbursed</th>
+                                        <th>Outstanding<br>Total Amount</th>
+                                        <th>Total<br>Amount In<br>Arrears</th>
+                                        <th>S/N</th>
+                                        <th class="col-deadline-hdr">Deadline</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${rowsHtml}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                }).join('') || `<div class="bg-white p-6 rounded-xl border text-center text-xs text-slate-400">No active loans or staff found</div>`;
+            },
+            getExportRows() {
+                const branch = State.getActiveBranch();
+                const filterOff = document.getElementById("aging-officer-filter")?.value || "ALL";
+                let allActive = branch.clients.filter(c => (c.balance || 0) > 0);
+                allActive.forEach(c => State.recalculateClientStatus(c));
+                if (filterOff !== "ALL") {
+                    allActive = allActive.filter(c => c.officerId === filterOff);
+                }
+
+                const groupedList = [];
+                const buckets = this.buildOfficerGroups(allActive);
+                let globalSn = 0;
+
+                groupedList.push(["ACTIVE LOANS", "", "", "", "", "", "", "", "", "", "", ""]);
+
+                buckets.forEach(bucket => {
+                    groupedList.push([bucket.label, "", "", "", "", "", "", "", "", "", "", ""]);
+                    bucket.items.forEach((c, idx) => {
+                        globalSn += 1;
+                        const officer = branch.officers.find(o => o.id === c.officerId);
+                        groupedList.push([
+                            String(idx + 1),
+                            c.name || "-",
+                            c.phone || "-",
+                            c.guarantor || "-",
+                            c.guarantorPhone || "-",
+                            c.dateDisbursed || "-",
+                            this.getDueDate(c),
+                            Utils.formatNumber(c.principal || 0),
+                            Utils.formatNumber(c.balance || 0),
+                            Utils.formatNumber(c.arrears || 0),
+                            String(globalSn),
+                            `${this.getDeadlineText(c)}${officer ? ` (${officer.name})` : ""}`
+                        ]);
+                    });
+                    const bTot = this.computeTotals(bucket.items);
+                    groupedList.push([
+                        "", "", "", "", "", "", `${bucket.label} Subtotal`,
+                        Utils.formatNumber(bTot.disbursed),
+                        Utils.formatNumber(bTot.outstanding),
+                        Utils.formatNumber(bTot.arrears),
+                        "", ""
+                    ]);
+                });
+
+                const grandTot = this.computeTotals(allActive);
+                groupedList.push([
+                    "", "", "", "", "", "", "TOTAL ACTIVE LOANS",
+                    Utils.formatNumber(grandTot.disbursed),
+                    Utils.formatNumber(grandTot.outstanding),
+                    Utils.formatNumber(grandTot.arrears),
+                    "", ""
+                ]);
+
+                return groupedList;
             },
             exportCSV() {
-                const branch = State.getActiveBranch();
-                const rows = [["Client", "NIN", "OverdueDays", "Arrears", "Balance"]];
-                branch.clients.filter(c => (c.balance || 0) > 0).forEach(c => rows.push([c.name, c.nin || '', c.overdueDays || 0, c.arrears || 0, c.balance || 0]));
-                const csv = rows.map(r => r.join(",")).join("\n");
+                const headers = [
+                    "S/N", "Customer Name", "Customer Contact", "Guarantor Name",
+                    "Guarantor Contact", "Disburse Date", "Due Date", "Loan Disbursed",
+                    "Outstanding Total Amount", "Total Amount In Arrears", "S/N", "Deadline"
+                ];
+                const rows = this.getExportRows();
+                const csvContent = "data:text/csv;charset=utf-8,"
+                    + headers.map(h => `"${h}"`).join(",") + "\n"
+                    + rows.map(e => e.map(cell => `"${String(cell || '').replace(/"/g, '""')}"`).join(",")).join("\n");
                 const link = document.createElement("a");
-                link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
-                link.download = `PMMS_AGING_${Utils.today()}.csv`;
+                link.setAttribute("href", encodeURI(csvContent));
+                link.setAttribute("download", `Aging_PAR_Grouped_${Utils.today()}.csv`);
+                document.body.appendChild(link);
                 link.click();
-                Utils.toast("CSV exported");
+                link.remove();
+                Utils.toast("Grouped Aging & PAR CSV exported");
             },
             async exportPDF() {
-                const branch = State.getActiveBranch();
-                const rows = branch.clients.filter(c => (c.balance || 0) > 0).map(c => [c.name, c.nin || '-', `${c.overdueDays || 0}d`, Utils.formatUGX(c.arrears || 0), Utils.formatUGX(c.balance || 0)]);
-                await PdfEngine.downloadReportPDF("AGING & PAR REPORT", ["Client", "NIN", "Overdue", "Arrears", "Balance"], rows, [`Date: ${Utils.today()}`]);
-                Utils.toast("PDF exported");
+                const headers = [
+                    "S/N", "Customer Name", "Customer Contact", "Guarantor Name",
+                    "Guarantor Contact", "Disburse Date", "Due Date", "Loan Disbursed",
+                    "Outstanding Total Amount", "Total Amount In Arrears", "S/N", "Deadline"
+                ];
+                const rows = this.getExportRows();
+                await PdfEngine.downloadReportPDF(
+                    "AGING & PAR REPORT (GROUPED)",
+                    headers,
+                    rows,
+                    [`Branch: ${state.company.location || "Kampala, Uganda"}`, `Date: ${Utils.today()}`],
+                    {
+                        landscape: true,
+                        didParseCell: (data) => {
+                            const txt = (data.row.raw?.[0] || "") + (data.row.raw?.[6] || "");
+                            if (txt === "ACTIVE LOANS" || txt.endsWith("Days") || txt === "PERFORMING PORTFOLIO" || txt.includes("Subtotal") || txt.includes("TOTAL ACTIVE LOANS")) {
+                                data.cell.styles.fontStyle = "bold";
+                                if (txt.includes("Subtotal") || txt.includes("TOTAL ACTIVE LOANS")) {
+                                    data.cell.styles.fillColor = [236, 254, 255];
+                                } else if (txt === "ACTIVE LOANS" || txt.endsWith("Days") || txt === "PERFORMING PORTFOLIO") {
+                                    data.cell.styles.fillColor = [241, 245, 249];
+                                }
+                            }
+                        }
+                    }
+                );
+                Utils.toast("Grouped Aging & PAR PDF exported");
             },
-            printAgingList() { window.print(); }
+            printAgingList() {
+                const pa = document.getElementById("printable-area");
+                const sectionsHtml = document.getElementById("officer-aging-sections")?.innerHTML || "";
+                const summaryHtml = document.getElementById("par-metrics-summary-box")?.innerHTML || "";
+                pa.innerHTML = `
+                    <div style="font-family: sans-serif; color: #0f172a;">
+                        <h2 style="font-size: 18px; font-weight: 800; margin-bottom: 4px;">${state.company.name} — Aging & PAR Report</h2>
+                        <p style="font-size: 11px; color: #475569; margin-bottom: 12px;">Branch: ${state.company.location || 'Kampala, Uganda'} | Date: ${Utils.today()} ${Utils.timeNow()}</p>
+                        <div style="margin-bottom: 12px;">${summaryHtml}</div>
+                        <div style="display: flex; flex-direction: column; gap: 16px;">${sectionsHtml}</div>
+                    </div>
+                `;
+                Utils.show(pa);
+                window.print();
+                Utils.hide(pa);
+            }
         };
 
         // ============================================================
@@ -4810,8 +5266,14 @@
                 const branch = State.getActiveBranch();
                 const container = document.getElementById("demand-list-container");
                 if (!container) return;
-                const defaulters = branch.clients.filter(c => (c.balance || 0) > 0 && (c.overdueDays || 0) >= 90);
-                container.innerHTML = defaulters.map(c => `<div class="bg-white border-l-4 border-red-600 p-4 rounded-xl shadow-sm text-xs space-y-2"><div class="flex justify-between items-start"><div><div class="font-bold text-slate-900 text-sm">${c.name}</div><div class="text-slate-500">${c.phone || ''}</div></div><span class="bg-red-100 text-red-800 font-bold px-2 py-0.5 rounded">${c.overdueDays}d Overdue</span></div><div class="flex justify-between font-bold text-red-700"><span>Balance:</span> <span>${Utils.formatUGX(c.balance)}</span></div></div>`).join('') || `<p class="text-slate-400 text-xs">No 90+ day defaulters</p>`;
+                const defaulters = branch.clients.filter(c => (c.balance || 0) > 0 && (c.overdueDays || 0) > 90);
+                container.innerHTML = defaulters.map(c => `
+                    <div class="bg-red-50 border border-red-200 p-4 rounded-xl space-y-2 text-xs">
+                        <div class="font-bold text-red-900 text-sm">${c.name} <span class="text-xs font-normal text-red-600">(${c.overdueDays}d overdue)</span></div>
+                        <div class="text-slate-600">Phone: ${c.phone || 'N/A'} | Guarantor: ${c.guarantor || 'N/A'}</div>
+                        <div class="font-mono font-bold text-red-700">Balance: ${Utils.formatUGX(c.balance)} | Arrears: ${Utils.formatUGX(c.arrears || 0)}</div>
+                    </div>
+                `).join('') || `<p class="text-slate-400 text-xs col-span-2">No defaulters (90+ days) at this time.</p>`;
             }
         };
 
@@ -4819,80 +5281,90 @@
         // SMS
         // ============================================================
         const SMS = {
-            populateQuickClients() {
-                const sel = document.getElementById("sms-quick-client-select");
-                if (!sel) return;
-                sel.innerHTML = state.globalClients.map(c => `<option value="${c.phone}">${c.name} (${c.phone})</option>`).join('') || `<option value="">-- No Clients --</option>`;
-            },
-            toggleTargetDropdown(val) {
-                const singleBox = document.getElementById("sms-single-client-container");
-                if (val === 'SINGLE') Utils.show(singleBox);
-                else Utils.hide(singleBox);
-            },
-            dispatch(phone, message, triggerType = 'Manual') {
+            dispatch(phone, message, trigger = 'System') {
                 if (!phone) return;
+                const normPhone = RegionManager.normalizePhone(phone);
                 const carrier = document.getElementById("sms-preferred-network")?.value || "MTN";
+                if (!state.smsLogs) state.smsLogs = [];
                 state.smsLogs.unshift({
                     id: Utils.generateId("sms"),
-                    time: Utils.now(),
-                    recipient: phone,
+                    timestamp: Utils.now(),
+                    recipient: normPhone,
                     carrier,
-                    trigger: triggerType,
+                    trigger,
                     message
                 });
-                if (state.smsLogs.length > 200) state.smsLogs.length = 200;
+                if (state.smsLogs.length > 500) state.smsLogs.length = 500;
                 State.save();
                 this.renderLogs();
             },
+            populateQuickClients() {
+                const branch = State.getActiveBranch();
+                const sel = document.getElementById("sms-quick-client-select");
+                if (!sel) return;
+                sel.innerHTML = `<option value="">-- Select Client --</option>` + branch.clients.map(c => `<option value="${c.phone}">${c.name} (${c.phone || 'No Phone'})</option>`).join('');
+            },
+            toggleTargetDropdown(val) {
+                const container = document.getElementById("sms-single-client-container");
+                if (val === "SINGLE") Utils.show(container);
+                else Utils.hide(container);
+            },
             dispatchBroadcast() {
                 const target = document.getElementById("sms-broadcast-target").value;
-                const rawMsg = document.getElementById("sms-quick-message").value.trim();
-                if (!rawMsg) {
+                const template = document.getElementById("sms-quick-message").value.trim();
+                if (!template) {
                     Utils.toast("Enter message");
                     return;
                 }
                 const branch = State.getActiveBranch();
                 let recipients = [];
-                if (target === 'SINGLE') {
+                if (target === "SINGLE") {
                     const phone = document.getElementById("sms-quick-client-select").value;
                     if (!phone) {
-                        Utils.toast("Select client");
+                        Utils.toast("Select a client");
                         return;
                     }
-                    const cli = state.globalClients.find(c => c.phone === phone) || { name: 'Client', phone, nin: '' };
-                    recipients.push(cli);
-                } else if (target === 'ALL') {
+                    const cl = branch.clients.find(c => c.phone === phone);
+                    if (cl) recipients.push(cl);
+                } else if (target === "ALL") {
                     recipients = state.globalClients;
-                } else if (target === 'DEFAULTERS') {
-                    recipients = branch.clients.filter(c => (c.balance || 0) > 0 && (c.overdueDays || 0) >= 90);
-                } else if (target === 'ACTIVE') {
+                } else if (target === "DEFAULTERS") {
+                    recipients = branch.clients.filter(c => (c.balance || 0) > 0 && (c.overdueDays || 0) > 90);
+                } else if (target === "ACTIVE") {
                     recipients = branch.clients.filter(c => (c.balance || 0) > 0);
-                } else if (target === 'BODABODA') {
-                    recipients = state.globalClients.filter(c => c.category === 'BODABODA');
-                }
-                if (recipients.length === 0) {
-                    Utils.toast("No recipients in group");
-                    return;
+                } else if (target === "BODABODA") {
+                    recipients = state.globalClients.filter(c => c.category === "BODABODA");
                 }
                 recipients.forEach(r => {
-                    const bCli = branch.clients.find(bc => bc.nin === r.nin);
-                    const bal = bCli ? Utils.formatUGX(bCli.balance) : Utils.formatUGX(0);
-                    const personalized = rawMsg
-                        .replace(/{name}/g, r.name || 'Client')
-                        .replace(/{balance}/g, bal)
+                    const msg = template
+                        .replace(/{name}/g, r.name || '')
+                        .replace(/{balance}/g, Utils.formatUGX(r.balance || 0))
                         .replace(/{nin}/g, r.nin || '');
-                    this.dispatch(r.phone, personalized, `Broadcast (${target})`);
+                    this.dispatch(r.phone, msg, `Broadcast (${target})`);
                 });
-                Utils.toast(`Dispatched to ${recipients.length} recipient(s)`);
+                Utils.toast(`Dispatched ${recipients.length} SMS message(s)`);
                 document.getElementById("sms-quick-message").value = "";
             },
             renderLogs() {
                 const tbody = document.getElementById("sms-logs-table-body");
                 if (!tbody) return;
-                document.getElementById("sms-log-count").innerText = state.smsLogs.length;
-                tbody.innerHTML = state.smsLogs.slice(0, 50).map(l => `<tr><td class="p-3 font-mono text-[10px]">${l.time}</td><td class="p-3 font-bold">${l.recipient}</td><td class="p-3"><span class="bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded text-[10px] font-bold">${l.carrier || 'MTN'}</span></td><td class="p-3">${l.trigger}</td><td class="p-3 text-slate-600 max-w-xs truncate">${l.message}</td><td class="p-3 text-right"><a href="sms:${l.recipient}?body=${encodeURIComponent(l.message)}" class="bg-sky-600 text-white px-2.5 py-1 rounded text-[10px] font-bold">Send SMS</a></td></tr>`).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">No SMS logs</td></tr>`;
+                const logs = state.smsLogs || [];
+                document.getElementById("sms-log-count").innerText = logs.length;
+                tbody.innerHTML = logs.map(l => `
+                    <tr>
+                        <td class="p-3 font-mono text-[11px]">${l.timestamp}</td>
+                        <td class="p-3 font-mono font-bold">${l.recipient}</td>
+                        <td class="p-3">${l.carrier || 'MTN'}</td>
+                        <td class="p-3 font-semibold text-sky-700">${l.trigger || 'System'}</td>
+                        <td class="p-3 max-w-xs truncate">${l.message}</td>
+                        <td class="p-3 text-right">
+                            <a href="sms:${encodeURIComponent(l.recipient)}?body=${encodeURIComponent(l.message)}" class="bg-sky-600 text-white px-2.5 py-1 rounded text-[10px] font-bold">Open SIM</a>
+                        </td>
+                    </tr>
+                `).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">No SMS logs yet.</td></tr>`;
             },
             clearLogs() {
+                if (!Utils.confirmAction("Clear all SMS logs?")) return;
                 state.smsLogs = [];
                 State.save();
                 this.renderLogs();
@@ -4904,57 +5376,50 @@
         // ============================================================
         const ThemeCustomizer = {
             applyTheme(themeName) {
-                const validThemes = ['teal', 'indigo', 'emerald', 'slate', 'blue', 'rose', 'amber', 'purple', 'cyan', 'orange', 'crimson', 'forest', 'navy', 'gold', 'magenta'];
-                if (!validThemes.includes(themeName)) themeName = 'teal';
-                document.body.classList.remove(...validThemes.map(t => 'theme-' + t));
+                if (!themeName) return;
+                document.body.className = document.body.className.replace(/theme-[a-z]+/g, '').trim();
                 document.body.classList.add('theme-' + themeName);
-                localStorage.setItem('pmms_theme_color', themeName);
+                localStorage.setItem('pmms_theme_v10', themeName);
                 const sel = document.getElementById('theme-color-select');
                 if (sel) sel.value = themeName;
             },
             applyFont(fontName) {
-                const validFonts = ['sans', 'serif', 'mono', 'inter', 'poppins', 'roboto', 'montserrat', 'lato', 'opensans', 'nunito', 'raleway', 'merriweather', 'playfair', 'oswald', 'firacode'];
-                if (!validFonts.includes(fontName)) fontName = 'sans';
-                document.body.classList.remove(...validFonts.map(f => 'font-' + f));
+                if (!fontName) return;
+                document.body.className = document.body.className.replace(/font-[a-z0-9]+/g, '').trim();
                 document.body.classList.add('font-' + fontName);
-                localStorage.setItem('pmms_theme_font', fontName);
+                localStorage.setItem('pmms_font_v10', fontName);
                 const sel = document.getElementById('theme-font-select');
                 if (sel) sel.value = fontName;
             },
-            initSaved() {
-                this.applyTheme(localStorage.getItem('pmms_theme_color') || 'teal');
-                this.applyFont(localStorage.getItem('pmms_theme_font') || 'sans');
+            init() {
+                const savedTheme = localStorage.getItem('pmms_theme_v10') || 'teal';
+                const savedFont = localStorage.getItem('pmms_font_v10') || 'sans';
+                this.applyTheme(savedTheme);
+                this.applyFont(savedFont);
             }
         };
 
         const Printer = {
-            onTogglePrintReceipt(enabled) {
+            onTogglePrintReceipt(checked) {
                 if (!state.settings) state.settings = {};
-                state.settings.printReceiptEnabled = !!enabled;
+                state.settings.printReceiptEnabled = checked;
                 State.save();
             },
-            syncPrintToggleUI() {
-                const cb = document.getElementById("toggle-print-receipt");
-                if (cb) cb.checked = state.settings?.printReceiptEnabled ?? true;
-            },
-            updateStatusUI(connected, label = "") {
-                const statusText = document.getElementById("xprinter-status-text");
-                const miniDot = document.getElementById("xprinter-mini-dot");
-                const btn = document.getElementById("xprinter-btn");
+            updatePrinterStatusUI(connected, label = "") {
+                const textEl = document.getElementById("xprinter-status-text");
+                const dotEl = document.getElementById("xprinter-mini-dot");
                 if (connected) {
-                    if (statusText) statusText.innerText = label ? `X-Printer (${label})` : "X-Printer Ready";
-                    if (miniDot) {
-                        miniDot.className = "w-2 h-2 rounded-full bg-emerald-500 inline-block";
-                        miniDot.title = "X-Printer Connected";
+                    if (textEl) textEl.innerText = label ? `X-Printer (${label})` : "X-Printer Ready";
+                    if (dotEl) {
+                        dotEl.className = "w-2 h-2 rounded-full bg-emerald-500 inline-block";
+                        dotEl.title = "X-Printer Connected";
                     }
-                    if (btn) btn.classList.add("ring-2", "ring-emerald-400");
                 } else {
-                    if (statusText) statusText.innerText = "Connect Printer";
-                    if (miniDot) {
-                        miniDot.className = "w-2 h-2 rounded-full bg-slate-400 inline-block";
-                        miniDot.title = "X-Printer Disconnected";
+                    if (textEl) textEl.innerText = "Connect Printer";
+                    if (dotEl) {
+                        dotEl.className = "w-2 h-2 rounded-full bg-slate-400 inline-block";
+                        dotEl.title = "X-Printer Disconnected";
                     }
-                    if (btn) btn.classList.remove("ring-2", "ring-emerald-400");
                 }
             },
             async connectXPrinter() {
@@ -4966,142 +5431,101 @@
                         xPrinterSerialPort = port;
                         xPrinterDevice = null;
                         xPrinterCharacteristic = null;
-                        this.updateStatusUI(true, "USB/Serial");
+                        this.updatePrinterStatusUI(true, "USB/Serial");
                         Utils.toast("X-Printer connected via Serial/USB");
-                        return true;
+                        return;
                     }
                     if (!navigator.bluetooth) {
-                        Utils.toast("Web Bluetooth / Serial not supported on this browser");
-                        return false;
+                        Utils.toast("Bluetooth/Serial not supported in this browser; fallback receipt print ready.");
+                        this.updatePrinterStatusUI(true, "Browser");
+                        return;
                     }
-                    Utils.toast("Scanning for XPrinter...");
                     const device = await navigator.bluetooth.requestDevice({
                         acceptAllDevices: true,
-                        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', '49535343-fe7d-4ae5-8fa9-9fafd205e455']
+                        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', '49535343-fe7d-4ae5-8fa9-9fafd205e455', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
                     });
-                    const server = await device.gatt.connect();
-                    let foundChar = null;
-                    const services = await server.getPrimaryServices();
-                    for (const srv of services) {
-                        const chars = await srv.getCharacteristics();
-                        for (const ch of chars) {
-                            if (ch.properties.write || ch.properties.writeWithoutResponse) {
-                                foundChar = ch;
-                                break;
-                            }
-                        }
-                        if (foundChar) break;
-                    }
-                    if (!foundChar) throw new Error("No writable characteristic found");
                     xPrinterDevice = device;
-                    xPrinterCharacteristic = foundChar;
                     xPrinterSerialPort = null;
-                    device.addEventListener('gattserverdisconnected', () => {
-                        xPrinterCharacteristic = null;
-                        this.updateStatusUI(false);
-                        Utils.toast("X-Printer disconnected");
-                    });
-                    this.updateStatusUI(true, device.name || "BT");
-                    Utils.toast(`Connected to ${device.name || "XPrinter"}`);
-                    return true;
-                } catch (err) {
-                    this.updateStatusUI(false);
-                    Utils.toast("X-Printer connection failed: " + (err.message || err));
-                    return false;
-                }
-            },
-            async sendRawEscPos(text) {
-                const encoder = new TextEncoder();
-                const initCmd = new Uint8Array([0x1B, 0x40]);
-                const feedCutCmd = new Uint8Array([0x0A, 0x0A, 0x1D, 0x56, 0x41, 0x10]);
-                const bodyBytes = encoder.encode(text);
-                const fullPayload = new Uint8Array(initCmd.length + bodyBytes.length + feedCutCmd.length);
-                fullPayload.set(initCmd, 0);
-                fullPayload.set(bodyBytes, initCmd.length);
-                fullPayload.set(feedCutCmd, initCmd.length + bodyBytes.length);
-
-                if (xPrinterSerialPort && xPrinterSerialPort.writable) {
-                    const writer = xPrinterSerialPort.writable.getWriter();
-                    await writer.write(fullPayload);
-                    writer.releaseLock();
-                    return true;
-                }
-                if (xPrinterCharacteristic) {
-                    const chunkSize = 180;
-                    for (let i = 0; i < fullPayload.length; i += chunkSize) {
-                        const chunk = fullPayload.slice(i, i + chunkSize);
-                        if (xPrinterCharacteristic.properties.writeWithoutResponse) {
-                            await xPrinterCharacteristic.writeValueWithoutResponse(chunk);
-                        } else {
-                            await xPrinterCharacteristic.writeValue(chunk);
+                    const server = await device.gatt.connect();
+                    const services = await server.getPrimaryServices();
+                    for (const service of services) {
+                        const chars = await service.getCharacteristics();
+                        const writable = chars.find(c => c.properties.write || c.properties.writeWithoutResponse);
+                        if (writable) {
+                            xPrinterCharacteristic = writable;
+                            break;
                         }
                     }
-                    return true;
+                    this.updatePrinterStatusUI(true, device.name || "BT");
+                    Utils.toast(`X-Printer connected: ${device.name || "Device"}`);
+                } catch (err) {
+                    Utils.toast("Printer connection cancelled or unavailable; standard print fallback active.");
                 }
-                return false;
             },
             async testPrint() {
-                const sample = `=== ${state.company.name} ===\nX-PRINTER TEST RECEIPT\nDate: ${Utils.today()} ${Utils.timeNow()}\nStatus: OK\n--------------------------------\n`;
+                const sample = `=== ${state.company.name} ===\nX-PRINTER TEST RECEIPT\nDate: ${Utils.today()} ${Utils.timeNow()}\n--------------------------------\nStatus: Connected & Ready\n--------------------------------\n`;
                 await this.printToXPrinter(sample, true);
             },
             async printToXPrinter(text, force = false) {
                 lastPrintedReceiptText = text;
-                const shouldPrint = force || (state.settings?.printReceiptEnabled ?? true);
-                if (!shouldPrint) {
-                    return;
-                }
-                if (!xPrinterCharacteristic && !xPrinterSerialPort) {
-                    const connected = await this.connectXPrinter();
-                    if (!connected) {
-                        this.fallbackBrowserPrint(text);
+                const enabled = state.settings?.printReceiptEnabled ?? true;
+                if (!enabled && !force) return;
+
+                try {
+                    if (xPrinterSerialPort && xPrinterSerialPort.writable) {
+                        const writer = xPrinterSerialPort.writable.getWriter();
+                        const encoder = new TextEncoder();
+                        await writer.write(encoder.encode("\x1B\x40" + text + "\n\n\n"));
+                        writer.releaseLock();
+                        Utils.toast("Sent to X-Printer (Serial/USB)");
                         return;
                     }
-                }
-                try {
-                    const sent = await this.sendRawEscPos(text);
-                    if (sent) {
-                        Utils.toast("Sent to X-Printer");
-                    } else {
-                        this.fallbackBrowserPrint(text);
+                    if (xPrinterCharacteristic) {
+                        const encoder = new TextEncoder();
+                        const initCmd = new Uint8Array([0x1B, 0x40]);
+                        const data = encoder.encode(text + "\n\n\n");
+                        const payload = new Uint8Array(initCmd.length + data.length);
+                        payload.set(initCmd);
+                        payload.set(data, initCmd.length);
+
+                        const chunkSize = 180;
+                        for (let i = 0; i < payload.length; i += chunkSize) {
+                            const chunk = payload.slice(i, i + chunkSize);
+                            if (xPrinterCharacteristic.properties.writeWithoutResponse) {
+                                await xPrinterCharacteristic.writeValueWithoutResponse(chunk);
+                            } else {
+                                await xPrinterCharacteristic.writeValue(chunk);
+                            }
+                        }
+                        Utils.toast("Sent to X-Printer (Bluetooth)");
+                        return;
                     }
-                } catch (err) {
-                    Utils.toast("Direct X-Printer error, using print preview");
-                    this.fallbackBrowserPrint(text);
+                } catch (e) {
+                    console.warn("Direct X-Printer write fallback to browser print:", e);
                 }
-            },
-            fallbackBrowserPrint(text) {
-                const area = document.getElementById("printable-area");
-                if (area) {
-                    const logoHtml = state.company.logo
-                        ? `<div style="text-align:center;margin-bottom:8px;"><img src="${state.company.logo}" style="max-height:64px;max-width:140px;display:inline-block;" /></div>`
-                        : "";
-                    area.innerHTML = `${logoHtml}<pre style="font-family:monospace;font-size:13px;white-space:pre-wrap;">${text}</pre>`;
-                    Utils.show(area);
-                    window.print();
-                    setTimeout(() => Utils.hide(area), 600);
-                }
+
+                const pa = document.getElementById("printable-area");
+                pa.innerHTML = `<pre style="font-family: monospace; font-size: 12px; white-space: pre-wrap;">${text}</pre>`;
+                Utils.show(pa);
+                window.print();
+                Utils.hide(pa);
             }
         };
 
-        // ============================================================
-        // BOOT
-        // ============================================================
+        window.addEventListener("online", () => { Utils.hide("offline-banner"); Utils.toast("Back online"); });
+        window.addEventListener("offline", () => { Utils.show("offline-banner"); Utils.toast("Offline mode active"); });
+
         window.addEventListener("DOMContentLoaded", async () => {
-            ThemeCustomizer.initSaved();
+            ThemeCustomizer.init();
             await State.load();
-            Printer.syncPrintToggleUI();
-            if (!document.getElementById("daily-workspace-date").value) {
-                document.getElementById("daily-workspace-date").value = Utils.today();
-            }
-            if (!document.getElementById("manual-receipt-date").value) {
-                document.getElementById("manual-receipt-date").value = Utils.today();
-            }
-            if (!document.getElementById("staff-history-date").value) {
-                document.getElementById("staff-history-date").value = Utils.today();
-            }
+            const dateInput = document.getElementById("daily-workspace-date");
+            if (dateInput) dateInput.value = Utils.today();
+            const recDateInput = document.getElementById("manual-receipt-date");
+            if (recDateInput) recDateInput.value = Utils.today();
+            const staffHistDate = document.getElementById("staff-history-date");
+            if (staffHistDate) staffHistDate.value = Utils.today();
             UI.refreshAll();
-            window.addEventListener("online", () => Utils.hide("offline-banner"));
-            window.addEventListener("offline", () => Utils.show("offline-banner"));
+            AdminSettings.renderManagersList();
         });
     </script>
 </body>

@@ -310,7 +310,8 @@
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3" id="post-inputs-container">
                             <div>
                                 <label class="block text-xs font-semibold mb-1 text-slate-600">Payment Amount (<span class="curr-code">UGX</span>)</label>
-                                <input type="number" id="post-amount" min="1" placeholder="Amount Paid" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm font-bold">
+                                <input type="number" id="post-amount" min="1" oninput="Posting.validateAmountInput()" placeholder="Amount Paid" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm font-bold">
+                                <p id="post-amount-limit-hint" class="text-[11px] text-slate-500 mt-1"></p>
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold mb-1 text-slate-600">Payment Channel</label>
@@ -3043,6 +3044,40 @@
         // POSTING
         // ============================================================
         const Posting = {
+            getRemainingAllowedAmount(client) {
+                if (!client) return 0;
+                const outBal = Math.max(0, Number(client.balance) || 0);
+                const batch = State.getActiveBranch().batch || [];
+                const queued = batch
+                    .filter(item => item.clientId === client.id)
+                    .reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+                return Math.max(0, outBal - queued);
+            },
+            updateAmountLimitUI() {
+                const amtInput = document.getElementById("post-amount");
+                const hintEl = document.getElementById("post-amount-limit-hint");
+                if (!amtInput) return;
+                if (!selectedPostClient) {
+                    amtInput.removeAttribute("max");
+                    if (hintEl) hintEl.innerText = "";
+                    return;
+                }
+                const remaining = this.getRemainingAllowedAmount(selectedPostClient);
+                amtInput.max = String(remaining);
+                if (hintEl) {
+                    hintEl.innerText = `Max allowed: ${Utils.formatUGX(remaining)}`;
+                }
+            },
+            validateAmountInput() {
+                if (!selectedPostClient) return;
+                const amtInput = document.getElementById("post-amount");
+                if (!amtInput) return;
+                const val = parseFloat(amtInput.value);
+                const remaining = this.getRemainingAllowedAmount(selectedPostClient);
+                if (!isNaN(val) && val > remaining) {
+                    Utils.toast(`Amount cannot exceed loan outstanding balance (${Utils.formatUGX(remaining)})`);
+                }
+            },
             searchClients(query) {
                 const resultsDiv = document.getElementById("post-search-results");
                 if (!query || query.trim().length < 1) {
@@ -3106,6 +3141,7 @@
                     Utils.hide("zero-balance-warning");
                     Utils.show("post-inputs-container");
                     Utils.show("add-to-batch-btn");
+                    this.updateAmountLimitUI();
                 }
                 Utils.show("post-selected-card");
                 Utils.show("post-form");
@@ -3114,6 +3150,11 @@
                 if (!selectedPostClient || (selectedPostClient.balance || 0) <= 0) return;
                 const amt = parseFloat(document.getElementById("post-amount").value);
                 if (!Validation.isPositiveAmount(amt, "Payment Amount")) return;
+                const remaining = this.getRemainingAllowedAmount(selectedPostClient);
+                if (amt > remaining) {
+                    Utils.toast(`Cannot enter more than loan outstanding balance (${Utils.formatUGX(remaining)})`);
+                    return;
+                }
                 State.getActiveBranch().batch.push({
                     clientId: selectedPostClient.id,
                     clientName: selectedPostClient.name,
@@ -3125,6 +3166,7 @@
                 document.getElementById("post-amount").value = "";
                 State.save();
                 this.renderBatchList();
+                this.updateAmountLimitUI();
                 Utils.toast("Added to batch");
             },
             renderBatchList() {
@@ -3146,24 +3188,34 @@
                 State.getActiveBranch().batch.splice(idx, 1);
                 State.save();
                 this.renderBatchList();
+                this.updateAmountLimitUI();
             },
             async postAllBatch() {
                 const branch = State.getActiveBranch();
                 if (branch.batch.length === 0) return;
+                const overBalanceItem = branch.batch.find(item => {
+                    const c = branch.clients.find(cl => cl.id === item.clientId);
+                    return !c || (Number(item.amount) || 0) > Math.max(0, Number(c.balance) || 0);
+                });
+                if (overBalanceItem) {
+                    Utils.toast(`Blocked: "${overBalanceItem.clientName}" amount exceeds current loan outstanding balance.`);
+                    return;
+                }
                 if (!Utils.confirmAction(`Post ${branch.batch.length} payment(s)?`)) return;
                 let receiptText = `REPAYMENT RECEIPT\nDate: ${Utils.today()} ${Utils.timeNow()}\n--------------------------------\n`;
                 const baseTs = Date.now();
                 branch.batch.forEach((item, index) => {
                     const client = branch.clients.find(c => c.id === item.clientId);
                     if (client) {
-                        const prevBal = client.balance || 0;
-                        client.balance = Math.max(0, prevBal - item.amount);
+                        const prevBal = Math.max(0, client.balance || 0);
+                        const appliedAmt = Math.min(Number(item.amount) || 0, prevBal);
+                        client.balance = Math.max(0, prevBal - appliedAmt);
                         State.recalculateClientStatus(client);
                         if (!client.history) client.history = [];
                         client.history.push({
                             id: Utils.generateId("txn"),
                             type: 'Repayment',
-                            amount: item.amount,
+                            amount: appliedAmt,
                             date: item.date,
                             timestamp: baseTs + index,
                             time: Utils.timeNow(),
@@ -3172,12 +3224,12 @@
                             newBalance: client.balance,
                             arrears: client.arrears || 0
                         });
-                        CashPosition.add(item.channel, item.amount);
-                        receiptText += `Client: ${client.name}\nChannel: ${item.channel}\nPaid: ${Utils.formatUGX(item.amount)}\nArrears: ${Utils.formatUGX(client.arrears || 0)}\nBalance: ${Utils.formatUGX(client.balance)}\n--------------------------------\n`;
+                        CashPosition.add(item.channel, appliedAmt);
+                        receiptText += `Client: ${client.name}\nChannel: ${item.channel}\nPaid: ${Utils.formatUGX(appliedAmt)}\nArrears: ${Utils.formatUGX(client.arrears || 0)}\nBalance: ${Utils.formatUGX(client.balance)}\n--------------------------------\n`;
                         const template = state.smsTemplates?.repayment || "Dear {name}, payment of {amount} received. New balance: {balance}.";
                         const msg = template
                             .replace(/{name}/g, client.name)
-                            .replace(/{amount}/g, Utils.formatUGX(item.amount))
+                            .replace(/{amount}/g, Utils.formatUGX(appliedAmt))
                             .replace(/{balance}/g, Utils.formatUGX(client.balance))
                             .replace(/{nin}/g, client.nin || '');
                         SMS.dispatch(client.phone, msg, 'Repayment');
@@ -3955,44 +4007,45 @@
                             <strong>${c.name}</strong> (${c.nin || 'N/A'}) — ${info}
                         </div>
                     `;
-                }).join('') || `<div class="p-2 text-slate-400 text-xs">No matches</div>`;
+                }).join('') || `<div class="p-2 text-slate-400 text-xs">No clients found</div>`;
                 Utils.show(resultsDiv);
             },
             searchReversalClientsDebounced: null,
-            selectReversalClient(id) {
-                if (!['Administrator', 'Manager'].includes(state.currentUser?.role)) return;
+            selectReversalClient(clientId) {
                 const branch = State.getActiveBranch();
-                selectedReversalClient = branch.clients.find(c => c.id === id);
+                selectedReversalClient = branch.clients.find(c => c.id === clientId);
                 Utils.hide("reversal-search-results");
                 const searchInput = document.getElementById("reversal-search");
                 if (searchInput) searchInput.value = "";
                 if (!selectedReversalClient) return;
 
                 const cat = document.getElementById("reversal-category")?.value || "LOAN";
-                const select = document.getElementById("rev-transaction-select");
                 document.getElementById("rev-client-name").innerText = selectedReversalClient.name;
-                document.getElementById("rev-client-nin").innerText = selectedReversalClient.nin || '';
+                document.getElementById("rev-client-nin").innerText = selectedReversalClient.nin || 'N/A';
                 document.getElementById("rev-client-id").innerText = selectedReversalClient.id;
 
+                const select = document.getElementById("rev-transaction-select");
                 if (cat === "SAVINGS") {
                     const nin = selectedReversalClient.nin;
                     const sav = branch.savingsAccounts?.[nin] || { balance: 0, history: [] };
-                    document.getElementById("rev-balance-label").innerHTML = `Savings Bal: <span class="curr-code">UGX</span> <span id="rev-client-balance">${(sav.balance || 0).toLocaleString()}</span>`;
-                    const sHist = sav.history || [];
-                    select.innerHTML = sHist.length
-                        ? sHist.map((h, i) => `<option value="${i}" ${h.reversed ? 'disabled' : ''}>${h.date} ${h.time || ''} — Savings ${h.type} — ${Utils.formatUGX(h.amount)}${h.reversed ? ' [REVERSED]' : ''}</option>`).join('')
-                        : `<option value="">No savings transactions</option>`;
+                    document.getElementById("rev-balance-label").innerHTML = `Savings Balance: <span class="curr-code">UGX</span> <span id="rev-client-balance">${(sav.balance || 0).toLocaleString()}</span>`;
+                    select.innerHTML = (sav.history || []).map((sh, i) => `
+                        <option value="${i}" ${sh.reversed ? 'disabled' : ''}>
+                            ${sh.date} ${sh.time || ''} — Savings ${sh.type} — ${Utils.formatUGX(sh.amount)}${sh.reversed ? ' [REVERSED]' : ''}
+                        </option>
+                    `).join('') || `<option value="">No savings transactions</option>`;
                 } else {
-                    document.getElementById("rev-balance-label").innerHTML = `Loan Bal: <span class="curr-code">UGX</span> <span id="rev-client-balance">${(selectedReversalClient.balance || 0).toLocaleString()}</span>`;
-                    const hist = selectedReversalClient.history || [];
-                    select.innerHTML = hist.length
-                        ? hist.map((h, i) => `<option value="${i}" ${h.reversed ? 'disabled' : ''}>${h.date} ${h.time || ''} — ${h.type} — ${Utils.formatUGX(h.amount)} (${h.channel || '-'}) ${h.reversed ? ' [REVERSED]' : ''}</option>`).join('')
-                        : `<option value="">No loan transactions</option>`;
+                    document.getElementById("rev-balance-label").innerHTML = `Loan Balance: <span class="curr-code">UGX</span> <span id="rev-client-balance">${(selectedReversalClient.balance || 0).toLocaleString()}</span>`;
+                    select.innerHTML = (selectedReversalClient.history || []).map((h, i) => `
+                        <option value="${i}" ${h.reversed ? 'disabled' : ''}>
+                            ${h.date} ${h.time || ''} — ${h.type} (${h.channel || '-'}) — ${Utils.formatUGX(h.amount)}${h.reversed ? ' [REVERSED]' : ''}
+                        </option>
+                    `).join('') || `<option value="">No loan transactions</option>`;
                 }
                 RegionManager.syncLocaleUI();
                 Utils.show("reversal-card");
             },
-            logReversalToWorkspace(entry) {
+            logReversalRecord(entry) {
                 const branch = State.getActiveBranch();
                 if (!branch.reversals) branch.reversals = [];
                 branch.reversals.push({
@@ -4006,258 +4059,212 @@
             },
             executeReversal() {
                 if (!['Administrator', 'Manager'].includes(state.currentUser?.role)) {
-                    Utils.toast("Access Denied");
+                    Utils.toast("Admin/Manager only");
                     return;
                 }
                 const cat = document.getElementById("reversal-category")?.value || "LOAN";
-                const idxStr = document.getElementById("rev-transaction-select").value;
+                const idx = parseInt(document.getElementById("rev-transaction-select").value, 10);
                 const reason = document.getElementById("rev-reason").value.trim();
-                if (idxStr === "" || idxStr === undefined) {
-                    Utils.toast("Select a transaction to reverse");
-                    return;
-                }
-                if (!Validation.isRequired(reason, "Reason")) return;
+                if (isNaN(idx) || !Validation.isRequired(reason, "Reason")) return;
+                if (!Utils.confirmAction("Execute this transaction reversal and record it in Daily Workspace?")) return;
 
-                const idx = parseInt(idxStr, 10);
                 const branch = State.getActiveBranch();
 
                 if (cat === "LOAN") {
-                    if (!selectedReversalClient) {
-                        Utils.toast("Select a client");
-                        return;
-                    }
-                    const hist = selectedReversalClient.history || [];
-                    const txn = hist[idx];
-                    if (!txn || txn.reversed) {
-                        Utils.toast("Transaction already reversed or invalid");
-                        return;
-                    }
-                    const amt = Number(txn.amount) || 0;
+                    if (!selectedReversalClient) return;
+                    const txn = selectedReversalClient.history[idx];
+                    if (!txn || txn.reversed) return;
                     if (txn.type === 'Repayment') {
-                        selectedReversalClient.balance = (selectedReversalClient.balance || 0) + amt;
-                        CashPosition.deduct(txn.channel || 'cash', amt);
+                        selectedReversalClient.balance += txn.amount;
+                        CashPosition.deduct(txn.channel || 'Cash', txn.amount);
                     } else if (txn.type === 'Disbursement') {
-                        selectedReversalClient.balance = Math.max(0, (selectedReversalClient.balance || 0) - amt);
-                        const p = Number(txn.principal) || 0;
-                        const fee = Number(txn.processingFee) || 0;
-                        if (p > 0) CashPosition.add('cash', Math.max(0, p - fee));
+                        const netDisb = (txn.principal || txn.amount) - (txn.processingFee || 0);
+                        selectedReversalClient.balance = Math.max(0, selectedReversalClient.balance - txn.amount);
+                        CashPosition.add('cash', netDisb);
                     }
                     txn.reversed = true;
                     State.recalculateClientStatus(selectedReversalClient);
-                    this.logReversalToWorkspace({
+                    this.logReversalRecord({
                         category: "LOAN",
-                        subType: `Loan ${txn.type} Reversal`,
-                        clientOrSource: `${selectedReversalClient.name} (${selectedReversalClient.nin || selectedReversalClient.id})`,
-                        description: `Reversed ${txn.type} (${txn.channel || '-'}) — Reason: ${reason}`,
-                        amount: amt
+                        sourceLabel: `${selectedReversalClient.name} (${selectedReversalClient.nin || 'N/A'})`,
+                        description: `Reversed Loan ${txn.type} (${txn.channel || 'Cash'}) — ${reason}`,
+                        amount: txn.amount
                     });
-                    Audit.log("LOAN_TXN_REVERSED", { client: selectedReversalClient.name, txnType: txn.type, amt, reason });
-                    this.selectReversalClient(selectedReversalClient.id);
                 } else if (cat === "BANKING") {
-                    const bankTxn = (branch.bankings || [])[idx];
-                    if (!bankTxn || bankTxn.reversed) {
-                        Utils.toast("Banking deposit already reversed or invalid");
-                        return;
-                    }
-                    const amt = Number(bankTxn.amount) || 0;
-                    CashPosition.add('cash', amt);
-                    bankTxn.reversed = true;
-                    this.logReversalToWorkspace({
+                    const b = branch.bankings?.[idx];
+                    if (!b || b.reversed) return;
+                    b.reversed = true;
+                    CashPosition.add('cash', Number(b.amount) || 0);
+                    this.logReversalRecord({
                         category: "BANKING",
-                        subType: "Banking Reversal",
-                        clientOrSource: `${bankTxn.name} (${bankTxn.ref || 'No Ref'})`,
-                        description: `Reversed bank deposit — Reason: ${reason}`,
-                        amount: amt
+                        sourceLabel: `${b.name} (${b.ref || 'No Ref'})`,
+                        description: `Reversed Banking Deposit — ${reason}`,
+                        amount: b.amount
                     });
-                    Audit.log("BANKING_REVERSED", { bank: bankTxn.name, amt, reason });
-                    Banking.renderHistory();
-                    this.onCategoryChange();
                 } else if (cat === "SAVINGS") {
-                    if (!selectedReversalClient) {
-                        Utils.toast("Select a client");
-                        return;
-                    }
+                    if (!selectedReversalClient) return;
                     const nin = selectedReversalClient.nin;
                     const sav = branch.savingsAccounts?.[nin];
-                    const savTxn = sav?.history?.[idx];
-                    if (!savTxn || savTxn.reversed) {
-                        Utils.toast("Savings transaction already reversed or invalid");
-                        return;
-                    }
-                    const amt = Number(savTxn.amount) || 0;
-                    if (savTxn.type === 'DEPOSIT') {
+                    const sh = sav?.history?.[idx];
+                    if (!sh || sh.reversed) return;
+                    const amt = Number(sh.amount) || 0;
+                    if (sh.type === "DEPOSIT") {
                         sav.balance = Math.max(0, (sav.balance || 0) - amt);
                         CashPosition.deduct('cash', amt);
-                    } else if (savTxn.type === 'WITHDRAWAL') {
+                    } else if (sh.type === "WITHDRAWAL") {
                         sav.balance = (sav.balance || 0) + amt;
                         CashPosition.add('cash', amt);
                     }
-                    savTxn.reversed = true;
-                    this.logReversalToWorkspace({
+                    sh.reversed = true;
+                    this.logReversalRecord({
                         category: "SAVINGS",
-                        subType: `Savings ${savTxn.type} Reversal`,
-                        clientOrSource: `${selectedReversalClient.name} (${nin || selectedReversalClient.id})`,
-                        description: `Reversed savings ${savTxn.type.toLowerCase()} — Reason: ${reason}`,
+                        sourceLabel: `${selectedReversalClient.name} (${nin || 'N/A'})`,
+                        description: `Reversed Savings ${sh.type} — ${reason}`,
                         amount: amt
                     });
-                    Audit.log("SAVINGS_REVERSED", { client: selectedReversalClient.name, type: savTxn.type, amt, reason });
-                    this.selectReversalClient(selectedReversalClient.id);
                 } else if (cat === "EXPENSE") {
-                    const expTxn = (branch.expenses || [])[idx];
-                    if (!expTxn || expTxn.reversed) {
-                        Utils.toast("Expense already reversed or invalid");
-                        return;
-                    }
-                    const amt = Number(expTxn.amount) || 0;
-                    CashPosition.add('cash', amt);
-                    expTxn.reversed = true;
-                    this.logReversalToWorkspace({
+                    const exp = branch.expenses?.[idx];
+                    if (!exp || exp.reversed) return;
+                    exp.reversed = true;
+                    CashPosition.add('cash', Number(exp.amount) || 0);
+                    this.logReversalRecord({
                         category: "EXPENSE",
-                        subType: "Expense Reversal",
-                        clientOrSource: `${expTxn.category} — ${expTxn.narration || 'Expense'}`,
-                        description: `Reversed expense — Reason: ${reason}`,
-                        amount: amt
+                        sourceLabel: exp.category,
+                        description: `Reversed Expense (${exp.narration || '-'}) — ${reason}`,
+                        amount: exp.amount
                     });
-                    Audit.log("EXPENSE_REVERSED", { category: expTxn.category, amt, reason });
-                    Expenses.renderHistory();
-                    this.onCategoryChange();
                 } else if (cat === "MM_WITHDRAWAL") {
-                    const wdrTxn = (branch.mmWithdrawals || [])[idx];
-                    if (!wdrTxn || wdrTxn.reversed) {
-                        Utils.toast("Mobile money withdrawal already reversed or invalid");
-                        return;
-                    }
-                    const amt = Number(wdrTxn.amount) || 0;
-                    CashPosition.deduct('cash', amt);
-                    const wallet = (wdrTxn.channel || '').toLowerCase();
-                    if (wallet === 'airtel') {
-                        state.cashPosition.airtel = (state.cashPosition.airtel || 0) + amt;
-                    } else {
+                    const wdr = branch.mmWithdrawals?.[idx];
+                    if (!wdr || wdr.reversed) return;
+                    wdr.reversed = true;
+                    const amt = Number(wdr.amount) || 0;
+                    state.cashPosition.cash = Math.max(0, (state.cashPosition.cash || 0) - amt);
+                    if (wdr.channel === 'MTN') {
                         state.cashPosition.mtn = (state.cashPosition.mtn || 0) + amt;
+                    } else if (wdr.channel === 'AIRTEL') {
+                        state.cashPosition.airtel = (state.cashPosition.airtel || 0) + amt;
                     }
-                    wdrTxn.reversed = true;
-                    this.logReversalToWorkspace({
+                    this.logReversalRecord({
                         category: "MM_WITHDRAWAL",
-                        subType: "MM Withdrawal Reversal",
-                        clientOrSource: `${wdrTxn.channel} → Cash`,
-                        description: `Reversed ${wdrTxn.channel} withdrawal to Cash — Reason: ${reason}`,
+                        sourceLabel: `${wdr.channel} → Cash`,
+                        description: `Reversed MM Withdrawal — ${reason}`,
                         amount: amt
                     });
-                    Audit.log("MM_WITHDRAWAL_REVERSED", { channel: wdrTxn.channel, amt, reason });
-                    this.onCategoryChange();
                 }
 
                 document.getElementById("rev-reason").value = "";
                 State.save();
                 UI.refreshAll();
-                Utils.toast("Reversal executed & logged to Daily Workspace");
+                this.onCategoryChange();
+                Utils.toast("Transaction reversed & logged in Daily Workspace");
             }
         };
         LoanOps.searchReversalClientsDebounced = Utils.debounce(q => LoanOps.searchReversalClients(q), 260);
 
         // ============================================================
-        // CLIENTS & DOCUMENTS
+        // CLIENTS
         // ============================================================
         const Clients = {
             renderMasterDirectory() {
-                const query = (document.getElementById("master-client-search")?.value || "").toLowerCase();
-                const branch = State.getActiveBranch();
                 const tbody = document.getElementById("master-clients-table-body");
                 if (!tbody) return;
-                const filtered = state.globalClients.filter(c =>
-                    !query ||
-                    (c.name && c.name.toLowerCase().includes(query)) ||
-                    (c.nin && c.nin.toLowerCase().includes(query)) ||
-                    (c.phone && c.phone.toLowerCase().includes(query)) ||
-                    (c.guarantor && c.guarantor.toLowerCase().includes(query))
+                const branch = State.getActiveBranch();
+                const filter = (document.getElementById("master-client-search")?.value || "").toLowerCase();
+                const uniqueMap = new Map();
+                state.globalClients.forEach(gc => uniqueMap.set(gc.nin, { ...gc }));
+                branch.clients.forEach(bc => {
+                    if (bc.nin) {
+                        const existing = uniqueMap.get(bc.nin) || {};
+                        uniqueMap.set(bc.nin, { ...existing, ...bc });
+                    }
+                });
+                const list = Array.from(uniqueMap.values()).filter(c =>
+                    !filter ||
+                    (c.name && c.name.toLowerCase().includes(filter)) ||
+                    (c.nin && c.nin.toLowerCase().includes(filter)) ||
+                    (c.phone && c.phone.includes(filter)) ||
+                    (c.guarantor && c.guarantor.toLowerCase().includes(filter))
                 );
-                if (filtered.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">No clients found</td></tr>`;
-                    return;
-                }
-                tbody.innerHTML = filtered.map(c => {
-                    const bClient = branch.clients.find(bc => bc.nin === c.nin);
-                    const off = branch.officers.find(o => o.id === bClient?.officerId);
-                    const docs = state.clientDocuments[c.nin] || [];
-                    const savBal = branch.savingsAccounts[c.nin]?.balance || 0;
-                    const gPhoneDisp = c.guarantorPhone ? ` (${c.guarantorPhone})` : "";
+                tbody.innerHTML = list.map(c => {
+                    const savBal = branch.savingsAccounts?.[c.nin]?.balance || 0;
+                    const docCount = (state.clientDocuments[c.nin] || []).length;
+                    const officer = branch.officers.find(o => o.id === c.officerId)?.name || 'Unassigned';
+                    const catDisplay = c.category === 'BODABODA' ? `<span class="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded font-bold text-[10px]">BODABODA${c.plate ? ' (' + c.plate + ')' : ''}</span>` : `<span class="text-slate-600">${c.category || 'OTHERS'}</span>`;
                     return `
                         <tr class="hover:bg-slate-50">
-                            <td class="p-3 font-mono font-bold text-purple-700">${c.nin || 'N/A'}</td>
-                            <td class="p-3"><strong>${c.name || ''}</strong><br><span class="text-slate-500">${c.phone || ''}</span></td>
-                            <td class="p-3">${c.guarantor || '-'}${gPhoneDisp}</td>
-                            <td class="p-3">${c.category || 'OTHERS'}</td>
-                            <td class="p-3">${off ? off.name : 'Unassigned'}</td>
-                            <td class="p-3 font-mono text-emerald-700 font-bold">${Utils.formatUGX(savBal)}</td>
-                            <td class="p-3"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold">${docs.length}</span></td>
+                            <td class="p-3 font-mono font-bold text-purple-800">${c.nin || '-'}</td>
+                            <td class="p-3"><strong>${c.name || '-'}</strong><br><span class="text-slate-500">${c.phone || '-'}</span></td>
+                            <td class="p-3">${c.guarantor || '-'}<br><span class="text-[10px] text-slate-400">${c.guarantorPhone || ''}</span></td>
+                            <td class="p-3">${catDisplay}</td>
+                            <td class="p-3 font-semibold text-slate-700">${officer}</td>
+                            <td class="p-3 font-mono font-bold text-emerald-700">${Utils.formatUGX(savBal)}</td>
+                            <td class="p-3"><button onclick="Clients.openDocumentModal('${c.nin}', '${(c.name || '').replace(/'/g, "\\'")}')" class="bg-purple-100 text-purple-800 px-2 py-1 rounded text-[10px] font-bold"><i class="fa-solid fa-folder"></i> ${docCount}</button></td>
                             <td class="p-3 text-right">
-                                <button onclick="Clients.openDocumentModal('${c.nin}')" class="bg-purple-700 text-white px-2.5 py-1 rounded text-[11px] font-bold">Docs</button>
+                                <button onclick="Clients.deleteClient('${c.nin}')" class="bg-red-600 text-white px-2 py-1 rounded text-[10px] font-bold">Delete</button>
                             </td>
                         </tr>
                     `;
-                }).join('');
+                }).join('') || `<tr><td colspan="8" class="p-4 text-center text-slate-400">No clients found</td></tr>`;
             },
             renderMasterDirectoryDebounced: null,
-            openDocumentModal(nin) {
-                activeDocNin = nin;
-                const gc = state.globalClients.find(c => c.nin === nin) || { name: nin };
-                document.getElementById("doc-modal-client-info").innerText = `${gc.name} (${nin})`;
-                this.renderDocumentList();
-                UI.show("document-modal");
-            },
-            renderDocumentList() {
-                const docs = state.clientDocuments[activeDocNin] || [];
-                const list = document.getElementById("doc-modal-list");
-                if (!list) return;
-                if (docs.length === 0) {
-                    list.innerHTML = `<p class="text-slate-400 text-center py-2">No documents uploaded</p>`;
+            deleteClient(nin) {
+                if (!['Administrator', 'Manager'].includes(state.currentUser?.role)) {
+                    Utils.toast("Admin/Manager only");
                     return;
                 }
-                list.innerHTML = docs.map((d, idx) => `
-                    <div class="flex justify-between items-center p-2 border rounded bg-white">
-                        <div>
-                            <a href="${d.dataUrl}" download="${d.filename}" class="text-purple-700 font-bold hover:underline">${d.label || d.filename}</a>
-                            <div class="text-[10px] text-slate-400">${d.date || ''}</div>
-                        </div>
-                        <button onclick="Clients.deleteDocument(${idx})" class="text-red-600 text-xs font-bold">Delete</button>
-                    </div>
-                `).join('');
+                if (!Utils.confirmAction("Delete client?")) return;
+                state.globalClients = state.globalClients.filter(c => c.nin !== nin);
+                State.getActiveBranch().clients = State.getActiveBranch().clients.filter(c => c.nin !== nin);
+                State.save();
+                this.renderMasterDirectory();
+                Utils.toast("Client deleted");
+            },
+            openDocumentModal(nin, name) {
+                activeDocNin = nin;
+                document.getElementById("doc-modal-client-info").innerText = `${name} (${nin})`;
+                this.renderDocumentsList();
+                Utils.show("document-modal");
             },
             uploadDocument() {
+                if (!activeDocNin) return;
                 const fileInput = document.getElementById("client-file-input");
-                const labelInput = document.getElementById("client-file-label");
-                if (!fileInput.files || fileInput.files.length === 0) {
-                    Utils.toast("Choose a file");
+                const label = document.getElementById("client-file-label").value.trim() || "Document";
+                const file = fileInput.files[0];
+                if (!file) {
+                    Utils.toast("Choose file");
                     return;
                 }
-                const file = fileInput.files[0];
                 const reader = new FileReader();
                 reader.onload = e => {
                     if (!state.clientDocuments[activeDocNin]) state.clientDocuments[activeDocNin] = [];
                     state.clientDocuments[activeDocNin].push({
-                        filename: file.name,
-                        label: labelInput.value.trim() || file.name,
-                        dataUrl: e.target.result,
-                        date: Utils.today()
+                        id: Utils.generateId("doc"),
+                        label,
+                        name: file.name,
+                        date: Utils.today(),
+                        dataUrl: e.target.result
                     });
                     State.save();
-                    fileInput.value = "";
-                    labelInput.value = "";
-                    this.renderDocumentList();
+                    this.renderDocumentsList();
                     this.renderMasterDirectory();
-                    Utils.toast("Document uploaded");
+                    fileInput.value = "";
+                    document.getElementById("client-file-label").value = "";
+                    Utils.toast("Uploaded");
                 };
                 reader.readAsDataURL(file);
             },
-            deleteDocument(idx) {
-                if (!state.clientDocuments[activeDocNin]) return;
-                state.clientDocuments[activeDocNin].splice(idx, 1);
-                State.save();
-                this.renderDocumentList();
-                this.renderMasterDirectory();
+            renderDocumentsList() {
+                const list = document.getElementById("doc-modal-list");
+                const docs = state.clientDocuments[activeDocNin] || [];
+                list.innerHTML = docs.map(d => `
+                    <div class="flex justify-between items-center p-2.5 bg-slate-50 border rounded-lg text-xs">
+                        <div><strong>${d.label}</strong><br><span class="text-[10px] text-slate-400">${d.date}</span></div>
+                        <a href="${d.dataUrl}" download="${d.name}" class="bg-blue-600 text-white px-2.5 py-1 rounded text-[10px]">Download</a>
+                    </div>
+                `).join('') || `<p class="text-slate-400 text-xs text-center">No documents</p>`;
             }
         };
-        Clients.renderMasterDirectoryDebounced = Utils.debounce(() => Clients.renderMasterDirectory(), 250);
+        Clients.renderMasterDirectoryDebounced = Utils.debounce(() => Clients.renderMasterDirectory(), 240);
 
         // ============================================================
         // DAILY WORKSPACE
@@ -4269,235 +4276,307 @@
             },
             render() {
                 const dateEl = document.getElementById("daily-workspace-date");
-                if (dateEl && !dateEl.value) dateEl.value = Utils.today();
-                const targetDate = dateEl ? dateEl.value : Utils.today();
+                if (!dateEl.value) dateEl.value = Utils.today();
+                const targetDate = dateEl.value;
                 const search = (document.getElementById("daily-workspace-search")?.value || "").toLowerCase();
                 const branch = State.getActiveBranch();
-                const tbody = document.getElementById("daily-workspace-table-body");
-                if (!tbody) return;
-                const activities = [];
+                let activities = [];
+                let totalCol = 0, totalDisb = 0, totalExp = 0, totalBank = 0;
+
                 branch.clients.forEach(c => {
                     (c.history || []).forEach(h => {
                         if (h.date === targetDate) {
+                            const ts = h.timestamp || Date.parse(`${h.date} ${h.time || '00:00:00'}`) || 0;
+                            if (h.type === 'Repayment') {
+                                activities.push({
+                                    timestamp: ts,
+                                    timeStr: h.time || '',
+                                    type: 'Repayment',
+                                    source: `${c.name} (${c.nin || ''})`,
+                                    desc: 'Loan Repayment',
+                                    detail: h.channel || 'Cash',
+                                    amount: h.amount || 0,
+                                    isCredit: true
+                                });
+                                totalCol += (h.amount || 0);
+                            } else if (h.type === 'Disbursement') {
+                                activities.push({
+                                    timestamp: ts,
+                                    timeStr: h.time || '',
+                                    type: 'Disbursement',
+                                    source: `${c.name} (${c.nin || ''})`,
+                                    desc: `Loan (${c.category || 'OTHERS'})`,
+                                    detail: `Fee: ${Utils.formatUGX(h.processingFee || 0)}`,
+                                    amount: h.amount || 0,
+                                    isCredit: false
+                                });
+                                totalDisb += (h.amount || 0);
+                            }
+                        }
+                    });
+                });
+
+                (branch.expenses || []).forEach(e => {
+                    if (e.date === targetDate) {
+                        const ts = e.timestamp || Date.parse(`${e.date} ${e.time || '00:00:00'}`) || 0;
+                        activities.push({
+                            timestamp: ts,
+                            timeStr: e.time || '',
+                            type: 'Expense',
+                            source: e.category || 'Expense',
+                            desc: e.narration || '-',
+                            detail: 'Cash Out',
+                            amount: e.amount || 0,
+                            isCredit: false
+                        });
+                        totalExp += (e.amount || 0);
+                    }
+                });
+
+                (branch.bankings || []).forEach(b => {
+                    if (b.date === targetDate) {
+                        const ts = b.timestamp || Date.parse(`${b.date} ${b.time || '00:00:00'}`) || 0;
+                        activities.push({
+                            timestamp: ts,
+                            timeStr: b.time || '',
+                            type: 'Banking',
+                            source: b.name || 'Bank',
+                            desc: `Ref: ${b.ref || '-'}`,
+                            detail: 'Bank Deposit',
+                            amount: b.amount || 0,
+                            isCredit: false
+                        });
+                        totalBank += (b.amount || 0);
+                    }
+                });
+
+                Object.entries(branch.savingsAccounts || {}).forEach(([nin, sav]) => {
+                    const cli = branch.clients.find(c => c.nin === nin) || state.globalClients.find(c => c.nin === nin);
+                    const cLabel = cli ? `${cli.name} (${nin})` : nin;
+                    (sav.history || []).forEach(sh => {
+                        if (sh.date === targetDate) {
+                            const ts = sh.timestamp || Date.parse(`${sh.date} ${sh.time || '00:00:00'}`) || 0;
+                            const isDep = sh.type === 'DEPOSIT';
                             activities.push({
-                                timestamp: h.timestamp || 0,
-                                time: h.time || '',
-                                type: h.type === 'Repayment' ? 'Collection' : h.type,
-                                client: c.name,
-                                description: `${h.type}${h.reversed ? ' [REVERSED]' : ''}`,
-                                detail: h.channel || '',
-                                amount: h.amount || 0,
-                                isDebit: h.type === 'Disbursement'
+                                timestamp: ts,
+                                timeStr: sh.time || '',
+                                type: `Savings ${sh.type}`,
+                                source: cLabel,
+                                desc: isDep ? 'Savings Deposit' : 'Savings Withdrawal',
+                                detail: 'Cash',
+                                amount: sh.amount || 0,
+                                isCredit: isDep
                             });
                         }
                     });
                 });
-                (branch.expenses || []).forEach(e => {
-                    if (e.date === targetDate) {
-                        activities.push({
-                            timestamp: e.timestamp || 0,
-                            time: e.time || '',
-                            type: 'Expense',
-                            client: e.category,
-                            description: `${e.narration || 'Expense'}${e.reversed ? ' [REVERSED]' : ''}`,
-                            detail: '',
-                            amount: e.amount || 0,
-                            isDebit: true
-                        });
-                    }
-                });
-                (branch.bankings || []).forEach(b => {
-                    if (b.date === targetDate) {
-                        activities.push({
-                            timestamp: b.timestamp || 0,
-                            time: b.time || '',
-                            type: 'Banking',
-                            client: b.name,
-                            description: `Deposit (Ref: ${b.ref || '-'}) ${b.reversed ? '[REVERSED]' : ''}`,
-                            detail: '',
-                            amount: b.amount || 0,
-                            isDebit: true
-                        });
-                    }
-                });
+
                 (branch.mmWithdrawals || []).forEach(w => {
                     if (w.date === targetDate) {
+                        const ts = w.timestamp || Date.parse(`${w.date} ${w.time || '00:00:00'}`) || 0;
                         activities.push({
-                            timestamp: w.timestamp || 0,
-                            time: w.time || '',
+                            timestamp: ts,
+                            timeStr: w.time || '',
                             type: 'MM Withdrawal',
-                            client: `${w.channel} → Cash`,
-                            description: `Wallet to Cash withdrawal${w.reversed ? ' [REVERSED]' : ''}`,
-                            detail: w.by || '',
+                            source: `${w.channel} Wallet`,
+                            desc: 'Withdraw MM → Cash at Hand',
+                            detail: `By ${w.by || 'Staff'}`,
                             amount: w.amount || 0,
-                            isDebit: false
+                            isCredit: true
                         });
                     }
                 });
-                (branch.reversals || []).forEach(r => {
-                    if (r.date === targetDate) {
+
+                (branch.reversals || []).forEach(rev => {
+                    if (rev.date === targetDate) {
+                        const ts = rev.timestamp || Date.parse(`${rev.date} ${rev.time || '00:00:00'}`) || 0;
                         activities.push({
-                            timestamp: r.timestamp || 0,
-                            time: r.time || '',
-                            type: 'Reversal',
-                            client: r.clientOrSource || '',
-                            description: `${r.subType || 'Reversal'}: ${r.description || ''}`,
-                            detail: r.by || '',
-                            amount: r.amount || 0,
-                            isDebit: false
+                            timestamp: ts,
+                            timeStr: rev.time || '',
+                            type: `Reversal (${rev.category})`,
+                            source: rev.sourceLabel || '-',
+                            desc: rev.description || 'Transaction Reversal',
+                            detail: `By ${rev.by || 'Admin'}`,
+                            amount: rev.amount || 0,
+                            isCredit: false,
+                            isReversal: true
                         });
                     }
                 });
+
                 activities.sort((a, b) => a.timestamp - b.timestamp);
-                let totalCol = 0, totalDisb = 0, totalExp = 0, totalBank = 0;
-                activities.forEach(a => {
-                    if (a.type === 'Collection') totalCol += a.amount;
-                    if (a.type === 'Disbursement') totalDisb += a.amount;
-                    if (a.type === 'Expense') totalExp += a.amount;
-                    if (a.type === 'Banking') totalBank += a.amount;
-                });
+
+                const filtered = activities.filter(act =>
+                    !search ||
+                    (act.source && act.source.toLowerCase().includes(search)) ||
+                    (act.desc && act.desc.toLowerCase().includes(search)) ||
+                    (act.type && act.type.toLowerCase().includes(search))
+                );
+
                 document.getElementById("dw-total-collections").innerText = Utils.formatUGX(totalCol);
                 document.getElementById("dw-total-disbursements").innerText = Utils.formatUGX(totalDisb);
                 document.getElementById("dw-total-expenses").innerText = Utils.formatUGX(totalExp);
                 document.getElementById("dw-total-bankings").innerText = Utils.formatUGX(totalBank);
-                const filtered = activities.filter(a => !search || (a.client && a.client.toLowerCase().includes(search)) || (a.description && a.description.toLowerCase().includes(search)) || (a.type && a.type.toLowerCase().includes(search)));
-                if (filtered.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No entries for ${targetDate}</td></tr>`;
-                    return;
-                }
-                tbody.innerHTML = filtered.map((a, idx) => `
-                    <tr class="hover:bg-slate-50">
-                        <td class="p-3 font-mono text-[11px] text-slate-500">#${idx + 1} (${a.time})</td>
-                        <td class="p-3 font-bold">${a.type}</td>
-                        <td class="p-3 font-semibold">${a.client}</td>
-                        <td class="p-3 text-slate-600">${a.description}</td>
-                        <td class="p-3 text-slate-500">${a.detail}</td>
-                        <td class="p-3 text-right font-mono font-bold ${a.isDebit ? 'text-rose-600' : 'text-emerald-600'}">${Utils.formatUGX(a.amount)}</td>
+
+                const tbody = document.getElementById("daily-workspace-table-body");
+                tbody.innerHTML = filtered.map((act, idx) => `
+                    <tr class="hover:bg-slate-50 ${act.isReversal ? 'bg-rose-50/60' : ''}">
+                        <td class="p-3 font-mono text-[11px] font-bold">#${idx + 1} <span class="text-slate-400 font-normal">${act.timeStr || ''}</span></td>
+                        <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${act.isReversal ? 'bg-rose-100 text-rose-800' : (act.isCredit ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800')}">${act.type}</span></td>
+                        <td class="p-3 font-semibold">${act.source}</td>
+                        <td class="p-3 text-slate-600">${act.desc}</td>
+                        <td class="p-3 text-slate-500">${act.detail}</td>
+                        <td class="p-3 text-right font-mono font-bold ${act.isReversal ? 'text-rose-700' : (act.isCredit ? 'text-emerald-700' : 'text-slate-800')}">${Utils.formatUGX(act.amount)}</td>
                     </tr>
-                `).join('');
+                `).join('') || `<tr><td colspan="6" class="p-6 text-center text-slate-400">No activities on ${targetDate}</td></tr>`;
             },
             renderDebounced: null
         };
-        DailyWorkspace.renderDebounced = Utils.debounce(() => DailyWorkspace.render(), 250);
+        DailyWorkspace.renderDebounced = Utils.debounce(() => DailyWorkspace.render(), 220);
 
         // ============================================================
-        // STAFF & OFFICERS
+        // STAFF
         // ============================================================
         const Staff = {
+            populateDropdowns() {
+                const branch = State.getActiveBranch();
+                const sel = document.getElementById("disburse-officer-select");
+                const ageFilter = document.getElementById("aging-officer-filter");
+                const histSelect = document.getElementById("staff-history-select");
+
+                if (sel) sel.innerHTML = branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('') || `<option value="">-- Add Staff First --</option>`;
+                if (ageFilter) ageFilter.innerHTML = `<option value="ALL">-- ALL STAFF --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+                if (histSelect) histSelect.innerHTML = `<option value="">-- Select Staff --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+            },
             registerOfficer() {
-                if (!['Administrator', 'Manager', 'Accountant'].includes(state.currentUser?.role)) {
-                    Utils.toast("Not authorized");
-                    return;
-                }
                 const name = document.getElementById("officer-add-name").value.trim();
                 const phone = RegionManager.normalizePhone(document.getElementById("officer-add-phone").value);
                 if (!Validation.isRequired(name, "Name") || !Validation.isValidPhone(phone) || Validation.isDuplicatePhone(phone)) return;
                 const branch = State.getActiveBranch();
                 branch.officers.push({ id: Utils.generateId("off"), name, phone });
                 State.save();
-                document.getElementById("officer-add-name").value = "";
-                document.getElementById("officer-add-phone").value = "";
                 this.populateDropdowns();
                 this.renderHub();
+                document.getElementById("officer-add-name").value = "";
+                document.getElementById("officer-add-phone").value = "";
                 Utils.toast("Staff registered");
-            },
-            populateDropdowns() {
-                const branch = State.getActiveBranch();
-                const sel = document.getElementById("disburse-officer-select");
-                if (sel) sel.innerHTML = branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
-                const histSel = document.getElementById("staff-history-select");
-                if (histSel) histSel.innerHTML = branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
-                const histDate = document.getElementById("staff-history-date");
-                if (histDate && !histDate.value) histDate.value = Utils.today();
             },
             renderHub() {
                 const branch = State.getActiveBranch();
                 const container = document.getElementById("officers-container");
                 if (!container) return;
+                const todayStr = Utils.today();
                 container.innerHTML = branch.officers.map(o => {
-                    const clients = branch.clients.filter(c => c.officerId === o.id);
-                    const totalBalance = clients.reduce((s, c) => s + (c.balance || 0), 0);
+                    const myClients = branch.clients.filter(c => c.officerId === o.id);
+                    const totalPortfolio = myClients.reduce((s, c) => s + (c.balance || 0), 0);
+                    const todayCol = myClients.reduce((s, c) => s + (c.history || []).filter(h => h.type === 'Repayment' && h.date === todayStr).reduce((x, h) => x + h.amount, 0), 0);
                     return `
-                        <div class="bg-white border p-4 rounded-xl shadow-sm space-y-2 text-xs">
-                            <div class="font-bold text-sm text-slate-900">${o.name}</div>
-                            <div class="text-slate-500 font-mono">${o.phone || 'N/A'}</div>
-                            <div class="flex justify-between pt-2 border-t text-xs">
-                                <span>Clients: <strong>${clients.length}</strong></span>
-                                <span class="font-mono font-bold text-blue-700">${Utils.formatUGX(totalBalance)}</span>
+                        <div class="bg-white border rounded-xl p-4 space-y-2 shadow-sm text-xs">
+                            <div class="flex justify-between items-start border-b pb-2">
+                                <div><div class="font-bold text-slate-900 text-sm">${o.name}</div><div class="text-slate-500">${o.phone}</div></div>
+                                <span class="bg-slate-100 text-slate-700 font-bold px-2 py-0.5 rounded">${myClients.length} Clients</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 pt-1">
+                                <div><span class="text-slate-500 block text-[10px]">Portfolio</span><strong class="text-blue-700">${Utils.formatUGX(totalPortfolio)}</strong></div>
+                                <div><span class="text-slate-500 block text-[10px]">Today Collected</span><strong class="text-emerald-700">${Utils.formatUGX(todayCol)}</strong></div>
                             </div>
                         </div>
                     `;
-                }).join('') || `<p class="text-xs text-slate-400 col-span-full text-center py-4">No staff registered</p>`;
+                }).join('') || `<p class="text-slate-400 text-xs">No staff registered</p>`;
             },
             renderHistoricalRecords() {
-                const officerId = document.getElementById("staff-history-select")?.value;
-                const dateVal = document.getElementById("staff-history-date")?.value;
-                const resDiv = document.getElementById("staff-history-results");
-                if (!officerId || !dateVal || !resDiv) return;
+                const staffId = document.getElementById("staff-history-select")?.value;
+                const targetDate = document.getElementById("staff-history-date")?.value;
+                const resBox = document.getElementById("staff-history-results");
+                if (!staffId || !targetDate) {
+                    Utils.toast("Please select both a staff member and a date.");
+                    return;
+                }
                 const branch = State.getActiveBranch();
-                const off = branch.officers.find(o => o.id === officerId);
-                const offClients = branch.clients.filter(c => c.officerId === officerId);
-                let dayCollections = 0, dayDisbursements = 0;
-                const items = [];
-                offClients.forEach(c => {
+                const officer = branch.officers.find(o => o.id === staffId);
+                const myClients = branch.clients.filter(c => c.officerId === staffId);
+                let dayRepayments = [];
+                let dayDisbursements = [];
+                let totalCollected = 0;
+                let totalDisbursed = 0;
+
+                myClients.forEach(c => {
                     (c.history || []).forEach(h => {
-                        if (h.date === dateVal) {
-                            if (h.type === 'Repayment') dayCollections += Number(h.amount) || 0;
-                            if (h.type === 'Disbursement') dayDisbursements += Number(h.amount) || 0;
-                            items.push(`<div class="flex justify-between py-1 border-b text-[11px]"><span><strong>${c.name}</strong> — ${h.type} (${h.time || ''})</span><span class="font-mono font-bold">${Utils.formatUGX(h.amount || 0)}</span></div>`);
+                        if (h.date === targetDate) {
+                            if (h.type === 'Repayment') {
+                                dayRepayments.push({ clientName: c.name, nin: c.nin, amount: h.amount, channel: h.channel, time: h.time });
+                                totalCollected += (h.amount || 0);
+                            } else if (h.type === 'Disbursement') {
+                                dayDisbursements.push({ clientName: c.name, nin: c.nin, amount: h.amount, time: h.time });
+                                totalDisbursed += (h.amount || 0);
+                            }
                         }
                     });
                 });
-                resDiv.innerHTML = `
-                    <div class="font-bold text-xs text-slate-800">${off ? off.name : 'Staff'} — Records for ${dateVal}</div>
-                    <div class="grid grid-cols-2 gap-2 text-xs">
-                        <div class="bg-emerald-50 p-2 rounded border border-emerald-200">Collections: <strong class="text-emerald-700">${Utils.formatUGX(dayCollections)}</strong></div>
-                        <div class="bg-indigo-50 p-2 rounded border border-indigo-200">Disbursements: <strong class="text-indigo-700">${Utils.formatUGX(dayDisbursements)}</strong></div>
+
+                resBox.innerHTML = `
+                    <div class="flex flex-wrap justify-between items-center gap-2 text-xs bg-slate-50 p-3 rounded-xl border">
+                        <div><strong>Staff:</strong> ${officer?.name || 'Unknown'} | <strong>Date:</strong> ${targetDate}</div>
+                        <div class="flex gap-4">
+                            <span class="text-emerald-700 font-bold">Collected: ${Utils.formatUGX(totalCollected)}</span>
+                            <span class="text-indigo-700 font-bold">Disbursed: ${Utils.formatUGX(totalDisbursed)}</span>
+                        </div>
                     </div>
-                    <div class="max-h-40 overflow-y-auto">${items.join('') || '<p class="text-slate-400 text-[11px]">No transactions on this date.</p>'}</div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <div class="border rounded-xl p-3 bg-white">
+                            <div class="font-bold text-slate-800 mb-2">Repayments (${dayRepayments.length})</div>
+                            ${dayRepayments.map(r => `<div class="py-1.5 border-b last:border-b-0 flex justify-between"><span><strong>${r.clientName}</strong> (${r.channel || 'Cash'})</span><strong class="text-emerald-700">${Utils.formatUGX(r.amount)}</strong></div>`).join('') || `<p class="text-slate-400">No repayments on this date.</p>`}
+                        </div>
+                        <div class="border rounded-xl p-3 bg-white">
+                            <div class="font-bold text-slate-800 mb-2">Disbursements (${dayDisbursements.length})</div>
+                            ${dayDisbursements.map(d => `<div class="py-1.5 border-b last:border-b-0 flex justify-between"><span><strong>${d.clientName}</strong> (${d.nin || 'N/A'})</span><strong class="text-indigo-700">${Utils.formatUGX(d.amount)}</strong></div>`).join('') || `<p class="text-slate-400">No disbursements on this date.</p>`}
+                        </div>
+                    </div>
                 `;
-                Utils.show(resDiv);
+                Utils.show(resBox);
             }
         };
 
         // ============================================================
-        // BANKING
+        // BANKINGS
         // ============================================================
         const Banking = {
             recordDeposit() {
-                if (!['Administrator', 'Manager', 'Accountant', 'Cashier'].includes(state.currentUser?.role)) {
-                    Utils.toast("Not authorized");
-                    return;
-                }
                 const name = document.getElementById("bank-name").value.trim();
                 const accNo = document.getElementById("bank-acc-no").value.trim();
                 const amt = parseFloat(document.getElementById("bank-amount").value);
                 const ref = document.getElementById("bank-ref").value.trim();
                 if (!Validation.isRequired(name, "Bank Name") || !Validation.isPositiveAmount(amt)) return;
                 const branch = State.getActiveBranch();
-                branch.bankings.push({ id: Utils.generateId("bnk"), name, accNo, amount: amt, ref, date: Utils.today(), timestamp: Date.now(), time: Utils.timeNow() });
+                branch.bankings.push({
+                    id: Utils.generateId("bnk"),
+                    name,
+                    accNo,
+                    amount: amt,
+                    ref,
+                    date: Utils.today(),
+                    timestamp: Date.now(),
+                    time: Utils.timeNow()
+                });
                 CashPosition.deduct('cash', amt);
                 State.save();
-                ["bank-name", "bank-acc-no", "bank-amount", "bank-ref"].forEach(id => document.getElementById(id).value = "");
                 this.renderHistory();
                 DailyWorkspace.render();
                 CashPosition.render();
-                Utils.toast("Deposit recorded");
+                document.getElementById("bank-name").value = "";
+                document.getElementById("bank-acc-no").value = "";
+                document.getElementById("bank-amount").value = "";
+                document.getElementById("bank-ref").value = "";
+                Utils.toast("Banking recorded");
             },
             renderHistory() {
                 const branch = State.getActiveBranch();
-                const tbody = document.getElementById("bankings-history-body");
-                if (!tbody) return;
-                const total = branch.bankings.filter(b => !b.reversed).reduce((s, b) => s + (b.amount || 0), 0);
-                document.getElementById("total-banked-display").innerText = Utils.formatUGX(total);
-                tbody.innerHTML = branch.bankings.map(b => `
-                    <tr class="${b.reversed ? 'opacity-50 line-through' : ''}">
-                        <td class="p-3">${b.date}</td>
-                        <td class="p-3 font-bold">${b.name}</td>
-                        <td class="p-3 font-mono">${b.ref || '-'}</td>
-                        <td class="p-3 text-right font-mono font-bold text-blue-700">${Utils.formatUGX(b.amount)}</td>
-                    </tr>
-                `).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No deposits</td></tr>`;
+                const activeBankings = branch.bankings.filter(b => !b.reversed);
+                const tot = activeBankings.reduce((s, b) => s + b.amount, 0);
+                document.getElementById("total-banked-display").innerText = Utils.formatUGX(tot);
+                document.getElementById("bankings-history-body").innerHTML = activeBankings.slice().reverse().map(b => `
+                    <tr><td class="p-3">${b.date}</td><td class="p-3 font-bold">${b.name}</td><td class="p-3">${b.ref || '-'}</td><td class="p-3 text-right font-mono font-bold text-blue-700">${Utils.formatUGX(b.amount)}</td></tr>
+                `).join('') || `<tr><td colspan="4" class="p-4 text-center text-slate-400">No deposits</td></tr>`;
             }
         };
 
@@ -4506,39 +4585,37 @@
         // ============================================================
         const Expenses = {
             record() {
-                if (!['Administrator', 'Manager', 'Accountant', 'Cashier'].includes(state.currentUser?.role)) {
-                    Utils.toast("Not authorized");
-                    return;
-                }
                 const cat = document.getElementById("exp-category").value;
                 const amt = parseFloat(document.getElementById("exp-amount").value);
-                const narr = document.getElementById("exp-narration").value.trim();
+                const nar = document.getElementById("exp-narration").value.trim();
                 if (!Validation.isPositiveAmount(amt)) return;
                 const branch = State.getActiveBranch();
-                branch.expenses.push({ id: Utils.generateId("exp"), category: cat, amount: amt, narration: narr, date: Utils.today(), timestamp: Date.now(), time: Utils.timeNow() });
+                branch.expenses.push({
+                    id: Utils.generateId("exp"),
+                    category: cat,
+                    amount: amt,
+                    narration: nar,
+                    date: Utils.today(),
+                    timestamp: Date.now(),
+                    time: Utils.timeNow()
+                });
                 CashPosition.deduct('cash', amt);
                 State.save();
-                document.getElementById("exp-amount").value = "";
-                document.getElementById("exp-narration").value = "";
                 this.renderHistory();
                 DailyWorkspace.render();
                 CashPosition.render();
+                document.getElementById("exp-amount").value = "";
+                document.getElementById("exp-narration").value = "";
                 Utils.toast("Expense recorded");
             },
             renderHistory() {
                 const branch = State.getActiveBranch();
-                const tbody = document.getElementById("expenses-history-body");
-                if (!tbody) return;
-                const total = branch.expenses.filter(e => !e.reversed).reduce((s, e) => s + (e.amount || 0), 0);
-                document.getElementById("total-expenses-display").innerText = Utils.formatUGX(total);
-                tbody.innerHTML = branch.expenses.map(e => `
-                    <tr class="${e.reversed ? 'opacity-50 line-through' : ''}">
-                        <td class="p-3">${e.date}</td>
-                        <td class="p-3 font-bold">${e.category}</td>
-                        <td class="p-3">${e.narration || '-'}</td>
-                        <td class="p-3 text-right font-mono font-bold text-rose-600">${Utils.formatUGX(e.amount)}</td>
-                    </tr>
-                `).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No expenses</td></tr>`;
+                const activeExpenses = branch.expenses.filter(e => !e.reversed);
+                const tot = activeExpenses.reduce((s, e) => s + e.amount, 0);
+                document.getElementById("total-expenses-display").innerText = Utils.formatUGX(tot);
+                document.getElementById("expenses-history-body").innerHTML = activeExpenses.slice().reverse().map(e => `
+                    <tr><td class="p-3">${e.date}</td><td class="p-3 font-semibold">${e.category}</td><td class="p-3">${e.narration || '-'}</td><td class="p-3 text-right font-mono font-bold text-rose-700">${Utils.formatUGX(e.amount)}</td></tr>
+                `).join('') || `<tr><td colspan="4" class="p-4 text-center text-slate-400">No expenses</td></tr>`;
             }
         };
 
@@ -4547,33 +4624,40 @@
         // ============================================================
         const Capital = {
             submit() {
-                if (state.currentUser?.role !== 'Administrator') {
-                    Utils.toast("Access Denied: Admin only");
+                const role = state.currentUser?.role;
+                if (role === 'Manager') {
+                    Utils.toast("Managers are not permitted to add capital.");
                     return;
                 }
                 const amt = parseFloat(document.getElementById("cap-amount").value);
-                const narr = document.getElementById("cap-narration").value.trim();
+                const nar = document.getElementById("cap-narration").value.trim() || "Capital Injection";
                 if (!Validation.isPositiveAmount(amt)) return;
                 const branch = State.getActiveBranch();
-                branch.capitalizations.push({ id: Utils.generateId("cap"), amount: amt, narration: narr, date: Utils.today(), status: 'Approved' });
+                branch.capitalizations.push({
+                    id: Utils.generateId("cap"),
+                    amount: amt,
+                    narration: nar,
+                    status: 'APPROVED',
+                    date: Utils.today()
+                });
                 CashPosition.add('cash', amt);
                 State.save();
-                document.getElementById("cap-amount").value = "";
-                document.getElementById("cap-narration").value = "";
                 this.renderQueue();
                 CashPosition.render();
-                Utils.toast("Capital injected");
+                document.getElementById("cap-amount").value = "";
+                document.getElementById("cap-narration").value = "";
+                Utils.toast("Capital added");
             },
             renderQueue() {
                 const branch = State.getActiveBranch();
                 const list = document.getElementById("capital-approval-list");
                 if (!list) return;
                 list.innerHTML = branch.capitalizations.map(c => `
-                    <div class="bg-white p-2.5 border rounded flex justify-between items-center text-xs">
-                        <div><strong>${Utils.formatUGX(c.amount)}</strong> — ${c.narration || 'Capital'} <span class="text-slate-400">(${c.date})</span></div>
-                        <span class="px-2 py-0.5 bg-green-100 text-green-800 rounded font-bold text-[10px]">${c.status}</span>
+                    <div class="p-2.5 bg-white border rounded-xl flex justify-between items-center text-xs">
+                        <div><strong>${Utils.formatUGX(c.amount)}</strong> — ${c.narration}</div>
+                        <span class="px-2 py-0.5 rounded font-bold bg-green-100 text-green-800">${c.status}</span>
                     </div>
-                `).join('') || `<p class="text-slate-400 text-xs">No capital records</p>`;
+                `).join('') || `<p class="text-slate-400 text-xs text-center py-2">No records</p>`;
             }
         };
 
@@ -4581,216 +4665,139 @@
         // REPORTS
         // ============================================================
         const Reports = {
-            updateDashboard() {
+            getReportData() {
                 const branch = State.getActiveBranch();
+                const todayStr = Utils.today();
+                const totalPortfolio = branch.clients.reduce((s, c) => s + (c.balance || 0), 0);
+                const todayCollected = branch.clients.reduce((s, c) => s + (c.history || []).filter(h => h.type === 'Repayment' && h.date === todayStr).reduce((x, h) => x + h.amount, 0), 0);
+                const todayDisbursed = branch.clients.reduce((s, c) => s + (c.history || []).filter(h => h.type === 'Disbursement' && h.date === todayStr).reduce((x, h) => x + h.amount, 0), 0);
+                const totalBanked = branch.bankings.filter(b => !b.reversed).reduce((s, b) => s + b.amount, 0);
+                const totalExpenses = branch.expenses.filter(e => !e.reversed).reduce((s, e) => s + e.amount, 0);
+                const totalCapital = branch.capitalizations.filter(c => c.status === 'APPROVED').reduce((s, c) => s + c.amount, 0);
+                const totalFees = branch.clients.reduce((s, c) => s + (c.processingFee || 0), 0);
+                const cashAvailable = (state.cashPosition.cash || 0) + (state.cashPosition.mtn || 0) + (state.cashPosition.airtel || 0);
+                return { totalPortfolio, todayCollected, todayDisbursed, totalBanked, totalExpenses, totalCapital, totalFees, cashAvailable };
+            },
+            updateDashboard() {
+                const d = this.getReportData();
                 const grid = document.getElementById("full-report-grid");
                 if (!grid) return;
-                const todayStr = Utils.today();
-                let todayCol = 0, todayDisb = 0;
-                branch.clients.forEach(c => {
-                    (c.history || []).forEach(h => {
-                        if (h.date === todayStr) {
-                            if (h.type === 'Repayment') todayCol += h.amount || 0;
-                            if (h.type === 'Disbursement') todayDisb += h.amount || 0;
-                        }
-                    });
-                });
-                const todayExp = branch.expenses.filter(e => e.date === todayStr && !e.reversed).reduce((s, e) => s + (e.amount || 0), 0);
-                const todayBank = branch.bankings.filter(b => b.date === todayStr && !b.reversed).reduce((s, b) => s + (b.amount || 0), 0);
-                const totalPortfolio = branch.clients.reduce((s, c) => s + (c.balance || 0), 0);
-                const totalCash = (state.cashPosition.cash || 0) + (state.cashPosition.mtn || 0) + (state.cashPosition.airtel || 0);
                 grid.innerHTML = `
-                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-400 text-[10px]">Collections Today</span><div class="font-bold text-sm text-emerald-400">${Utils.formatUGX(todayCol)}</div></div>
-                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-400 text-[10px]">Disbursed Today</span><div class="font-bold text-sm text-indigo-400">${Utils.formatUGX(todayDisb)}</div></div>
-                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-400 text-[10px]">Expenses Today</span><div class="font-bold text-sm text-rose-400">${Utils.formatUGX(todayExp)}</div></div>
-                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-400 text-[10px]">Banked Today</span><div class="font-bold text-sm text-blue-400">${Utils.formatUGX(todayBank)}</div></div>
-                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-400 text-[10px]">Total Portfolio</span><div class="font-bold text-sm text-amber-300">${Utils.formatUGX(totalPortfolio)}</div></div>
-                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-400 text-[10px]">Total Cash & Wallets</span><div class="font-bold text-sm text-cyan-300">${Utils.formatUGX(totalCash)}</div></div>
+                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-slate-400 block text-[10px] uppercase">Total Portfolio</span><span class="font-bold text-lg text-blue-300">${Utils.formatUGX(d.totalPortfolio)}</span></div>
+                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-slate-400 block text-[10px] uppercase">Today Collections</span><span class="font-bold text-lg text-emerald-300">${Utils.formatUGX(d.todayCollected)}</span></div>
+                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-slate-400 block text-[10px] uppercase">Today Disbursements</span><span class="font-bold text-lg text-indigo-300">${Utils.formatUGX(d.todayDisbursed)}</span></div>
+                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-slate-400 block text-[10px] uppercase">Total Banked</span><span class="font-bold text-lg text-blue-400">${Utils.formatUGX(d.totalBanked)}</span></div>
+                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-slate-400 block text-[10px] uppercase">Total Expenses</span><span class="font-bold text-lg text-rose-400">${Utils.formatUGX(d.totalExpenses)}</span></div>
+                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-slate-400 block text-[10px] uppercase">Total Capital</span><span class="font-bold text-lg text-amber-300">${Utils.formatUGX(d.totalCapital)}</span></div>
+                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-slate-400 block text-[10px] uppercase">Processing Fees</span><span class="font-bold text-lg text-orange-300">${Utils.formatUGX(d.totalFees)}</span></div>
+                    <div class="bg-slate-700/60 p-3.5 rounded-xl border border-slate-600"><span class="text-slate-400 block text-[10px] uppercase">Cash Available</span><span class="font-bold text-lg text-cyan-300">${Utils.formatUGX(d.cashAvailable)}</span></div>
                 `;
             },
-            generateSummaryText() {
-                const branch = State.getActiveBranch();
-                const todayStr = Utils.today();
-                let todayCol = 0, todayDisb = 0;
-                branch.clients.forEach(c => {
-                    (c.history || []).forEach(h => {
-                        if (h.date === todayStr) {
-                            if (h.type === 'Repayment') todayCol += h.amount || 0;
-                            if (h.type === 'Disbursement') todayDisb += h.amount || 0;
-                        }
-                    });
-                });
-                const todayExp = branch.expenses.filter(e => e.date === todayStr && !e.reversed).reduce((s, e) => s + (e.amount || 0), 0);
-                const todayBank = branch.bankings.filter(b => b.date === todayStr && !b.reversed).reduce((s, b) => s + (b.amount || 0), 0);
-                const totalPortfolio = branch.clients.reduce((s, c) => s + (c.balance || 0), 0);
-                const totalCash = (state.cashPosition.cash || 0) + (state.cashPosition.mtn || 0) + (state.cashPosition.airtel || 0);
-                return `*${state.company.name}* — Daily Summary (${todayStr})\n` +
-                       `• Collections: ${Utils.formatUGX(todayCol)}\n` +
-                       `• Disbursed: ${Utils.formatUGX(todayDisb)}\n` +
-                       `• Expenses: ${Utils.formatUGX(todayExp)}\n` +
-                       `• Banked: ${Utils.formatUGX(todayBank)}\n` +
-                       `• Total Portfolio: ${Utils.formatUGX(totalPortfolio)}\n` +
-                       `• Total Cash & Wallets: ${Utils.formatUGX(totalCash)}`;
+            buildSummaryText() {
+                const d = this.getReportData();
+                return `📊 *${state.company.name} — CLOSING REPORT*\nDate: ${Utils.today()} (${Utils.timeNow()})\n--------------------------------\n• Portfolio: ${Utils.formatUGX(d.totalPortfolio)}\n• Today Collections: ${Utils.formatUGX(d.todayCollected)}\n• Today Disbursements: ${Utils.formatUGX(d.todayDisbursed)}\n• Total Banked: ${Utils.formatUGX(d.totalBanked)}\n• Total Expenses: ${Utils.formatUGX(d.totalExpenses)}\n• Total Capital: ${Utils.formatUGX(d.totalCapital)}\n• Processing Fees: ${Utils.formatUGX(d.totalFees)}\n• Cash Available: ${Utils.formatUGX(d.cashAvailable)}\n--------------------------------`;
             },
             copySummaryText() {
-                const txt = this.generateSummaryText();
+                const text = this.buildSummaryText().replace(/\*/g, '');
                 if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(txt).then(() => Utils.toast("Summary copied to clipboard")).catch(() => this._fallbackCopy(txt));
+                    navigator.clipboard.writeText(text).then(() => Utils.toast("Report summary copied")).catch(() => this.fallbackCopy(text));
                 } else {
-                    this._fallbackCopy(txt);
+                    this.fallbackCopy(text);
                 }
             },
-            _fallbackCopy(txt) {
+            fallbackCopy(text) {
                 const ta = document.createElement("textarea");
-                ta.value = txt;
+                ta.value = text;
                 document.body.appendChild(ta);
                 ta.select();
-                try {
-                    document.execCommand("copy");
-                    Utils.toast("Summary copied to clipboard");
-                } catch (e) {
-                    Utils.toast("Copy failed");
-                }
+                document.execCommand("copy");
                 ta.remove();
+                Utils.toast("Report summary copied");
             },
             openWhatsAppModal() {
-                const box = document.getElementById("whatsapp-manager-checkboxes");
+                const container = document.getElementById("whatsapp-manager-checkboxes");
                 if (!state.managers || state.managers.length === 0) {
-                    box.innerHTML = `<p class="text-slate-400">No WhatsApp managers configured. Add in Settings.</p>`;
+                    container.innerHTML = `<p class="text-xs text-slate-500">No managers added in Admin Settings.</p>`;
                 } else {
-                    box.innerHTML = state.managers.map(m => `
-                        <label class="flex items-center gap-2 text-xs">
-                            <input type="checkbox" class="wa-mgr-chk" value="${m.phone}" checked>
-                            <span><strong>${m.name}</strong> (${m.phone})</span>
+                    container.innerHTML = state.managers.map((m, i) => `
+                        <label class="flex items-center gap-2 text-xs font-semibold cursor-pointer">
+                            <input type="checkbox" class="wa-mgr-cb rounded" value="${m.phone}" checked>
+                            <span>${m.name} (${m.phone})</span>
                         </label>
                     `).join('');
                 }
-                document.getElementById("whatsapp-report-preview").value = this.generateSummaryText();
-                UI.show("whatsapp-report-modal");
+                document.getElementById("whatsapp-report-preview").value = this.buildSummaryText();
+                Utils.show("whatsapp-report-modal");
             },
             async sendSelectedWhatsAppReports() {
-                const checked = Array.from(document.querySelectorAll(".wa-mgr-chk:checked")).map(c => c.value);
+                const checked = Array.from(document.querySelectorAll(".wa-mgr-cb:checked")).map(cb => cb.value);
                 if (checked.length === 0) {
                     Utils.toast("Select at least one manager");
                     return;
                 }
-                const branch = State.getActiveBranch();
-                const todayStr = Utils.today();
-                let todayCol = 0, todayDisb = 0;
-                branch.clients.forEach(c => {
-                    (c.history || []).forEach(h => {
-                        if (h.date === todayStr) {
-                            if (h.type === 'Repayment') todayCol += h.amount || 0;
-                            if (h.type === 'Disbursement') todayDisb += h.amount || 0;
-                        }
-                    });
-                });
-                const todayExp = branch.expenses.filter(e => e.date === todayStr && !e.reversed).reduce((s, e) => s + (e.amount || 0), 0);
-                const todayBank = branch.bankings.filter(b => b.date === todayStr && !b.reversed).reduce((s, b) => s + (b.amount || 0), 0);
-                const totalPortfolio = branch.clients.reduce((s, c) => s + (c.balance || 0), 0);
-                const totalCash = (state.cashPosition.cash || 0) + (state.cashPosition.mtn || 0) + (state.cashPosition.airtel || 0);
+                const d = this.getReportData();
                 const rows = [
-                    ["Collections Today", Utils.formatUGX(todayCol)],
-                    ["Disbursed Today", Utils.formatUGX(todayDisb)],
-                    ["Expenses Today", Utils.formatUGX(todayExp)],
-                    ["Banked Today", Utils.formatUGX(todayBank)],
-                    ["Total Portfolio", Utils.formatUGX(totalPortfolio)],
-                    ["Total Cash & Wallets", Utils.formatUGX(totalCash)]
+                    ["Total Portfolio", Utils.formatUGX(d.totalPortfolio)],
+                    ["Today Collections", Utils.formatUGX(d.todayCollected)],
+                    ["Today Disbursements", Utils.formatUGX(d.todayDisbursed)],
+                    ["Total Banked", Utils.formatUGX(d.totalBanked)],
+                    ["Total Expenses", Utils.formatUGX(d.totalExpenses)],
+                    ["Total Capital", Utils.formatUGX(d.totalCapital)],
+                    ["Processing Fees", Utils.formatUGX(d.totalFees)],
+                    ["Cash Available", Utils.formatUGX(d.cashAvailable)]
                 ];
-                await PdfEngine.downloadReportPDF("DAILY CLOSING REPORT", ["Metric", "Value"], rows, [`Date: ${todayStr}`]);
-                const summaryMsg = encodeURIComponent(this.generateSummaryText() + "\n\nPlease find the Daily Closing Report PDF attached.");
-                checked.forEach(phone => {
-                    const waPhone = RegionManager.formatPhoneForWhatsApp(phone);
-                    window.open(`https://wa.me/${waPhone}?text=${summaryMsg}`, '_blank');
+                await PdfEngine.downloadReportPDF("DAILY CLOSING REPORT", ["Metric", "Value"], rows, [`Date: ${Utils.today()} (${Utils.timeNow()})`]);
+                const textMsg = encodeURIComponent(this.buildSummaryText() + "\n\n(PDF report downloaded—please attach.)");
+                checked.forEach(ph => {
+                    const waPhone = RegionManager.formatPhoneForWhatsApp(ph);
+                    window.open(`https://wa.me/${waPhone}?text=${textMsg}`, '_blank');
                 });
                 UI.hide("whatsapp-report-modal");
-                Utils.toast("Daily report PDF downloaded & WhatsApp opened");
+                Utils.toast("PDF downloaded & WhatsApp opened");
             }
         };
 
         // ============================================================
-        // AGING & PAR
+        // AGING
         // ============================================================
         const Aging = {
             render() {
-                State.runDailyAging();
                 const branch = State.getActiveBranch();
-                const filterSel = document.getElementById("aging-officer-filter");
-                if (filterSel && filterSel.options.length <= 1) {
-                    filterSel.innerHTML = `<option value="ALL">-- ALL STAFF --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+                branch.clients.forEach(c => State.recalculateClientStatus(c));
+                const filterVal = document.getElementById("aging-officer-filter")?.value || "ALL";
+                const activeLoans = branch.clients.filter(c => (c.balance || 0) > 0);
+                const parLoans = activeLoans.filter(c => (c.overdueDays || 0) > 0);
+                const totalActiveBal = activeLoans.reduce((s, c) => s + (c.balance || 0), 0);
+                const totalParBal = parLoans.reduce((s, c) => s + (c.balance || 0), 0);
+                const parRate = totalActiveBal > 0 ? ((totalParBal / totalActiveBal) * 100).toFixed(1) : "0.0";
+                const sumBox = document.getElementById("par-metrics-summary-box");
+                if (sumBox) {
+                    sumBox.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs"><div class="bg-white p-3.5 rounded-xl border"><span class="text-slate-500 text-[10px] block uppercase">Active Portfolio</span><strong class="text-base text-slate-900">${Utils.formatUGX(totalActiveBal)}</strong></div><div class="bg-white p-3.5 rounded-xl border"><span class="text-slate-500 text-[10px] block uppercase">PAR Portfolio</span><strong class="text-base text-amber-700">${Utils.formatUGX(totalParBal)}</strong></div><div class="bg-white p-3.5 rounded-xl border"><span class="text-slate-500 text-[10px] block uppercase">PAR Ratio</span><strong class="text-base text-red-700">${parRate}%</strong></div></div>`;
                 }
-                const selectedOfficer = filterSel ? filterSel.value : "ALL";
-                const activeLoans = branch.clients.filter(c => (c.balance || 0) > 0 && (selectedOfficer === "ALL" || c.officerId === selectedOfficer));
-                const totalPortfolio = activeLoans.reduce((s, c) => s + (c.balance || 0), 0);
-                const atRisk = activeLoans.filter(c => (c.overdueDays || 0) > 0).reduce((s, c) => s + (c.balance || 0), 0);
-                const parPct = totalPortfolio > 0 ? ((atRisk / totalPortfolio) * 100).toFixed(1) : "0.0";
-                const box = document.getElementById("par-metrics-summary-box");
-                if (box) {
-                    box.innerHTML = `
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                            <div class="bg-white p-3 rounded-xl border shadow-sm"><span class="text-slate-500">Active Portfolio</span><div class="font-bold text-base text-slate-900">${Utils.formatUGX(totalPortfolio)}</div></div>
-                            <div class="bg-white p-3 rounded-xl border shadow-sm"><span class="text-slate-500">Portfolio at Risk</span><div class="font-bold text-base text-red-600">${Utils.formatUGX(atRisk)}</div></div>
-                            <div class="bg-white p-3 rounded-xl border shadow-sm"><span class="text-slate-500">PAR %</span><div class="font-bold text-base text-amber-600">${parPct}%</div></div>
-                        </div>
-                    `;
-                }
-                const sec = document.getElementById("officer-aging-sections");
-                if (!sec) return;
-                if (activeLoans.length === 0) {
-                    sec.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">No active loans found</p>`;
-                    return;
-                }
-                sec.innerHTML = `
-                    <div class="bg-white border rounded-xl overflow-x-auto">
-                        <table class="w-full text-left border-collapse text-xs">
-                            <thead>
-                                <tr class="bg-slate-800 text-white text-[11px]">
-                                    <th class="p-3">Client</th>
-                                    <th class="p-3">Overdue Days</th>
-                                    <th class="p-3 text-right">Arrears</th>
-                                    <th class="p-3 text-right">Balance</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y">
-                                ${activeLoans.map(c => `
-                                    <tr>
-                                        <td class="p-3 font-bold">${c.name} <span class="text-slate-400">(${c.nin || ''})</span></td>
-                                        <td class="p-3 font-mono">${c.overdueDays || 0}d</td>
-                                        <td class="p-3 text-right font-mono text-red-600 font-bold">${Utils.formatUGX(c.arrears || 0)}</td>
-                                        <td class="p-3 text-right font-mono font-bold text-blue-700">${Utils.formatUGX(c.balance || 0)}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                `;
+                const targetOfficers = filterVal === "ALL" ? branch.officers : branch.officers.filter(o => o.id === filterVal);
+                const container = document.getElementById("officer-aging-sections");
+                if (!container) return;
+                container.innerHTML = targetOfficers.map(o => {
+                    const clients = activeLoans.filter(c => c.officerId === o.id);
+                    return `<div class="bg-white border rounded-xl p-4 space-y-2"><div class="font-bold text-slate-800 text-sm">${o.name} (${clients.length})</div><div class="overflow-x-auto"><table class="w-full text-left border-collapse text-xs"><thead><tr class="bg-slate-800 text-white text-[10px]"><th class="p-2">Client</th><th class="p-2">Days</th><th class="p-2 text-right">Arrears</th><th class="p-2 text-right">Balance</th></tr></thead><tbody class="divide-y">${clients.map(c => `<tr><td class="p-2 font-bold">${c.name}</td><td class="p-2 font-bold text-red-600">${c.overdueDays || 0}d</td><td class="p-2 text-right font-mono">${Utils.formatUGX(c.arrears || 0)}</td><td class="p-2 text-right font-mono font-bold">${Utils.formatUGX(c.balance || 0)}</td></tr>`).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No active loans</td></tr>`}</tbody></table></div></div>`;
+                }).join('') || `<p class="text-slate-400 text-xs">No data</p>`;
             },
             exportCSV() {
                 const branch = State.getActiveBranch();
-                const rows = [["Client Name", "NIN", "Overdue Days", "Arrears", "Balance"]];
-                branch.clients.filter(c => (c.balance || 0) > 0).forEach(c => {
-                    rows.push([c.name, c.nin || '', c.overdueDays || 0, c.arrears || 0, c.balance || 0]);
-                });
-                const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+                const rows = [["Client", "NIN", "OverdueDays", "Arrears", "Balance"]];
+                branch.clients.filter(c => (c.balance || 0) > 0).forEach(c => rows.push([c.name, c.nin || '', c.overdueDays || 0, c.arrears || 0, c.balance || 0]));
+                const csv = rows.map(r => r.join(",")).join("\n");
                 const link = document.createElement("a");
                 link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
-                link.download = `PMMS_Aging_${Utils.today()}.csv`;
-                document.body.appendChild(link);
+                link.download = `PMMS_AGING_${Utils.today()}.csv`;
                 link.click();
-                link.remove();
-                Utils.toast("Aging CSV exported");
+                Utils.toast("CSV exported");
             },
             async exportPDF() {
                 const branch = State.getActiveBranch();
-                const rows = branch.clients.filter(c => (c.balance || 0) > 0).map(c => [
-                    c.name,
-                    c.nin || '',
-                    `${c.overdueDays || 0}d`,
-                    Utils.formatUGX(c.arrears || 0),
-                    Utils.formatUGX(c.balance || 0)
-                ]);
+                const rows = branch.clients.filter(c => (c.balance || 0) > 0).map(c => [c.name, c.nin || '-', `${c.overdueDays || 0}d`, Utils.formatUGX(c.arrears || 0), Utils.formatUGX(c.balance || 0)]);
                 await PdfEngine.downloadReportPDF("AGING & PAR REPORT", ["Client", "NIN", "Overdue", "Arrears", "Balance"], rows, [`Date: ${Utils.today()}`]);
-                Utils.toast("Aging PDF downloaded");
+                Utils.toast("PDF exported");
             },
             printAgingList() { window.print(); }
         };
@@ -4804,22 +4811,7 @@
                 const container = document.getElementById("demand-list-container");
                 if (!container) return;
                 const defaulters = branch.clients.filter(c => (c.balance || 0) > 0 && (c.overdueDays || 0) >= 90);
-                if (defaulters.length === 0) {
-                    container.innerHTML = `<p class="text-xs text-slate-400 col-span-full text-center py-6">No 90+ day defaulters</p>`;
-                    return;
-                }
-                container.innerHTML = defaulters.map(c => `
-                    <div class="bg-white border border-red-200 p-4 rounded-xl shadow-sm space-y-2 text-xs">
-                        <div class="flex justify-between items-start">
-                            <div><div class="font-bold text-sm text-slate-900">${c.name}</div><div class="text-slate-500">${c.phone || 'N/A'}</div></div>
-                            <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold">${c.overdueDays} Days</span>
-                        </div>
-                        <div class="pt-2 border-t flex justify-between font-mono font-bold text-red-700">
-                            <span>Balance:</span>
-                            <span>${Utils.formatUGX(c.balance || 0)}</span>
-                        </div>
-                    </div>
-                `).join('');
+                container.innerHTML = defaulters.map(c => `<div class="bg-white border-l-4 border-red-600 p-4 rounded-xl shadow-sm text-xs space-y-2"><div class="flex justify-between items-start"><div><div class="font-bold text-slate-900 text-sm">${c.name}</div><div class="text-slate-500">${c.phone || ''}</div></div><span class="bg-red-100 text-red-800 font-bold px-2 py-0.5 rounded">${c.overdueDays}d Overdue</span></div><div class="flex justify-between font-bold text-red-700"><span>Balance:</span> <span>${Utils.formatUGX(c.balance)}</span></div></div>`).join('') || `<p class="text-slate-400 text-xs">No 90+ day defaulters</p>`;
             }
         };
 
@@ -4830,78 +4822,75 @@
             populateQuickClients() {
                 const sel = document.getElementById("sms-quick-client-select");
                 if (!sel) return;
-                sel.innerHTML = state.globalClients.map(c => `<option value="${c.phone}">${c.name} (${c.phone})</option>`).join('');
+                sel.innerHTML = state.globalClients.map(c => `<option value="${c.phone}">${c.name} (${c.phone})</option>`).join('') || `<option value="">-- No Clients --</option>`;
             },
-            toggleTargetDropdown(target) {
-                const container = document.getElementById("sms-single-client-container");
-                if (target === "SINGLE") Utils.show(container);
-                else Utils.hide(container);
+            toggleTargetDropdown(val) {
+                const singleBox = document.getElementById("sms-single-client-container");
+                if (val === 'SINGLE') Utils.show(singleBox);
+                else Utils.hide(singleBox);
             },
-            dispatch(phone, message, trigger = 'Manual') {
-                const normPhone = RegionManager.normalizePhone(phone);
-                if (!normPhone) return;
-                const carrier = document.getElementById("sms-preferred-network")?.value || 'Standard SIM';
+            dispatch(phone, message, triggerType = 'Manual') {
+                if (!phone) return;
+                const carrier = document.getElementById("sms-preferred-network")?.value || "MTN";
                 state.smsLogs.unshift({
                     id: Utils.generateId("sms"),
                     time: Utils.now(),
-                    recipient: normPhone,
+                    recipient: phone,
                     carrier,
-                    trigger,
+                    trigger: triggerType,
                     message
                 });
-                if (state.smsLogs.length > 300) state.smsLogs.length = 300;
+                if (state.smsLogs.length > 200) state.smsLogs.length = 200;
                 State.save();
                 this.renderLogs();
             },
             dispatchBroadcast() {
                 const target = document.getElementById("sms-broadcast-target").value;
-                const template = document.getElementById("sms-quick-message").value.trim();
-                if (!template) {
+                const rawMsg = document.getElementById("sms-quick-message").value.trim();
+                if (!rawMsg) {
                     Utils.toast("Enter message");
                     return;
                 }
                 const branch = State.getActiveBranch();
                 let recipients = [];
-                if (target === "SINGLE") {
+                if (target === 'SINGLE') {
                     const phone = document.getElementById("sms-quick-client-select").value;
-                    const gc = state.globalClients.find(c => c.phone === phone) || { name: 'Client', phone, nin: '' };
-                    recipients.push(gc);
-                } else if (target === "ALL") {
+                    if (!phone) {
+                        Utils.toast("Select client");
+                        return;
+                    }
+                    const cli = state.globalClients.find(c => c.phone === phone) || { name: 'Client', phone, nin: '' };
+                    recipients.push(cli);
+                } else if (target === 'ALL') {
                     recipients = state.globalClients;
-                } else if (target === "DEFAULTERS") {
+                } else if (target === 'DEFAULTERS') {
                     recipients = branch.clients.filter(c => (c.balance || 0) > 0 && (c.overdueDays || 0) >= 90);
-                } else if (target === "ACTIVE") {
+                } else if (target === 'ACTIVE') {
                     recipients = branch.clients.filter(c => (c.balance || 0) > 0);
-                } else if (target === "BODABODA") {
-                    recipients = branch.clients.filter(c => c.category === "BODABODA");
+                } else if (target === 'BODABODA') {
+                    recipients = state.globalClients.filter(c => c.category === 'BODABODA');
                 }
                 if (recipients.length === 0) {
                     Utils.toast("No recipients in group");
                     return;
                 }
                 recipients.forEach(r => {
-                    const bc = branch.clients.find(c => c.nin === r.nin || c.phone === r.phone);
-                    const bal = bc ? Utils.formatUGX(bc.balance || 0) : Utils.formatUGX(0);
-                    const msg = template.replace(/{name}/g, r.name || 'Client').replace(/{balance}/g, bal).replace(/{nin}/g, r.nin || '');
-                    this.dispatch(r.phone, msg, `Bulk (${target})`);
+                    const bCli = branch.clients.find(bc => bc.nin === r.nin);
+                    const bal = bCli ? Utils.formatUGX(bCli.balance) : Utils.formatUGX(0);
+                    const personalized = rawMsg
+                        .replace(/{name}/g, r.name || 'Client')
+                        .replace(/{balance}/g, bal)
+                        .replace(/{nin}/g, r.nin || '');
+                    this.dispatch(r.phone, personalized, `Broadcast (${target})`);
                 });
-                Utils.toast(`SMS queued for ${recipients.length} recipient(s)`);
+                Utils.toast(`Dispatched to ${recipients.length} recipient(s)`);
+                document.getElementById("sms-quick-message").value = "";
             },
             renderLogs() {
                 const tbody = document.getElementById("sms-logs-table-body");
-                const countEl = document.getElementById("sms-log-count");
-                if (countEl) countEl.innerText = state.smsLogs.length;
                 if (!tbody) return;
-                tbody.innerHTML = state.smsLogs.map(l => `
-                    <tr>
-                        <td class="p-3 font-mono text-[11px]">${l.time}</td>
-                        <td class="p-3 font-mono">${l.recipient}</td>
-                        <td class="p-3">${l.carrier}</td>
-                        <td class="p-3">${l.trigger}</td>
-                        <td class="p-3 max-w-xs truncate">${l.message}</td>
-                        <td class="p-3 text-right"><a href="sms:${l.recipient}?body=${encodeURIComponent(l.message)}" class="text-sky-600 font-bold hover:underline">Open SMS</a></td>
-                    </tr>
-                `).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">No SMS logs</td></tr>`;
+                document.getElementById("sms-log-count").innerText = state.smsLogs.length;
+                tbody.innerHTML = state.smsLogs.slice(0, 50).map(l => `<tr><td class="p-3 font-mono text-[10px]">${l.time}</td><td class="p-3 font-bold">${l.recipient}</td><td class="p-3"><span class="bg-sky-100 text-sky-800 px-1.5 py-0.5 rounded text-[10px] font-bold">${l.carrier || 'MTN'}</span></td><td class="p-3">${l.trigger}</td><td class="p-3 text-slate-600 max-w-xs truncate">${l.message}</td><td class="p-3 text-right"><a href="sms:${l.recipient}?body=${encodeURIComponent(l.message)}" class="bg-sky-600 text-white px-2.5 py-1 rounded text-[10px] font-bold">Send SMS</a></td></tr>`).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">No SMS logs</td></tr>`;
             },
             clearLogs() {
                 state.smsLogs = [];
@@ -4911,100 +4900,208 @@
         };
 
         // ============================================================
-        // PRINTER & THEME
+        // THEME & PRINTER
         // ============================================================
+        const ThemeCustomizer = {
+            applyTheme(themeName) {
+                const validThemes = ['teal', 'indigo', 'emerald', 'slate', 'blue', 'rose', 'amber', 'purple', 'cyan', 'orange', 'crimson', 'forest', 'navy', 'gold', 'magenta'];
+                if (!validThemes.includes(themeName)) themeName = 'teal';
+                document.body.classList.remove(...validThemes.map(t => 'theme-' + t));
+                document.body.classList.add('theme-' + themeName);
+                localStorage.setItem('pmms_theme_color', themeName);
+                const sel = document.getElementById('theme-color-select');
+                if (sel) sel.value = themeName;
+            },
+            applyFont(fontName) {
+                const validFonts = ['sans', 'serif', 'mono', 'inter', 'poppins', 'roboto', 'montserrat', 'lato', 'opensans', 'nunito', 'raleway', 'merriweather', 'playfair', 'oswald', 'firacode'];
+                if (!validFonts.includes(fontName)) fontName = 'sans';
+                document.body.classList.remove(...validFonts.map(f => 'font-' + f));
+                document.body.classList.add('font-' + fontName);
+                localStorage.setItem('pmms_theme_font', fontName);
+                const sel = document.getElementById('theme-font-select');
+                if (sel) sel.value = fontName;
+            },
+            initSaved() {
+                this.applyTheme(localStorage.getItem('pmms_theme_color') || 'teal');
+                this.applyFont(localStorage.getItem('pmms_theme_font') || 'sans');
+            }
+        };
+
         const Printer = {
             onTogglePrintReceipt(enabled) {
                 if (!state.settings) state.settings = {};
                 state.settings.printReceiptEnabled = !!enabled;
                 State.save();
-                Utils.toast(enabled ? "Receipt printing enabled" : "Receipt printing disabled");
+            },
+            syncPrintToggleUI() {
+                const cb = document.getElementById("toggle-print-receipt");
+                if (cb) cb.checked = state.settings?.printReceiptEnabled ?? true;
+            },
+            updateStatusUI(connected, label = "") {
+                const statusText = document.getElementById("xprinter-status-text");
+                const miniDot = document.getElementById("xprinter-mini-dot");
+                const btn = document.getElementById("xprinter-btn");
+                if (connected) {
+                    if (statusText) statusText.innerText = label ? `X-Printer (${label})` : "X-Printer Ready";
+                    if (miniDot) {
+                        miniDot.className = "w-2 h-2 rounded-full bg-emerald-500 inline-block";
+                        miniDot.title = "X-Printer Connected";
+                    }
+                    if (btn) btn.classList.add("ring-2", "ring-emerald-400");
+                } else {
+                    if (statusText) statusText.innerText = "Connect Printer";
+                    if (miniDot) {
+                        miniDot.className = "w-2 h-2 rounded-full bg-slate-400 inline-block";
+                        miniDot.title = "X-Printer Disconnected";
+                    }
+                    if (btn) btn.classList.remove("ring-2", "ring-emerald-400");
+                }
             },
             async connectXPrinter() {
-                const iface = document.getElementById("xprinter-interface-select")?.value || 'bluetooth';
+                const iface = document.getElementById("xprinter-interface-select")?.value || "bluetooth";
                 try {
-                    if (iface === 'bluetooth' && navigator.bluetooth) {
-                        xPrinterDevice = await navigator.bluetooth.requestDevice({
-                            acceptAllDevices: true,
-                            optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
-                        });
-                        const server = await xPrinterDevice.gatt.connect();
-                        const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
-                        xPrinterCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
-                        document.getElementById("xprinter-status-text").innerText = "Printer Connected";
-                        document.getElementById("xprinter-mini-dot").className = "w-2 h-2 rounded-full bg-emerald-500 inline-block";
-                        Utils.toast("X-Printer connected via Bluetooth");
-                    } else if (iface === 'usb' && navigator.serial) {
-                        xPrinterSerialPort = await navigator.serial.requestPort();
-                        await xPrinterSerialPort.open({ baudRate: 9600 });
-                        document.getElementById("xprinter-status-text").innerText = "Printer Connected";
-                        document.getElementById("xprinter-mini-dot").className = "w-2 h-2 rounded-full bg-emerald-500 inline-block";
+                    if (iface === "usb" && navigator.serial) {
+                        const port = await navigator.serial.requestPort();
+                        await port.open({ baudRate: 9600 });
+                        xPrinterSerialPort = port;
+                        xPrinterDevice = null;
+                        xPrinterCharacteristic = null;
+                        this.updateStatusUI(true, "USB/Serial");
                         Utils.toast("X-Printer connected via Serial/USB");
-                    } else {
-                        Utils.toast("Web Bluetooth/Serial not supported on this device");
+                        return true;
                     }
-                } catch (e) {
-                    Utils.toast("Printer connection cancelled or failed");
+                    if (!navigator.bluetooth) {
+                        Utils.toast("Web Bluetooth / Serial not supported on this browser");
+                        return false;
+                    }
+                    Utils.toast("Scanning for XPrinter...");
+                    const device = await navigator.bluetooth.requestDevice({
+                        acceptAllDevices: true,
+                        optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', '49535343-fe7d-4ae5-8fa9-9fafd205e455']
+                    });
+                    const server = await device.gatt.connect();
+                    let foundChar = null;
+                    const services = await server.getPrimaryServices();
+                    for (const srv of services) {
+                        const chars = await srv.getCharacteristics();
+                        for (const ch of chars) {
+                            if (ch.properties.write || ch.properties.writeWithoutResponse) {
+                                foundChar = ch;
+                                break;
+                            }
+                        }
+                        if (foundChar) break;
+                    }
+                    if (!foundChar) throw new Error("No writable characteristic found");
+                    xPrinterDevice = device;
+                    xPrinterCharacteristic = foundChar;
+                    xPrinterSerialPort = null;
+                    device.addEventListener('gattserverdisconnected', () => {
+                        xPrinterCharacteristic = null;
+                        this.updateStatusUI(false);
+                        Utils.toast("X-Printer disconnected");
+                    });
+                    this.updateStatusUI(true, device.name || "BT");
+                    Utils.toast(`Connected to ${device.name || "XPrinter"}`);
+                    return true;
+                } catch (err) {
+                    this.updateStatusUI(false);
+                    Utils.toast("X-Printer connection failed: " + (err.message || err));
+                    return false;
                 }
             },
-            async printToXPrinter(textData, force = false) {
-                lastPrintedReceiptText = textData;
-                const enabled = force ? true : (state.settings?.printReceiptEnabled ?? true);
-                if (!enabled) return;
-                if (xPrinterCharacteristic) {
-                    try {
-                        const encoder = new TextEncoder();
-                        await xPrinterCharacteristic.writeValue(encoder.encode(textData + "\n\n\n"));
-                        Utils.toast("Sent to thermal X-Printer");
-                        return;
-                    } catch (e) {}
-                }
+            async sendRawEscPos(text) {
+                const encoder = new TextEncoder();
+                const initCmd = new Uint8Array([0x1B, 0x40]);
+                const feedCutCmd = new Uint8Array([0x0A, 0x0A, 0x1D, 0x56, 0x41, 0x10]);
+                const bodyBytes = encoder.encode(text);
+                const fullPayload = new Uint8Array(initCmd.length + bodyBytes.length + feedCutCmd.length);
+                fullPayload.set(initCmd, 0);
+                fullPayload.set(bodyBytes, initCmd.length);
+                fullPayload.set(feedCutCmd, initCmd.length + bodyBytes.length);
+
                 if (xPrinterSerialPort && xPrinterSerialPort.writable) {
-                    try {
-                        const writer = xPrinterSerialPort.writable.getWriter();
-                        const encoder = new TextEncoder();
-                        await writer.write(encoder.encode(textData + "\n\n\n"));
-                        writer.releaseLock();
-                        Utils.toast("Sent to serial X-Printer");
-                        return;
-                    } catch (e) {}
+                    const writer = xPrinterSerialPort.writable.getWriter();
+                    await writer.write(fullPayload);
+                    writer.releaseLock();
+                    return true;
                 }
-                const printArea = document.getElementById("printable-area");
-                if (printArea) {
-                    printArea.innerHTML = `<pre style="font-family:monospace;font-size:12px;white-space:pre-wrap;">${textData}</pre>`;
-                    Utils.show(printArea);
-                    window.print();
-                    Utils.hide(printArea);
+                if (xPrinterCharacteristic) {
+                    const chunkSize = 180;
+                    for (let i = 0; i < fullPayload.length; i += chunkSize) {
+                        const chunk = fullPayload.slice(i, i + chunkSize);
+                        if (xPrinterCharacteristic.properties.writeWithoutResponse) {
+                            await xPrinterCharacteristic.writeValueWithoutResponse(chunk);
+                        } else {
+                            await xPrinterCharacteristic.writeValue(chunk);
+                        }
+                    }
+                    return true;
                 }
+                return false;
             },
             async testPrint() {
-                await this.printToXPrinter(`=== ${state.company.name} ===\nTEST PRINT SUCCESSFUL\nDate: ${Utils.today()} ${Utils.timeNow()}\n`, true);
-            }
-        };
-
-        const ThemeCustomizer = {
-            applyTheme(themeName) {
-                document.body.className = document.body.className.replace(/\btheme-\S+/g, '').trim() + ` theme-${themeName}`;
-                State.save();
+                const sample = `=== ${state.company.name} ===\nX-PRINTER TEST RECEIPT\nDate: ${Utils.today()} ${Utils.timeNow()}\nStatus: OK\n--------------------------------\n`;
+                await this.printToXPrinter(sample, true);
             },
-            applyFont(fontName) {
-                document.body.className = document.body.className.replace(/\bfont-\S+/g, '').trim() + ` font-${fontName}`;
-                State.save();
+            async printToXPrinter(text, force = false) {
+                lastPrintedReceiptText = text;
+                const shouldPrint = force || (state.settings?.printReceiptEnabled ?? true);
+                if (!shouldPrint) {
+                    return;
+                }
+                if (!xPrinterCharacteristic && !xPrinterSerialPort) {
+                    const connected = await this.connectXPrinter();
+                    if (!connected) {
+                        this.fallbackBrowserPrint(text);
+                        return;
+                    }
+                }
+                try {
+                    const sent = await this.sendRawEscPos(text);
+                    if (sent) {
+                        Utils.toast("Sent to X-Printer");
+                    } else {
+                        this.fallbackBrowserPrint(text);
+                    }
+                } catch (err) {
+                    Utils.toast("Direct X-Printer error, using print preview");
+                    this.fallbackBrowserPrint(text);
+                }
+            },
+            fallbackBrowserPrint(text) {
+                const area = document.getElementById("printable-area");
+                if (area) {
+                    const logoHtml = state.company.logo
+                        ? `<div style="text-align:center;margin-bottom:8px;"><img src="${state.company.logo}" style="max-height:64px;max-width:140px;display:inline-block;" /></div>`
+                        : "";
+                    area.innerHTML = `${logoHtml}<pre style="font-family:monospace;font-size:13px;white-space:pre-wrap;">${text}</pre>`;
+                    Utils.show(area);
+                    window.print();
+                    setTimeout(() => Utils.hide(area), 600);
+                }
             }
         };
 
         // ============================================================
-        // INIT
+        // BOOT
         // ============================================================
-        window.addEventListener("online", () => Utils.hide("offline-banner"));
-        window.addEventListener("offline", () => Utils.show("offline-banner"));
         window.addEventListener("DOMContentLoaded", async () => {
-            if (!navigator.onLine) Utils.show("offline-banner");
-            const recDate = document.getElementById("manual-receipt-date");
-            if (recDate) recDate.value = Utils.today();
+            ThemeCustomizer.initSaved();
             await State.load();
-            AdminSettings.renderManagersList();
+            Printer.syncPrintToggleUI();
+            if (!document.getElementById("daily-workspace-date").value) {
+                document.getElementById("daily-workspace-date").value = Utils.today();
+            }
+            if (!document.getElementById("manual-receipt-date").value) {
+                document.getElementById("manual-receipt-date").value = Utils.today();
+            }
+            if (!document.getElementById("staff-history-date").value) {
+                document.getElementById("staff-history-date").value = Utils.today();
+            }
             UI.refreshAll();
+            window.addEventListener("online", () => Utils.hide("offline-banner"));
+            window.addEventListener("offline", () => Utils.show("offline-banner"));
         });
     </script>
 </body>

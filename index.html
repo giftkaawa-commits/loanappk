@@ -314,8 +314,7 @@
                             </div>
                             <div>
                                 <label class="block text-xs font-semibold mb-1 text-slate-600">Payment Channel</label>
-                                <select id="post-channel
-                                    ="w-full p-2.5 border rounded-lg bg-slate-50 text-sm">
+                                <select id="post-channel" class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm">
                                     <option value="Cash">Cash</option>
                                     <option value="MTN Mobile Money">MTN Mobile Money</option>
                                     <option value="Airtel Mobile Money">Airtel Mobile Money</option>
@@ -426,7 +425,7 @@
             </div>
         </section>
 
-<!-- TAB: DISBURSE -->
+        <!-- TAB: DISBURSE -->
         <section id="tab-disburse" hidden class="tab-content space-y-4 max-w-3xl mx-auto">
             <h2 class="text-lg font-bold border-b pb-2">Loan Disbursement</h2>
             
@@ -466,7 +465,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block text-[10px] text-slate-600 font-semibold mb-1">Phone *</label>
-                        <input type="tel" id="new-phone" placeholder="+256771234567" class="w-full p-2.5 border rounded-lg text-xs phone-auto-prefix">
+                        <input type="tel" id="new-phone" placeholder="+256771234567" oninput="Disburse.validateNewClientPhones()" class="w-full p-2.5 border rounded-lg text-xs phone-auto-prefix">
                     </div>
                     <div>
                         <label class="block text-[10px] text-slate-600 font-semibold mb-1">Address</label>
@@ -480,15 +479,11 @@
                     </div>
                     <div>
                         <label class="block text-[10px] text-slate-600 font-semibold mb-1">Guarantor Phone *</label>
-                        <input type="tel" id="new-guarantor-phone" oninput="Disburse.checkGuarantorPhoneUnique(this.value)" placeholder="+256771234567" class="w-full p-2.5 border rounded-lg text-xs bg-slate-50 phone-auto-prefix">
+                        <input type="tel" id="new-guarantor-phone" placeholder="+256771234567" oninput="Disburse.validateNewClientPhones()" class="w-full p-2.5 border rounded-lg text-xs bg-slate-50 phone-auto-prefix">
                     </div>
                 </div>
+                <div id="new-client-phone-warning" hidden class="p-2.5 bg-red-50 border border-red-300 text-red-800 rounded-xl text-xs font-bold"></div>
                 
-                <div id="guarantor-phone-unique-alert-new" hidden class="p-2.5 bg-red-100 border border-red-400 rounded-lg text-xs text-red-800 font-bold">
-                    <i class="fa-solid fa-ban mr-1"></i>
-                    <span id="guarantor-phone-unique-msg-new"></span>
-                </div>
-
                 <div id="guarantor-exposure-alert" hidden class="p-3 bg-red-100 border-2 border-red-500 rounded-xl text-xs space-y-1 text-red-900">
                     <div class="font-bold flex items-center gap-1.5 text-sm">
                         <i class="fa-solid fa-triangle-exclamation text-red-600"></i> GUARANTOR EXPOSURE WARNING
@@ -511,66 +506,53 @@
                 </div>
             </div>
 
-            <div id="existing-client-fields">
-                <label class="block text-xs font-semibold mb-1 text-slate-600">Search Client</label>
-                <input type="text" id="disburse-search" oninput="Disburse.searchClientsDebounced(this.value)" placeholder="Search registered client..." class="w-full p-3 border rounded-xl bg-white text-sm shadow-sm">
-                <div id="disburse-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-40 overflow-y-auto shadow-md"></div>
-                <div id="disburse-selected-name" class="text-xs font-bold text-green-700 mt-2"></div>
+            <div id="existing-client-fields" class="space-y-3 bg-white p-4 rounded-xl border shadow-sm">
+                <div>
+                    <label class="block text-xs font-semibold mb-1 text-slate-600">Search Existing Client</label>
+                    <input type="text" id="disburse-search" oninput="Disburse.searchClientsDebounced(this.value)" placeholder="Search registered client by name, NIN, or phone..." class="w-full p-3 border rounded-xl bg-slate-50 text-sm shadow-sm">
+                    <div id="disburse-search-results" hidden class="bg-white border rounded-xl mt-1 divide-y max-h-40 overflow-y-auto shadow-md"></div>
+                    <div id="disburse-selected-name" class="text-xs font-bold text-green-700 mt-2"></div>
+                </div>
 
-                <!-- Guarantor Selection for Existing Client -->
-                <div id="existing-guarantor-section" hidden class="mt-4 space-y-3 border p-4 rounded-xl bg-white shadow-sm">
-                    <div class="font-bold text-xs text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                        <i class="fa-solid fa-user-shield dyn-text"></i> Guarantor Selection
+                <!-- EXISTING CLIENT GUARANTOR SELECTION / NEW GUARANTOR PROMPT -->
+                <div id="existing-guarantor-section" hidden class="border-t pt-3 space-y-3 text-xs">
+                    <div class="font-bold text-slate-800 flex items-center justify-between">
+                        <span><i class="fa-solid fa-user-check dyn-text mr-1"></i> Guarantor Selection</span>
+                        <span id="existing-guarantor-count-badge" class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-bold">0 Saved</span>
                     </div>
 
-                    <div class="flex gap-4 text-xs font-medium">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="existing-guarantor-mode" value="saved" checked
-                                   onchange="Disburse.toggleExistingGuarantorMode('saved')">
-                            Use Saved Guarantor
+                    <div class="flex flex-wrap gap-4 bg-slate-50 p-2.5 rounded-xl border">
+                        <label class="flex items-center gap-2 font-semibold cursor-pointer">
+                            <input type="radio" name="existing-guarantor-mode" id="existing-g-mode-saved" value="saved" checked onchange="Disburse.onExistingGuarantorModeChange()">
+                            Saved Guarantor
                         </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="existing-guarantor-mode" value="new"
-                                   onchange="Disburse.toggleExistingGuarantorMode('new')">
-                            Add New Guarantor
+                        <label class="flex items-center gap-2 font-semibold cursor-pointer">
+                            <input type="radio" name="existing-guarantor-mode" id="existing-g-mode-new" value="new" onchange="Disburse.onExistingGuarantorModeChange()">
+                            Add a New Guarantor
                         </label>
                     </div>
 
-                    <!-- Saved Guarantors dropdown -->
-                    <div id="saved-guarantor-box">
-                        <label class="block text-[10px] text-slate-600 font-semibold mb-1">Select from previously used guarantors *</label>
-                        <select id="existing-saved-guarantor" onchange="Disburse.onSavedGuarantorChange()"
-                                class="w-full p-2.5 border rounded-lg text-xs bg-slate-50 font-bold">
-                            <option value="">-- Choose a saved guarantor --</option>
-                        </select>
-                        <div id="saved-guarantor-preview" class="mt-2 text-[11px] text-slate-600 hidden"></div>
+                    <div id="existing-saved-guarantor-box">
+                        <label class="block text-[10px] text-slate-600 font-semibold mb-1">Choose Saved Guarantor (Includes Previous Loans & Records) *</label>
+                        <select id="existing-guarantor-select" onchange="Disburse.onSavedGuarantorSelect(this.value)" class="w-full p-2.5 border rounded-lg text-xs bg-slate-50 font-bold"></select>
                     </div>
 
-                    <!-- New Guarantor fields -->
-                    <div id="new-existing-guarantor-fields" hidden class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                            <label class="block text-[10px] text-slate-600 font-semibold mb-1">Guarantor Name *</label>
-                            <input type="text" id="existing-new-guarantor-name"
-                                   oninput="Disburse.checkGuarantorExposure(this.value)"
-                                   placeholder="Guarantor Full Name"
-                                   class="w-full p-2.5 border rounded-lg text-xs bg-slate-50 font-bold">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] text-slate-600 font-semibold mb-1">Guarantor Phone *</label>
-                            <input type="tel" id="existing-new-guarantor-phone"
-                                   oninput="Disburse.checkGuarantorPhoneUnique(this.value)"
-                                   placeholder="+256771234567"
-                                   class="w-full p-2.5 border rounded-lg text-xs bg-slate-50 phone-auto-prefix">
-                        </div>
-                        <div id="guarantor-phone-unique-alert" hidden
-                             class="sm:col-span-2 p-2.5 bg-red-100 border border-red-400 rounded-lg text-xs text-red-800 font-bold">
-                            <i class="fa-solid fa-ban mr-1"></i>
-                            <span id="guarantor-phone-unique-msg"></span>
+                    <div id="existing-new-guarantor-fields" hidden class="space-y-2.5 bg-slate-50 p-3 rounded-xl border">
+                        <div class="font-bold text-[11px] text-slate-700 uppercase">New Guarantor Details</div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-[10px] text-slate-600 font-semibold mb-1">Guarantor Name *</label>
+                                <input type="text" id="existing-new-guarantor-name" oninput="Disburse.onExistingNewGuarantorInput()" placeholder="Guarantor Full Name" class="w-full p-2.5 border rounded-lg text-xs bg-white font-bold">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] text-slate-600 font-semibold mb-1">Guarantor Phone *</label>
+                                <input type="tel" id="existing-new-guarantor-phone" oninput="Disburse.onExistingNewGuarantorInput()" placeholder="+256771234567" class="w-full p-2.5 border rounded-lg text-xs bg-white phone-auto-prefix">
+                            </div>
                         </div>
                     </div>
 
-                    <div id="disburse-guarantor-exposure-existing" hidden
-                         class="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 font-bold"></div>
+                    <div id="existing-guarantor-phone-warning" hidden class="p-2.5 bg-red-50 border border-red-300 text-red-800 rounded-xl text-xs font-bold"></div>
+                    <div id="disburse-guarantor-exposure-existing" hidden class="p-3 bg-amber-50 border border-amber-300 rounded-xl text-xs text-amber-900 font-bold"></div>
                 </div>
             </div>
 
@@ -1926,10 +1908,10 @@
             },
             normalizePhone(phone) {
                 if (!phone) return "";
-                let clean = String(phone).trim().replace(/\s+/g, "");
+                let clean = String(phone).trim().replace(/[\s\-()]/g, "");
                 const dial = this.getDialCode();
                 const rawDial = dial.replace("+", "");
-                if (clean === dial) return "";
+                if (clean === dial || clean === "+") return "";
                 if (clean.startsWith("+")) return clean;
                 if (clean.startsWith("0")) return dial + clean.substring(1);
                 if (clean.startsWith(rawDial)) return "+" + clean;
@@ -2251,6 +2233,76 @@
                     return false;
                 }
                 return true;
+            },
+            findDuplicatePhoneOwner(phone, options = {}) {
+                const norm = RegionManager.normalizePhone(phone);
+                if (!norm || norm === RegionManager.getDialCode()) return null;
+                const branch = State.getActiveBranch();
+                const ignoreNin = (options.ignoreNin || "").toUpperCase().trim();
+                const ignoreGuarantorPhone = options.ignoreGuarantorPhone ? RegionManager.normalizePhone(options.ignoreGuarantorPhone) : "";
+
+                const matchNorm = p => {
+                    const np = RegionManager.normalizePhone(p);
+                    return np && np === norm;
+                };
+
+                for (const gc of (state.globalClients || [])) {
+                    const gcNin = (gc.nin || "").toUpperCase().trim();
+                    if (gc.phone && matchNorm(gc.phone) && (!ignoreNin || gcNin !== ignoreNin)) {
+                        return `Client "${gc.name || gc.nin}" (${gc.phone})`;
+                    }
+                    if (gc.guarantorPhone && matchNorm(gc.guarantorPhone) && (!ignoreGuarantorPhone || matchNorm(gc.guarantorPhone) !== ignoreGuarantorPhone)) {
+                        return `Guarantor "${gc.guarantor || 'Saved Guarantor'}" for ${gc.name || gc.nin} (${gc.guarantorPhone})`;
+                    }
+                    for (const sg of (gc.savedGuarantors || [])) {
+                        if (sg.phone && matchNorm(sg.phone) && (!ignoreGuarantorPhone || matchNorm(sg.phone) !== ignoreGuarantorPhone)) {
+                            return `Saved Guarantor "${sg.name || 'Guarantor'}" (${sg.phone})`;
+                        }
+                    }
+                }
+
+                for (const bc of (branch.clients || [])) {
+                    const bcNin = (bc.nin || "").toUpperCase().trim();
+                    if (bc.phone && matchNorm(bc.phone) && (!ignoreNin || bcNin !== ignoreNin)) {
+                        return `Client "${bc.name || bc.id}" (${bc.phone})`;
+                    }
+                    if (bc.guarantorPhone && matchNorm(bc.guarantorPhone) && (!ignoreGuarantorPhone || matchNorm(bc.guarantorPhone) !== ignoreGuarantorPhone)) {
+                        return `Guarantor "${bc.guarantor || 'Guarantor'}" on loan ${bc.id} (${bc.guarantorPhone})`;
+                    }
+                    for (const sg of (bc.savedGuarantors || [])) {
+                        if (sg.phone && matchNorm(sg.phone) && (!ignoreGuarantorPhone || matchNorm(sg.phone) !== ignoreGuarantorPhone)) {
+                            return `Saved Guarantor "${sg.name || 'Guarantor'}" (${sg.phone})`;
+                        }
+                    }
+                }
+
+                for (const acc of (state.accounts || [])) {
+                    if (acc.phone && matchNorm(acc.phone)) {
+                        return `User Account "${acc.username}" (${acc.role})`;
+                    }
+                }
+
+                for (const off of (branch.officers || [])) {
+                    if (off.phone && matchNorm(off.phone)) {
+                        return `Staff Officer "${off.name}" (${off.phone})`;
+                    }
+                }
+
+                for (const mgr of (state.managers || [])) {
+                    if (mgr.phone && matchNorm(mgr.phone)) {
+                        return `Manager "${mgr.name}" (${mgr.phone})`;
+                    }
+                }
+
+                return null;
+            },
+            isDuplicatePhone(phone, options = {}) {
+                const owner = this.findDuplicatePhoneOwner(phone, options);
+                if (owner) {
+                    Utils.toast(`Duplicate phone number rejected: ${RegionManager.normalizePhone(phone)} is already used by ${owner}. A phone number cannot be entered more than once.`);
+                    return true;
+                }
+                return false;
             }
         };
 
@@ -2609,6 +2661,7 @@
                 if (!Validation.isRequired(username, "Username") ||
                     !Validation.isValidEmail(email) ||
                     !Validation.isValidPhone(phone) ||
+                    Validation.isDuplicatePhone(phone) ||
                     !Validation.isValidPassword(password)) return;
 
                 if (state.accounts.some(a => a.username.toLowerCase() === username.toLowerCase())) {
@@ -2899,7 +2952,7 @@
             addManager() {
                 const name = document.getElementById("mgr-name").value.trim();
                 const phone = RegionManager.normalizePhone(document.getElementById("mgr-phone").value);
-                if (!Validation.isRequired(name, "Manager Name") || !Validation.isValidPhone(phone)) return;
+                if (!Validation.isRequired(name, "Manager Name") || !Validation.isValidPhone(phone) || Validation.isDuplicatePhone(phone)) return;
                 if (!state.managers) state.managers = [];
                 state.managers.push({ id: Utils.generateId("mgr"), name, phone });
                 State.save();
@@ -3226,6 +3279,8 @@
                     Utils.hide("existing-client-fields");
                     selectedDisburseClient = null;
                     Utils.hide("disburse-active-loan-warning");
+                    Utils.hide("existing-guarantor-section");
+                    Utils.hide("existing-guarantor-phone-warning");
                     document.getElementById("disburse-submit-btn").disabled = false;
                     document.getElementById("disburse-submit-btn").classList.remove("opacity-50", "cursor-not-allowed");
                     const p1 = document.getElementById("new-phone");
@@ -3233,9 +3288,14 @@
                     const dial = RegionManager.getDialCode();
                     if (p1 && !p1.value.trim()) p1.value = dial;
                     if (p2 && !p2.value.trim()) p2.value = dial;
+                    this.validateNewClientPhones();
                 } else {
                     Utils.hide("new-client-fields");
                     Utils.show("existing-client-fields");
+                    Utils.hide("new-client-phone-warning");
+                    if (!selectedDisburseClient) {
+                        Utils.hide("existing-guarantor-section");
+                    }
                 }
             },
             toggleBodaPlateInput(prefix) {
@@ -3244,34 +3304,259 @@
                 if (cat === "BODABODA") Utils.show(plateContainer);
                 else Utils.hide(plateContainer);
             },
-            checkGuarantorExposure(guarantorName) {
+            getSavedGuarantorsForClient(clientObj) {
+                if (!clientObj) return [];
+                const branch = State.getActiveBranch();
+                const ninUpper = (clientObj.nin || "").toUpperCase().trim();
+                const nameLower = (clientObj.name || "").toLowerCase().trim();
+                const collected = [];
+
+                const addEntry = (name, phone, sourceLabel) => {
+                    const cleanName = (name || "").trim();
+                    const cleanPhone = RegionManager.normalizePhone(phone || "");
+                    if (!cleanName && !cleanPhone) return;
+                    const key = `${cleanName.toLowerCase()}|${cleanPhone}`;
+                    const existing = collected.find(item => `${item.name.toLowerCase()}|${item.phone}` === key);
+                    if (existing) {
+                        if (sourceLabel && !existing.sources.includes(sourceLabel)) {
+                            existing.sources.push(sourceLabel);
+                        }
+                        return;
+                    }
+                    collected.push({
+                        name: cleanName || "Unnamed Guarantor",
+                        phone: cleanPhone,
+                        sources: sourceLabel ? [sourceLabel] : []
+                    });
+                };
+
+                const gClient = state.globalClients.find(gc =>
+                    (ninUpper && (gc.nin || "").toUpperCase().trim() === ninUpper) ||
+                    (!ninUpper && nameLower && (gc.name || "").toLowerCase().trim() === nameLower)
+                );
+                if (gClient) {
+                    addEntry(gClient.guarantor, gClient.guarantorPhone, "Client Profile");
+                    (gClient.savedGuarantors || []).forEach(sg => addEntry(sg.name, sg.phone, "Saved Record"));
+                }
+
+                addEntry(clientObj.guarantor, clientObj.guarantorPhone, "Client Record");
+                (clientObj.savedGuarantors || []).forEach(sg => addEntry(sg.name, sg.phone, "Saved Record"));
+
+                (branch.clients || []).forEach(bc => {
+                    const matchesClient = (ninUpper && (bc.nin || "").toUpperCase().trim() === ninUpper) ||
+                        (bc.id && clientObj.id && bc.id === clientObj.id) ||
+                        (!ninUpper && nameLower && (bc.name || "").toLowerCase().trim() === nameLower);
+                    if (matchesClient) {
+                        const src = bc.dateDisbursed ? `Loan (${bc.dateDisbursed})` : "Past Loan";
+                        addEntry(bc.guarantor, bc.guarantorPhone, src);
+                        (bc.savedGuarantors || []).forEach(sg => addEntry(sg.name, sg.phone, src));
+                    }
+                });
+
+                return collected;
+            },
+            populateExistingGuarantorOptions(clientObj) {
+                const section = document.getElementById("existing-guarantor-section");
+                const select = document.getElementById("existing-guarantor-select");
+                const badge = document.getElementById("existing-guarantor-count-badge");
+                const savedRadio = document.getElementById("existing-g-mode-saved");
+                const newRadio = document.getElementById("existing-g-mode-new");
+
+                if (!clientObj) {
+                    Utils.hide(section);
+                    return;
+                }
+
+                const savedList = this.getSavedGuarantorsForClient(clientObj);
+                if (badge) badge.innerText = `${savedList.length} Saved`;
+
+                if (savedList.length > 0) {
+                    select.innerHTML = savedList.map((g, idx) => {
+                        const srcText = g.sources.length ? ` — ${g.sources.join(", ")}` : "";
+                        return `<option value="${idx}">${g.name} (${g.phone || "No Phone"})${srcText}</option>`;
+                    }).join('');
+                    if (savedRadio) savedRadio.checked = true;
+                    if (newRadio) newRadio.checked = false;
+                } else {
+                    select.innerHTML = `<option value="">No saved guarantors found for this client</option>`;
+                    if (newRadio) newRadio.checked = true;
+                    if (savedRadio) savedRadio.checked = false;
+                }
+
+                Utils.show(section);
+                this.onExistingGuarantorModeChange();
+            },
+            onExistingGuarantorModeChange() {
+                const mode = document.querySelector('input[name="existing-guarantor-mode"]:checked')?.value || "saved";
+                const savedBox = document.getElementById("existing-saved-guarantor-box");
+                const newBox = document.getElementById("existing-new-guarantor-fields");
+                const newPhoneInput = document.getElementById("existing-new-guarantor-phone");
+
+                if (mode === "saved") {
+                    Utils.show(savedBox);
+                    Utils.hide(newBox);
+                    const select = document.getElementById("existing-guarantor-select");
+                    const savedList = this.getSavedGuarantorsForClient(selectedDisburseClient);
+                    const idx = parseInt(select?.value ?? "0", 10);
+                    const chosen = savedList[idx];
+                    if (chosen) {
+                        this.checkGuarantorExposure(chosen.name, "existing");
+                    } else {
+                        this.checkGuarantorExposure("", "existing");
+                    }
+                    Utils.hide("existing-guarantor-phone-warning");
+                } else {
+                    Utils.hide(savedBox);
+                    Utils.show(newBox);
+                    const dial = RegionManager.getDialCode();
+                    if (newPhoneInput && !newPhoneInput.value.trim()) {
+                        newPhoneInput.value = dial;
+                    }
+                    this.onExistingNewGuarantorInput();
+                }
+            },
+            onSavedGuarantorSelect(val) {
+                const savedList = this.getSavedGuarantorsForClient(selectedDisburseClient);
+                const idx = parseInt(val, 10);
+                const chosen = savedList[idx];
+                this.checkGuarantorExposure(chosen ? chosen.name : "", "existing");
+            },
+            onExistingNewGuarantorInput() {
+                const gName = document.getElementById("existing-new-guarantor-name")?.value || "";
+                const gPhone = document.getElementById("existing-new-guarantor-phone")?.value || "";
+                this.checkGuarantorExposure(gName, "existing");
+                this.validateExistingNewGuarantorPhone(gPhone);
+            },
+            getSelectedExistingGuarantor() {
+                if (!selectedDisburseClient) return null;
+                const mode = document.querySelector('input[name="existing-guarantor-mode"]:checked')?.value || "saved";
+                if (mode === "saved") {
+                    const savedList = this.getSavedGuarantorsForClient(selectedDisburseClient);
+                    const idx = parseInt(document.getElementById("existing-guarantor-select")?.value ?? "-1", 10);
+                    const chosen = savedList[idx];
+                    if (!chosen) return null;
+                    return { name: chosen.name, phone: chosen.phone, isNew: false };
+                } else {
+                    const name = (document.getElementById("existing-new-guarantor-name")?.value || "").trim();
+                    const phone = RegionManager.normalizePhone(document.getElementById("existing-new-guarantor-phone")?.value || "");
+                    return { name, phone, isNew: true };
+                }
+            },
+            checkGuarantorExposure(guarantorName, context = "new") {
+                const alertDiv = document.getElementById("guarantor-exposure-alert");
+                const msgEl = document.getElementById("guarantor-exposure-msg");
+                const existingWarnDiv = document.getElementById("disburse-guarantor-exposure-existing");
+                const submitBtn = document.getElementById("disburse-submit-btn");
+
                 if (!guarantorName || guarantorName.trim().length < 2) {
-                    Utils.hide("guarantor-exposure-alert");
+                    if (context === "new") Utils.hide(alertDiv);
+                    if (existingWarnDiv) Utils.hide(existingWarnDiv);
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.classList.remove("opacity-50", "cursor-not-allowed");
+                    }
                     return 0;
                 }
                 const branch = State.getActiveBranch();
                 const gName = guarantorName.toLowerCase().trim();
                 const activeGuaranteed = branch.clients.filter(c => c.guarantor && c.guarantor.toLowerCase().trim() === gName && (c.balance || 0) > 0);
                 const count = activeGuaranteed.length;
-                const alertDiv = document.getElementById("guarantor-exposure-alert");
-                const msgEl = document.getElementById("guarantor-exposure-msg");
-                const submitBtn = document.getElementById("disburse-submit-btn");
+
                 if (count >= 4) {
-                    msgEl.innerHTML = `Guarantor <strong>${guarantorName}</strong> already guarantees <strong>${count}</strong> active clients. Maximum is 4.`;
-                    Utils.show(alertDiv);
-                    submitBtn.disabled = true;
-                    submitBtn.classList.add("opacity-50", "cursor-not-allowed");
+                    const textMsg = `Guarantor "${guarantorName}" is at maximum exposure (${count} active guaranteed clients; max is 4).`;
+                    if (msgEl) msgEl.innerHTML = `Guarantor <strong>${guarantorName}</strong> already guarantees <strong>${count}</strong> active clients. Maximum is 4.`;
+                    if (context === "new") Utils.show(alertDiv);
+                    if (existingWarnDiv) {
+                        existingWarnDiv.innerText = textMsg;
+                        Utils.show(existingWarnDiv);
+                    }
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.classList.add("opacity-50", "cursor-not-allowed");
+                    }
                 } else if (count >= 2) {
-                    msgEl.innerHTML = `Guarantor <strong>${guarantorName}</strong> currently guarantees <strong>${count}</strong> active clients.`;
-                    Utils.show(alertDiv);
-                    submitBtn.disabled = false;
-                    submitBtn.classList.remove("opacity-50", "cursor-not-allowed");
+                    const textMsg = `Guarantor Exposure Notice: "${guarantorName}" currently guarantees ${count} active client(s).`;
+                    if (msgEl) msgEl.innerHTML = `Guarantor <strong>${guarantorName}</strong> currently guarantees <strong>${count}</strong> active clients.`;
+                    if (context === "new") Utils.show(alertDiv);
+                    if (existingWarnDiv) {
+                        existingWarnDiv.innerText = textMsg;
+                        Utils.show(existingWarnDiv);
+                    }
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.classList.remove("opacity-50", "cursor-not-allowed");
+                    }
                 } else {
-                    Utils.hide(alertDiv);
-                    submitBtn.disabled = false;
-                    submitBtn.classList.remove("opacity-50", "cursor-not-allowed");
+                    if (context === "new") Utils.hide(alertDiv);
+                    if (existingWarnDiv) Utils.hide(existingWarnDiv);
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                        submitBtn.classList.remove("opacity-50", "cursor-not-allowed");
+                    }
                 }
                 return count;
+            },
+            validateNewClientPhones() {
+                const warnEl = document.getElementById("new-client-phone-warning");
+                if (!warnEl) return true;
+                const nin = (document.getElementById("new-nin")?.value || "").trim().toUpperCase();
+                const rawClientPhone = document.getElementById("new-phone")?.value || "";
+                const rawGuarPhone = document.getElementById("new-guarantor-phone")?.value || "";
+                const dial = RegionManager.getDialCode();
+
+                const normClient = RegionManager.normalizePhone(rawClientPhone);
+                const normGuar = RegionManager.normalizePhone(rawGuarPhone);
+
+                const hasClient = normClient && normClient !== dial;
+                const hasGuar = normGuar && normGuar !== dial;
+
+                if (hasClient && hasGuar && normClient === normGuar) {
+                    warnEl.innerText = `Duplicate phone number: Client phone and Guarantor phone cannot be the same (${normClient}).`;
+                    Utils.show(warnEl);
+                    return false;
+                }
+                if (hasClient) {
+                    const owner = Validation.findDuplicatePhoneOwner(normClient, { ignoreNin: nin });
+                    if (owner) {
+                        warnEl.innerText = `Duplicate phone number: ${normClient} is already registered to ${owner}.`;
+                        Utils.show(warnEl);
+                        return false;
+                    }
+                }
+                if (hasGuar) {
+                    const owner = Validation.findDuplicatePhoneOwner(normGuar);
+                    if (owner) {
+                        warnEl.innerText = `Duplicate phone number: ${normGuar} is already registered to ${owner}.`;
+                        Utils.show(warnEl);
+                        return false;
+                    }
+                }
+                Utils.hide(warnEl);
+                return true;
+            },
+            validateExistingNewGuarantorPhone(rawPhone) {
+                const warnEl = document.getElementById("existing-guarantor-phone-warning");
+                if (!warnEl) return true;
+                const dial = RegionManager.getDialCode();
+                const normGuar = RegionManager.normalizePhone(rawPhone);
+                if (!normGuar || normGuar === dial) {
+                    Utils.hide(warnEl);
+                    return true;
+                }
+                const clientNorm = RegionManager.normalizePhone(selectedDisburseClient?.phone || "");
+                if (clientNorm && normGuar === clientNorm) {
+                    warnEl.innerText = `Duplicate phone number: Guarantor phone cannot match the client's own phone (${normGuar}).`;
+                    Utils.show(warnEl);
+                    return false;
+                }
+                const owner = Validation.findDuplicatePhoneOwner(normGuar);
+                if (owner) {
+                    warnEl.innerText = `Duplicate phone number: ${normGuar} is already registered to ${owner}.`;
+                    Utils.show(warnEl);
+                    return false;
+                }
+                Utils.hide(warnEl);
+                return true;
             },
             checkNinDuplicate(nin) {
                 if (!nin) return;
@@ -3296,8 +3581,9 @@
                     document.getElementById("new-address").value = existing.address || '';
                     document.getElementById("new-guarantor").value = existing.guarantor || '';
                     document.getElementById("new-guarantor-phone").value = existing.guarantorPhone || RegionManager.getDialCode();
-                    if (existing.guarantor) this.checkGuarantorExposure(existing.guarantor);
+                    if (existing.guarantor) this.checkGuarantorExposure(existing.guarantor, "new");
                 }
+                this.validateNewClientPhones();
             },
             searchClients(query) {
                 const resultsDiv = document.getElementById("disburse-search-results");
@@ -3308,7 +3594,8 @@
                 const q = query.toLowerCase();
                 const filtered = state.globalClients.filter(c =>
                     (c.name && c.name.toLowerCase().includes(q)) ||
-                    (c.nin && c.nin.toLowerCase().includes(q))
+                    (c.nin && c.nin.toLowerCase().includes(q)) ||
+                    (c.phone && c.phone.toLowerCase().includes(q))
                 );
                 resultsDiv.innerHTML = filtered.map(c => `
                     <div onclick="Disburse.selectByNin('${c.nin}')" class="p-2 hover:bg-slate-100 cursor-pointer text-xs">
@@ -3337,14 +3624,12 @@
                 Utils.hide("disburse-search-results");
                 const searchInput = document.getElementById("disburse-search");
                 if (searchInput) searchInput.value = "";
-                document.getElementById("disburse-selected-name").innerText = selectedDisburseClient ? `Selected: ${selectedDisburseClient.name}` : '';
-                if (selectedDisburseClient && selectedDisburseClient.guarantor) {
-                    const count = this.checkGuarantorExposure(selectedDisburseClient.guarantor);
-                    const warnDiv = document.getElementById("disburse-guarantor-exposure-existing");
-                    if (count >= 4) {
-                        warnDiv.innerText = `Guarantor (${selectedDisburseClient.guarantor}) is at maximum exposure (${count} clients)`;
-                        Utils.show(warnDiv);
-                    } else Utils.hide(warnDiv);
+                document.getElementById("disburse-selected-name").innerText = selectedDisburseClient ? `Selected: ${selectedDisburseClient.name} (${selectedDisburseClient.nin || 'N/A'})` : '';
+                if (selectedDisburseClient) {
+                    this.populateExistingGuarantorOptions(selectedDisburseClient);
+                } else {
+                    Utils.hide("existing-guarantor-section");
+                    Utils.hide("disburse-guarantor-exposure-existing");
                 }
             },
             liveCalculate() {
@@ -3377,10 +3662,31 @@
                     guarantorPhone = RegionManager.normalizePhone(document.getElementById("new-guarantor-phone").value);
                     category = document.getElementById("new-client-category").value;
                     plate = document.getElementById("new-number-plate")?.value.trim().toUpperCase() || "";
-                    if (!Validation.isRequired(nin, "National ID / NIN") || !Validation.isRequired(name, "Name") || !Validation.isValidPhone(phone)) return;
-                    if (guarantorPhone && !Validation.isValidPhone(guarantorPhone)) return;
-                    if (!state.globalClients.some(c => c.nin === nin)) {
-                        state.globalClients.push({ nin, name, phone, address, guarantor, guarantorPhone, category, plate });
+                    if (!Validation.isRequired(nin, "National ID / NIN") ||
+                        !Validation.isRequired(name, "Name") ||
+                        !Validation.isValidPhone(phone) ||
+                        Validation.isDuplicatePhone(phone, { ignoreNin: nin })) return;
+                    if (guarantorPhone) {
+                        if (!Validation.isValidPhone(guarantorPhone)) return;
+                        if (RegionManager.normalizePhone(guarantorPhone) === phone) {
+                            Utils.toast("Guarantor phone number cannot be the same as the client's phone number.");
+                            return;
+                        }
+                        if (Validation.isDuplicatePhone(guarantorPhone)) return;
+                    }
+                    const existingGlobal = state.globalClients.find(c => c.nin === nin);
+                    const savedGuarantors = guarantor ? [{ name: guarantor, phone: guarantorPhone }] : [];
+                    if (!existingGlobal) {
+                        state.globalClients.push({ nin, name, phone, address, guarantor, guarantorPhone, savedGuarantors, category, plate });
+                    } else {
+                        if (guarantor) {
+                            existingGlobal.guarantor = guarantor;
+                            existingGlobal.guarantorPhone = guarantorPhone;
+                            if (!existingGlobal.savedGuarantors) existingGlobal.savedGuarantors = [];
+                            if (!existingGlobal.savedGuarantors.some(sg => (sg.name || "").toLowerCase() === guarantor.toLowerCase() && (sg.phone || "") === guarantorPhone)) {
+                                existingGlobal.savedGuarantors.push({ name: guarantor, phone: guarantorPhone });
+                            }
+                        }
                     }
                 } else {
                     if (!selectedDisburseClient) {
@@ -3390,7 +3696,26 @@
                     nin = selectedDisburseClient.nin;
                     name = selectedDisburseClient.name;
                     phone = selectedDisburseClient.phone;
-                    guarantor = selectedDisburseClient.guarantor;
+                    address = selectedDisburseClient.address || "";
+                    category = selectedDisburseClient.category || "OTHERS";
+                    plate = selectedDisburseClient.plate || "";
+
+                    const chosenGuarantor = this.getSelectedExistingGuarantor();
+                    if (!chosenGuarantor || !chosenGuarantor.name) {
+                        Utils.toast("Please select a saved guarantor or enter a new guarantor name.");
+                        return;
+                    }
+                    guarantor = chosenGuarantor.name;
+                    guarantorPhone = chosenGuarantor.phone || "";
+
+                    if (chosenGuarantor.isNew) {
+                        if (!Validation.isValidPhone(guarantorPhone)) return;
+                        if (phone && RegionManager.normalizePhone(guarantorPhone) === RegionManager.normalizePhone(phone)) {
+                            Utils.toast("Guarantor phone number cannot be the same as the client's phone number.");
+                            return;
+                        }
+                        if (Validation.isDuplicatePhone(guarantorPhone)) return;
+                    }
                 }
                 const branch = State.getActiveBranch();
                 const activeLoan = branch.clients.find(c => c.nin && c.nin.toUpperCase() === nin.toUpperCase() && (c.balance || 0) > 0);
@@ -3399,7 +3724,7 @@
                     return;
                 }
                 if (guarantor) {
-                    const gCount = this.checkGuarantorExposure(guarantor);
+                    const gCount = this.checkGuarantorExposure(guarantor, isNew ? "new" : "existing");
                     if (gCount >= 4) {
                         Utils.toast("Guarantor at maximum exposure");
                         return;
@@ -3413,10 +3738,22 @@
                 deadline.setDate(deadline.getDate() + days);
                 const nowTs = Date.now();
                 const nowTime = Utils.timeNow();
+
+                const savedGuarantorsList = this.getSavedGuarantorsForClient(selectedDisburseClient || { nin, name, guarantor, guarantorPhone });
+                if (guarantor && !savedGuarantorsList.some(sg => (sg.name || "").toLowerCase() === guarantor.toLowerCase() && (sg.phone || "") === guarantorPhone)) {
+                    savedGuarantorsList.push({ name: guarantor, phone: guarantorPhone });
+                }
+
+                const gClientRecord = state.globalClients.find(gc => gc.nin && gc.nin.toUpperCase() === nin.toUpperCase());
+                if (gClientRecord && guarantor) {
+                    gClientRecord.guarantor = guarantor;
+                    gClientRecord.guarantorPhone = guarantorPhone;
+                    gClientRecord.savedGuarantors = savedGuarantorsList;
+                }
                 
                 branch.clients.push({
                     id: Utils.generateId("cli"),
-                    nin, name, phone, address, guarantor, guarantorPhone, category, plate,
+                    nin, name, phone, address, guarantor, guarantorPhone, savedGuarantors: savedGuarantorsList, category, plate,
                     officerId,
                     principal: p,
                     processingFee: fee,
@@ -3450,6 +3787,11 @@
                 Utils.toast(`Loan disbursed successfully (Fee charged: ${Utils.formatUGX(fee)})`);
                 UI.refreshAll();
                 document.getElementById("disburse-principal").value = "";
+                if (!isNew && selectedDisburseClient) {
+                    this.populateExistingGuarantorOptions(selectedDisburseClient);
+                    if (document.getElementById("existing-new-guarantor-name")) document.getElementById("existing-new-guarantor-name").value = "";
+                    if (document.getElementById("existing-new-guarantor-phone")) document.getElementById("existing-new-guarantor-phone").value = RegionManager.getDialCode();
+                }
             }
         };
         Disburse.searchClientsDebounced = Utils.debounce(q => Disburse.searchClients(q), 260);
@@ -3642,570 +3984,414 @@
                         : `<option value="">No savings transactions</option>`;
                 } else {
                     document.getElementById("rev-balance-label").innerHTML = `Loan Bal: <span class="curr-code">UGX</span> <span id="rev-client-balance">${(selectedReversalClient.balance || 0).toLocaleString()}</span>`;
-                    const hist = (selectedReversalClient.history || []).filter(h => h.type === 'Repayment' || h.type === 'Disbursement');
+                    const hist = selectedReversalClient.history || [];
                     select.innerHTML = hist.length
-                        ? hist.map((h, i) => `<option value="${i}" ${h.reversed ? 'disabled' : ''}>${h.date} ${h.time || ''} — ${h.type}${h.channel ? ' (' + h.channel + ')' : ''} — ${Utils.formatUGX(h.amount)}${h.reversed ? ' [REVERSED]' : ''}</option>`).join('')
+                        ? hist.map((h, i) => `<option value="${i}" ${h.reversed ? 'disabled' : ''}>${h.date} ${h.time || ''} — ${h.type} — ${Utils.formatUGX(h.amount)} (${h.channel || '-'}) ${h.reversed ? ' [REVERSED]' : ''}</option>`).join('')
                         : `<option value="">No loan transactions</option>`;
                 }
-
                 RegionManager.syncLocaleUI();
                 Utils.show("reversal-card");
             },
-            recordWorkspaceReversal({ reversalType, source, amount, reason, detail = '' }) {
+            logReversalToWorkspace(entry) {
                 const branch = State.getActiveBranch();
                 if (!branch.reversals) branch.reversals = [];
-                const nowTs = Date.now();
-                const nowTime = Utils.timeNow();
                 branch.reversals.push({
                     id: Utils.generateId("rev"),
                     date: Utils.today(),
-                    timestamp: nowTs,
-                    time: nowTime,
-                    reversalType,
-                    source,
-                    reason,
-                    detail,
-                    amount: Number(amount) || 0,
-                    by: state.currentUser?.username || 'Admin/Manager'
+                    timestamp: Date.now(),
+                    time: Utils.timeNow(),
+                    by: state.currentUser?.username || 'Admin',
+                    ...entry
                 });
             },
             executeReversal() {
                 if (!['Administrator', 'Manager'].includes(state.currentUser?.role)) {
-                    Utils.toast("Admin/Manager only");
+                    Utils.toast("Access Denied");
                     return;
                 }
                 const cat = document.getElementById("reversal-category")?.value || "LOAN";
+                const idxStr = document.getElementById("rev-transaction-select").value;
                 const reason = document.getElementById("rev-reason").value.trim();
-                if (!Validation.isRequired(reason, "Reason")) return;
-
-                const select = document.getElementById("rev-transaction-select");
-                if (select.value === "" || select.selectedOptions[0]?.disabled) {
-                    Utils.toast("Select a valid non-reversed transaction");
+                if (idxStr === "" || idxStr === undefined) {
+                    Utils.toast("Select a transaction to reverse");
                     return;
                 }
-                const idx = parseInt(select.value, 10);
+                if (!Validation.isRequired(reason, "Reason")) return;
+
+                const idx = parseInt(idxStr, 10);
                 const branch = State.getActiveBranch();
 
                 if (cat === "LOAN") {
-                    if (!selectedReversalClient) return;
-                    const hist = (selectedReversalClient.history || []).filter(h => h.type === 'Repayment' || h.type === 'Disbursement');
-                    const txn = hist[idx];
-                    if (!txn || txn.reversed) return;
-                    if (!Utils.confirmAction("Confirm loan transaction reversal?")) return;
-
-                    if (txn.type === 'Repayment') {
-                        selectedReversalClient.balance = (selectedReversalClient.balance || 0) + txn.amount;
-                        CashPosition.deduct(txn.channel || 'cash', txn.amount);
-                    } else if (txn.type === 'Disbursement') {
-                        selectedReversalClient.balance = Math.max(0, (selectedReversalClient.balance || 0) - txn.amount);
-                        CashPosition.add('cash', (txn.principal || txn.amount) - (txn.processingFee || 0));
-                    }
-                    txn.reversed = true;
-                    selectedReversalClient.history.push({
-                        id: Utils.generateId("txn"),
-                        type: 'Reversal',
-                        amount: txn.amount,
-                        date: Utils.today(),
-                        timestamp: Date.now(),
-                        time: Utils.timeNow(),
-                        originalType: txn.type,
-                        reason
-                    });
-                    State.recalculateClientStatus(selectedReversalClient);
-                    this.recordWorkspaceReversal({
-                        reversalType: `Loan ${txn.type}`,
-                        source: selectedReversalClient.name,
-                        amount: txn.amount,
-                        reason,
-                        detail: txn.channel || selectedReversalClient.nin || ''
-                    });
-                    Audit.log("LOAN_REVERSAL", { clientId: selectedReversalClient.id, type: txn.type, reason, amount: txn.amount });
-
-                } else if (cat === "BANKING") {
-                    const bankTxn = (branch.bankings || [])[idx];
-                    if (!bankTxn || bankTxn.reversed) return;
-                    if (!Utils.confirmAction("Confirm banking deposit reversal?")) return;
-
-                    bankTxn.reversed = true;
-                    bankTxn.amount = 0;
-                    const origAmt = bankTxn.originalAmount ?? bankTxn.amount;
-                    this.recordWorkspaceReversal({
-                        reversalType: 'Banking Deposit',
-                        source: bankTxn.name || 'Bank',
-                        amount: bankTxn.reversedAmount || 0,
-                        reason,
-                        detail: bankTxn.ref || bankTxn.acc || ''
-                    });
-                    Audit.log("BANKING_REVERSAL", { bank: bankTxn.name, ref: bankTxn.ref, reason });
-
-                } else if (cat === "SAVINGS") {
-                    if (!selectedReversalClient || !selectedReversalClient.nin) return;
-                    const nin = selectedReversalClient.nin;
-                    const sav = branch.savingsAccounts?.[nin];
-                    const sTxn = sav?.history?.[idx];
-                    if (!sTxn || sTxn.reversed) return;
-                    if (!Utils.confirmAction(`Confirm savings ${sTxn.type.toLowerCase()} reversal?`)) return;
-
-                    if (sTxn.type === 'DEPOSIT') {
-                        if ((sav.balance || 0) < sTxn.amount) {
-                            Utils.toast("Insufficient client savings balance to reverse deposit");
-                            return;
-                        }
-                        sav.balance -= sTxn.amount;
-                        CashPosition.deduct('cash', sTxn.amount);
-                    } else if (sTxn.type === 'WITHDRAWAL') {
-                        sav.balance = (sav.balance || 0) + sTxn.amount;
-                        CashPosition.add('cash', sTxn.amount);
-                    }
-                    sTxn.reversed = true;
-                    sav.history.push({
-                        id: Utils.generateId("sav"),
-                        date: Utils.today(),
-                        timestamp: Date.now(),
-                        time: Utils.timeNow(),
-                        type: 'REVERSAL',
-                        amount: sTxn.amount,
-                        reason
-                    });
-                    this.recordWorkspaceReversal({
-                        reversalType: `Savings ${sTxn.type}`,
-                        source: selectedReversalClient.name,
-                        amount: sTxn.amount,
-                        reason,
-                        detail: nin
-                    });
-                    Audit.log("SAVINGS_REVERSAL", { nin, type: sTxn.type, reason, amount: sTxn.amount });
-
-                } else if (cat === "EXPENSE") {
-                    const expTxn = (branch.expenses || [])[idx];
-                    if (!expTxn || expTxn.reversed) return;
-                    if (!Utils.confirmAction("Confirm expense reversal? Cash at Hand will be refunded.")) return;
-
-                    const revAmt = expTxn.amount || 0;
-                    expTxn.reversed = true;
-                    expTxn.reversedAmount = revAmt;
-                    expTxn.amount = 0;
-                    CashPosition.add('cash', revAmt);
-                    this.recordWorkspaceReversal({
-                        reversalType: 'Expense',
-                        source: expTxn.category || 'Expense',
-                        amount: revAmt,
-                        reason,
-                        detail: expTxn.narration || ''
-                    });
-                    Audit.log("EXPENSE_REVERSAL", { category: expTxn.category, reason, amount: revAmt });
-
-                } else if (cat === "MM_WITHDRAWAL") {
-                    const wdrTxn = (branch.mmWithdrawals || [])[idx];
-                    if (!wdrTxn || wdrTxn.reversed) return;
-                    if (!Utils.confirmAction("Confirm Mobile Money withdrawal reversal?")) return;
-
-                    const revAmt = wdrTxn.amount || 0;
-                    const wallet = (wdrTxn.channel || 'MTN').toLowerCase();
-                    if ((state.cashPosition.cash || 0) < revAmt) {
-                        Utils.toast("Insufficient Cash at Hand to return funds to Mobile Money");
+                    if (!selectedReversalClient) {
+                        Utils.toast("Select a client");
                         return;
                     }
-                    CashPosition.deduct('cash', revAmt);
-                    CashPosition.add(wallet, revAmt);
-                    wdrTxn.reversed = true;
-                    wdrTxn.reversedAmount = revAmt;
-                    wdrTxn.amount = 0;
-                    this.recordWorkspaceReversal({
-                        reversalType: 'MM Withdrawal',
-                        source: `${wdrTxn.channel} → Cash`,
-                        amount: revAmt,
-                        reason,
-                        detail: wdrTxn.by || ''
+                    const hist = selectedReversalClient.history || [];
+                    const txn = hist[idx];
+                    if (!txn || txn.reversed) {
+                        Utils.toast("Transaction already reversed or invalid");
+                        return;
+                    }
+                    const amt = Number(txn.amount) || 0;
+                    if (txn.type === 'Repayment') {
+                        selectedReversalClient.balance = (selectedReversalClient.balance || 0) + amt;
+                        CashPosition.deduct(txn.channel || 'cash', amt);
+                    } else if (txn.type === 'Disbursement') {
+                        selectedReversalClient.balance = Math.max(0, (selectedReversalClient.balance || 0) - amt);
+                        const p = Number(txn.principal) || 0;
+                        const fee = Number(txn.processingFee) || 0;
+                        if (p > 0) CashPosition.add('cash', Math.max(0, p - fee));
+                    }
+                    txn.reversed = true;
+                    State.recalculateClientStatus(selectedReversalClient);
+                    this.logReversalToWorkspace({
+                        category: "LOAN",
+                        subType: `Loan ${txn.type} Reversal`,
+                        clientOrSource: `${selectedReversalClient.name} (${selectedReversalClient.nin || selectedReversalClient.id})`,
+                        description: `Reversed ${txn.type} (${txn.channel || '-'}) — Reason: ${reason}`,
+                        amount: amt
                     });
-                    Audit.log("MM_WITHDRAWAL_REVERSAL", { channel: wdrTxn.channel, reason, amount: revAmt });
-                }
-
-                // Store original amount cleanly on BANKING before zeroing
-                document.getElementById("rev-reason").value = "";
-                State.save();
-                Utils.toast("Reversal completed & recorded in Daily Workspace");
-                UI.refreshAll();
-                if (cat === "LOAN" || cat === "SAVINGS") {
-                    if (selectedReversalClient) this.selectReversalClient(selectedReversalClient.id);
-                } else {
+                    Audit.log("LOAN_TXN_REVERSED", { client: selectedReversalClient.name, txnType: txn.type, amt, reason });
+                    this.selectReversalClient(selectedReversalClient.id);
+                } else if (cat === "BANKING") {
+                    const bankTxn = (branch.bankings || [])[idx];
+                    if (!bankTxn || bankTxn.reversed) {
+                        Utils.toast("Banking deposit already reversed or invalid");
+                        return;
+                    }
+                    const amt = Number(bankTxn.amount) || 0;
+                    CashPosition.add('cash', amt);
+                    bankTxn.reversed = true;
+                    this.logReversalToWorkspace({
+                        category: "BANKING",
+                        subType: "Banking Reversal",
+                        clientOrSource: `${bankTxn.name} (${bankTxn.ref || 'No Ref'})`,
+                        description: `Reversed bank deposit — Reason: ${reason}`,
+                        amount: amt
+                    });
+                    Audit.log("BANKING_REVERSED", { bank: bankTxn.name, amt, reason });
+                    Banking.renderHistory();
+                    this.onCategoryChange();
+                } else if (cat === "SAVINGS") {
+                    if (!selectedReversalClient) {
+                        Utils.toast("Select a client");
+                        return;
+                    }
+                    const nin = selectedReversalClient.nin;
+                    const sav = branch.savingsAccounts?.[nin];
+                    const savTxn = sav?.history?.[idx];
+                    if (!savTxn || savTxn.reversed) {
+                        Utils.toast("Savings transaction already reversed or invalid");
+                        return;
+                    }
+                    const amt = Number(savTxn.amount) || 0;
+                    if (savTxn.type === 'DEPOSIT') {
+                        sav.balance = Math.max(0, (sav.balance || 0) - amt);
+                        CashPosition.deduct('cash', amt);
+                    } else if (savTxn.type === 'WITHDRAWAL') {
+                        sav.balance = (sav.balance || 0) + amt;
+                        CashPosition.add('cash', amt);
+                    }
+                    savTxn.reversed = true;
+                    this.logReversalToWorkspace({
+                        category: "SAVINGS",
+                        subType: `Savings ${savTxn.type} Reversal`,
+                        clientOrSource: `${selectedReversalClient.name} (${nin || selectedReversalClient.id})`,
+                        description: `Reversed savings ${savTxn.type.toLowerCase()} — Reason: ${reason}`,
+                        amount: amt
+                    });
+                    Audit.log("SAVINGS_REVERSED", { client: selectedReversalClient.name, type: savTxn.type, amt, reason });
+                    this.selectReversalClient(selectedReversalClient.id);
+                } else if (cat === "EXPENSE") {
+                    const expTxn = (branch.expenses || [])[idx];
+                    if (!expTxn || expTxn.reversed) {
+                        Utils.toast("Expense already reversed or invalid");
+                        return;
+                    }
+                    const amt = Number(expTxn.amount) || 0;
+                    CashPosition.add('cash', amt);
+                    expTxn.reversed = true;
+                    this.logReversalToWorkspace({
+                        category: "EXPENSE",
+                        subType: "Expense Reversal",
+                        clientOrSource: `${expTxn.category} — ${expTxn.narration || 'Expense'}`,
+                        description: `Reversed expense — Reason: ${reason}`,
+                        amount: amt
+                    });
+                    Audit.log("EXPENSE_REVERSED", { category: expTxn.category, amt, reason });
+                    Expenses.renderHistory();
+                    this.onCategoryChange();
+                } else if (cat === "MM_WITHDRAWAL") {
+                    const wdrTxn = (branch.mmWithdrawals || [])[idx];
+                    if (!wdrTxn || wdrTxn.reversed) {
+                        Utils.toast("Mobile money withdrawal already reversed or invalid");
+                        return;
+                    }
+                    const amt = Number(wdrTxn.amount) || 0;
+                    CashPosition.deduct('cash', amt);
+                    const wallet = (wdrTxn.channel || '').toLowerCase();
+                    if (wallet === 'airtel') {
+                        state.cashPosition.airtel = (state.cashPosition.airtel || 0) + amt;
+                    } else {
+                        state.cashPosition.mtn = (state.cashPosition.mtn || 0) + amt;
+                    }
+                    wdrTxn.reversed = true;
+                    this.logReversalToWorkspace({
+                        category: "MM_WITHDRAWAL",
+                        subType: "MM Withdrawal Reversal",
+                        clientOrSource: `${wdrTxn.channel} → Cash`,
+                        description: `Reversed ${wdrTxn.channel} withdrawal to Cash — Reason: ${reason}`,
+                        amount: amt
+                    });
+                    Audit.log("MM_WITHDRAWAL_REVERSED", { channel: wdrTxn.channel, amt, reason });
                     this.onCategoryChange();
                 }
+
+                document.getElementById("rev-reason").value = "";
+                State.save();
+                UI.refreshAll();
+                Utils.toast("Reversal executed & logged to Daily Workspace");
             }
         };
         LoanOps.searchReversalClientsDebounced = Utils.debounce(q => LoanOps.searchReversalClients(q), 260);
 
         // ============================================================
-        // CLIENTS
+        // CLIENTS & DOCUMENTS
         // ============================================================
         const Clients = {
             renderMasterDirectory() {
+                const query = (document.getElementById("master-client-search")?.value || "").toLowerCase();
+                const branch = State.getActiveBranch();
                 const tbody = document.getElementById("master-clients-table-body");
                 if (!tbody) return;
-                const branch = State.getActiveBranch();
-                const filter = (document.getElementById("master-client-search")?.value || "").toLowerCase();
-                const list = state.globalClients.filter(c =>
-                    !filter ||
-                    c.name.toLowerCase().includes(filter) ||
-                    (c.nin && c.nin.toLowerCase().includes(filter)) ||
-                    (c.guarantor && c.guarantor.toLowerCase().includes(filter))
+                const filtered = state.globalClients.filter(c =>
+                    !query ||
+                    (c.name && c.name.toLowerCase().includes(query)) ||
+                    (c.nin && c.nin.toLowerCase().includes(query)) ||
+                    (c.phone && c.phone.toLowerCase().includes(query)) ||
+                    (c.guarantor && c.guarantor.toLowerCase().includes(query))
                 );
-                tbody.innerHTML = list.map(c => {
-                    const savBal = branch.savingsAccounts[c.nin] ? branch.savingsAccounts[c.nin].balance : 0;
-                    const gCount = c.guarantor ? branch.clients.filter(cl => cl.guarantor && cl.guarantor.toLowerCase().trim() === c.guarantor.toLowerCase().trim() && (cl.balance || 0) > 0).length : 0;
-                    const docs = state.clientDocuments[c.nin] || [];
-                    const activeLoan = branch.clients.find(cl => cl.nin && cl.nin.toUpperCase() === c.nin.toUpperCase());
-                    const currentOfficerId = activeLoan ? activeLoan.officerId : '';
-                    const officerDropdown = `<select onchange="Clients.reassignOfficer('${c.nin}', this.value)" class="p-1.5 border rounded text-xs bg-slate-50 font-bold">
-                        <option value="">-- Assign --</option>` +
-                        branch.officers.map(o => `<option value="${o.id}" ${currentOfficerId === o.id ? 'selected' : ''}>${o.name}</option>`).join('') +
-                    `</select>`;
-                    return `<tr class="text-xs">
-                        <td class="p-3 font-mono font-bold text-purple-700">${c.nin}</td>
-                        <td class="p-3"><strong>${c.name}</strong><br>${c.phone || ''}</td>
-                        <td class="p-3">${c.guarantor || '-'}<br><span class="text-[10px] ${gCount >= 4 ? 'bg-red-200 text-red-900 font-bold px-1 rounded' : 'text-slate-400'}">${gCount} active</span></td>
-                        <td class="p-3">${c.category || 'OTHERS'} ${c.plate ? '<br>' + c.plate : ''}</td>
-                        <td class="p-3">${officerDropdown}</td>
-                        <td class="p-3 font-bold text-emerald-600">${Utils.formatUGX(savBal)}</td>
-                        <td class="p-3 font-bold text-purple-700">${docs.length}</td>
-                        <td class="p-3 text-right flex gap-1 justify-end">
-                            <button onclick="Clients.openDocModal('${c.nin}', '${c.name.replace(/'/g, "\\'")}')" class="bg-purple-700 text-white px-2 py-1 rounded font-bold text-[10px]">Docs</button>
-                        </td>
-                    </tr>`;
-                }).join('') || `<tr><td colspan="8" class="p-4 text-center text-slate-400">No clients</td></tr>`;
-            },
-            renderMasterDirectoryDebounced: null,
-            reassignOfficer(nin, newOfficerId) {
-                const branch = State.getActiveBranch();
-                let updated = 0;
-                branch.clients.forEach(c => {
-                    if (c.nin && c.nin.toUpperCase() === nin.toUpperCase()) {
-                        c.officerId = newOfficerId;
-                        updated++;
-                    }
-                });
-                State.save();
-                Utils.toast(`Reassigned (${updated} records)`);
-                this.renderMasterDirectory();
-                Staff.renderHub();
-            },
-            openDocModal(nin, name) {
-                activeDocNin = nin;
-                document.getElementById("doc-modal-client-info").innerText = `Client: ${name} (${nin})`;
-                this.renderDocList();
-                Utils.show("document-modal");
-            },
-            renderDocList() {
-                const listDiv = document.getElementById("doc-modal-list");
-                const docs = state.clientDocuments[activeDocNin] || [];
-                if (docs.length === 0) {
-                    listDiv.innerHTML = `<p class="text-slate-400 py-2">No documents</p>`;
+                if (filtered.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-slate-400">No clients found</td></tr>`;
                     return;
                 }
-                listDiv.innerHTML = docs.map((d, i) => `
-                    <div class="p-2 border rounded bg-white flex justify-between items-center text-xs">
-                        <div><strong>${d.label}</strong><br><span class="text-[10px] text-slate-400">${d.date}</span></div>
-                        <div class="flex gap-2">
-                            <a href="${d.data}" download="${d.label}" class="text-blue-600 font-bold">Download</a>
-                            <button onclick="Clients.deleteDoc(${i})" class="text-red-500 font-bold">Delete</button>
+                tbody.innerHTML = filtered.map(c => {
+                    const bClient = branch.clients.find(bc => bc.nin === c.nin);
+                    const off = branch.officers.find(o => o.id === bClient?.officerId);
+                    const docs = state.clientDocuments[c.nin] || [];
+                    const savBal = branch.savingsAccounts[c.nin]?.balance || 0;
+                    const gPhoneDisp = c.guarantorPhone ? ` (${c.guarantorPhone})` : "";
+                    return `
+                        <tr class="hover:bg-slate-50">
+                            <td class="p-3 font-mono font-bold text-purple-700">${c.nin || 'N/A'}</td>
+                            <td class="p-3"><strong>${c.name || ''}</strong><br><span class="text-slate-500">${c.phone || ''}</span></td>
+                            <td class="p-3">${c.guarantor || '-'}${gPhoneDisp}</td>
+                            <td class="p-3">${c.category || 'OTHERS'}</td>
+                            <td class="p-3">${off ? off.name : 'Unassigned'}</td>
+                            <td class="p-3 font-mono text-emerald-700 font-bold">${Utils.formatUGX(savBal)}</td>
+                            <td class="p-3"><span class="bg-purple-100 text-purple-800 px-2 py-0.5 rounded font-bold">${docs.length}</span></td>
+                            <td class="p-3 text-right">
+                                <button onclick="Clients.openDocumentModal('${c.nin}')" class="bg-purple-700 text-white px-2.5 py-1 rounded text-[11px] font-bold">Docs</button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            },
+            renderMasterDirectoryDebounced: null,
+            openDocumentModal(nin) {
+                activeDocNin = nin;
+                const gc = state.globalClients.find(c => c.nin === nin) || { name: nin };
+                document.getElementById("doc-modal-client-info").innerText = `${gc.name} (${nin})`;
+                this.renderDocumentList();
+                UI.show("document-modal");
+            },
+            renderDocumentList() {
+                const docs = state.clientDocuments[activeDocNin] || [];
+                const list = document.getElementById("doc-modal-list");
+                if (!list) return;
+                if (docs.length === 0) {
+                    list.innerHTML = `<p class="text-slate-400 text-center py-2">No documents uploaded</p>`;
+                    return;
+                }
+                list.innerHTML = docs.map((d, idx) => `
+                    <div class="flex justify-between items-center p-2 border rounded bg-white">
+                        <div>
+                            <a href="${d.dataUrl}" download="${d.filename}" class="text-purple-700 font-bold hover:underline">${d.label || d.filename}</a>
+                            <div class="text-[10px] text-slate-400">${d.date || ''}</div>
                         </div>
+                        <button onclick="Clients.deleteDocument(${idx})" class="text-red-600 text-xs font-bold">Delete</button>
                     </div>
                 `).join('');
             },
             uploadDocument() {
                 const fileInput = document.getElementById("client-file-input");
-                const labelInput = document.getElementById("client-file-label").value.trim();
+                const labelInput = document.getElementById("client-file-label");
                 if (!fileInput.files || fileInput.files.length === 0) {
-                    Utils.toast("Select a file");
+                    Utils.toast("Choose a file");
                     return;
                 }
                 const file = fileInput.files[0];
-                const label = labelInput || file.name;
                 const reader = new FileReader();
                 reader.onload = e => {
                     if (!state.clientDocuments[activeDocNin]) state.clientDocuments[activeDocNin] = [];
-                    state.clientDocuments[activeDocNin].push({ label, data: e.target.result, date: Utils.today() });
+                    state.clientDocuments[activeDocNin].push({
+                        filename: file.name,
+                        label: labelInput.value.trim() || file.name,
+                        dataUrl: e.target.result,
+                        date: Utils.today()
+                    });
                     State.save();
-                    this.renderDocList();
+                    fileInput.value = "";
+                    labelInput.value = "";
+                    this.renderDocumentList();
                     this.renderMasterDirectory();
-                    Utils.toast("Document attached");
+                    Utils.toast("Document uploaded");
                 };
                 reader.readAsDataURL(file);
             },
-            deleteDoc(idx) {
+            deleteDocument(idx) {
                 if (!state.clientDocuments[activeDocNin]) return;
                 state.clientDocuments[activeDocNin].splice(idx, 1);
                 State.save();
-                this.renderDocList();
+                this.renderDocumentList();
                 this.renderMasterDirectory();
             }
         };
-        Clients.renderMasterDirectoryDebounced = Utils.debounce(() => Clients.renderMasterDirectory(), 280);
+        Clients.renderMasterDirectoryDebounced = Utils.debounce(() => Clients.renderMasterDirectory(), 250);
 
         // ============================================================
         // DAILY WORKSPACE
         // ============================================================
         const DailyWorkspace = {
             setToday() {
-                const dateInput = document.getElementById("daily-workspace-date");
-                if (dateInput) dateInput.value = Utils.today();
+                document.getElementById("daily-workspace-date").value = Utils.today();
                 this.render();
             },
-            extractFallbackTimestamp(idStr, fallbackIdx) {
-                if (typeof idStr === 'string') {
-                    const parts = idStr.split('-');
-                    if (parts.length >= 2 && !isNaN(Number(parts[1])) && Number(parts[1]) > 1000000000000) {
-                        return Number(parts[1]);
-                    }
-                }
-                return fallbackIdx;
-            },
             render() {
-                const dateInput = document.getElementById("daily-workspace-date");
-                if (!dateInput || !dateInput.value) {
-                    if (dateInput) dateInput.value = Utils.today();
-                }
-                const selectedDate = dateInput ? dateInput.value : Utils.today();
-                const searchQ = (document.getElementById("daily-workspace-search")?.value || "").toLowerCase();
+                const dateEl = document.getElementById("daily-workspace-date");
+                if (dateEl && !dateEl.value) dateEl.value = Utils.today();
+                const targetDate = dateEl ? dateEl.value : Utils.today();
+                const search = (document.getElementById("daily-workspace-search")?.value || "").toLowerCase();
                 const branch = State.getActiveBranch();
-                let activities = [];
-                let seqCounter = 0;
-
-                branch.clients.forEach(c => {
-                    if (c.dateDisbursed === selectedDate) {
-                        seqCounter++;
-                        const disbHistoryItem = (c.history || []).find(h => h.type === 'Disbursement');
-                        const ts = c.timestamp || (disbHistoryItem && disbHistoryItem.timestamp) || this.extractFallbackTimestamp(c.id, seqCounter);
-                        const timeStr = c.time || (disbHistoryItem && disbHistoryItem.time) || '';
-                        activities.push({
-                            timestamp: ts,
-                            time: timeStr,
-                            seq: seqCounter,
-                            type: 'Disbursement',
-                            source: c.name,
-                            officerId: c.officerId,
-                            narration: 'New Loan',
-                            detail: `Principal ${Utils.formatUGX(c.principal || 0)} (Fee: ${Utils.formatUGX(c.processingFee || 0)})`,
-                            amount: c.principal || 0
-                        });
-                    }
-                    (c.history || []).forEach(h => {
-                        if (h.date === selectedDate && h.type !== 'Disbursement') {
-                            seqCounter++;
-                            activities.push({
-                                timestamp: h.timestamp || seqCounter,
-                                time: h.time || '',
-                                seq: seqCounter,
-                                type: h.type,
-                                source: c.name,
-                                officerId: c.officerId,
-                                narration: h.type === 'Repayment' ? 'Loan Repayment' : (h.reason ? `${h.type}: ${h.reason}` : h.type),
-                                detail: h.channel || '',
-                                amount: h.amount || 0
-                            });
-                        }
-                    });
-                });
-
-                Object.keys(branch.savingsAccounts || {}).forEach(nin => {
-                    const sav = branch.savingsAccounts[nin];
-                    const globalClient = state.globalClients.find(gc => gc.nin === nin);
-                    const clientName = globalClient ? globalClient.name : nin;
-                    const matchedClient = branch.clients.find(cl => cl.nin === nin);
-                    const offId = matchedClient ? matchedClient.officerId : null;
-                    (sav.history || []).forEach(sh => {
-                        if (sh.date === selectedDate && sh.type !== 'REVERSAL') {
-                            seqCounter++;
-                            activities.push({
-                                timestamp: sh.timestamp || seqCounter,
-                                time: sh.time || '',
-                                seq: seqCounter,
-                                type: `Savings ${sh.type}`,
-                                source: clientName,
-                                officerId: offId,
-                                narration: `Savings ${sh.type}${sh.reversed ? ' [Reversed]' : ''}`,
-                                detail: '',
-                                amount: sh.amount || 0
-                            });
-                        }
-                    });
-                });
-
-                (branch.expenses || []).forEach(e => {
-                    if (e.date === selectedDate) {
-                        seqCounter++;
-                        activities.push({
-                            timestamp: e.timestamp || seqCounter,
-                            time: e.time || '',
-                            seq: seqCounter,
-                            type: 'Expense',
-                            source: e.category,
-                            officerId: null,
-                            narration: (e.narration || 'Expense') + (e.reversed ? ' [Reversed]' : ''),
-                            detail: '',
-                            amount: e.reversed ? (e.reversedAmount || 0) : (e.amount || 0)
-                        });
-                    }
-                });
-
-                (branch.bankings || []).forEach(b => {
-                    if (b.date === selectedDate) {
-                        seqCounter++;
-                        activities.push({
-                            timestamp: b.timestamp || seqCounter,
-                            time: b.time || '',
-                            seq: seqCounter,
-                            type: 'Banking',
-                            source: b.name,
-                            officerId: null,
-                            narration: `Deposit ${b.ref || ''}${b.reversed ? ' [Reversed]' : ''}`,
-                            detail: b.acc || '',
-                            amount: b.reversed ? (b.reversedAmount || 0) : (b.amount || 0)
-                        });
-                    }
-                });
-
-                (branch.capitalizations || []).forEach(c => {
-                    if (c.date === selectedDate) {
-                        seqCounter++;
-                        activities.push({
-                            timestamp: c.timestamp || seqCounter,
-                            time: c.time || '',
-                            seq: seqCounter,
-                            type: 'Capital',
-                            source: c.narration || 'Capital Injection',
-                            officerId: null,
-                            narration: 'Capital Added',
-                            detail: c.status || '',
-                            amount: c.amount || 0
-                        });
-                    }
-                });
-
-                (branch.mmWithdrawals || []).forEach(w => {
-                    if (w.date === selectedDate) {
-                        seqCounter++;
-                        activities.push({
-                            timestamp: w.timestamp || seqCounter,
-                            time: w.time || '',
-                            seq: seqCounter,
-                            type: 'MM Withdrawal',
-                            source: w.channel + ' → Cash',
-                            officerId: null,
-                            narration: 'Withdrawn to Cash at Hand' + (w.reversed ? ' [Reversed]' : ''),
-                            detail: `By ${w.by || 'Staff'}`,
-                            amount: w.reversed ? (w.reversedAmount || 0) : (w.amount || 0)
-                        });
-                    }
-                });
-
-                (branch.reversals || []).forEach(r => {
-                    if (r.date === selectedDate) {
-                        seqCounter++;
-                        activities.push({
-                            timestamp: r.timestamp || seqCounter,
-                            time: r.time || '',
-                            seq: seqCounter,
-                            type: 'Reversal',
-                            source: r.source || 'System',
-                            officerId: null,
-                            narration: `Reversal (${r.reversalType}): ${r.reason}`,
-                            detail: r.detail || (r.by ? `By ${r.by}` : ''),
-                            amount: r.amount || 0
-                        });
-                    }
-                });
-
-                // STRICT CHRONOLOGICAL ORDER (oldest entry first, latest at bottom)
-                activities.sort((a, b) => (a.timestamp - b.timestamp) || (a.seq - b.seq));
-
-                const role = state.currentUser?.role || 'Administrator';
-                let filtered = activities;
-                if (role === 'Loan Officer') {
-                    const matchedOfficer = branch.officers.find(o => o.name.toLowerCase() === (state.currentUser.name || state.currentUser.username).toLowerCase());
-                    if (matchedOfficer) filtered = filtered.filter(act => act.officerId === matchedOfficer.id);
-                    else filtered = [];
-                }
-                if (searchQ) {
-                    filtered = filtered.filter(act =>
-                        act.type.toLowerCase().includes(searchQ) ||
-                        act.source.toLowerCase().includes(searchQ) ||
-                        act.narration.toLowerCase().includes(searchQ) ||
-                        act.detail.toLowerCase().includes(searchQ)
-                    );
-                }
-
-                const totCol = filtered.filter(a => a.type === 'Repayment').reduce((s, a) => s + a.amount, 0);
-                const totDisb = filtered.filter(a => a.type === 'Disbursement').reduce((s, a) => s + a.amount, 0);
-                const totExp = filtered.filter(a => a.type === 'Expense' && !a.narration.includes('[Reversed]')).reduce((s, a) => s + a.amount, 0);
-                const totBank = filtered.filter(a => a.type === 'Banking' && !a.narration.includes('[Reversed]')).reduce((s, a) => s + a.amount, 0);
-
-                document.getElementById("dw-total-collections").innerText = Utils.formatUGX(totCol);
-                document.getElementById("dw-total-disbursements").innerText = Utils.formatUGX(totDisb);
-                document.getElementById("dw-total-expenses").innerText = Utils.formatUGX(totExp);
-                document.getElementById("dw-total-bankings").innerText = Utils.formatUGX(totBank);
-
                 const tbody = document.getElementById("daily-workspace-table-body");
+                if (!tbody) return;
+                const activities = [];
+                branch.clients.forEach(c => {
+                    (c.history || []).forEach(h => {
+                        if (h.date === targetDate) {
+                            activities.push({
+                                timestamp: h.timestamp || 0,
+                                time: h.time || '',
+                                type: h.type === 'Repayment' ? 'Collection' : h.type,
+                                client: c.name,
+                                description: `${h.type}${h.reversed ? ' [REVERSED]' : ''}`,
+                                detail: h.channel || '',
+                                amount: h.amount || 0,
+                                isDebit: h.type === 'Disbursement'
+                            });
+                        }
+                    });
+                });
+                (branch.expenses || []).forEach(e => {
+                    if (e.date === targetDate) {
+                        activities.push({
+                            timestamp: e.timestamp || 0,
+                            time: e.time || '',
+                            type: 'Expense',
+                            client: e.category,
+                            description: `${e.narration || 'Expense'}${e.reversed ? ' [REVERSED]' : ''}`,
+                            detail: '',
+                            amount: e.amount || 0,
+                            isDebit: true
+                        });
+                    }
+                });
+                (branch.bankings || []).forEach(b => {
+                    if (b.date === targetDate) {
+                        activities.push({
+                            timestamp: b.timestamp || 0,
+                            time: b.time || '',
+                            type: 'Banking',
+                            client: b.name,
+                            description: `Deposit (Ref: ${b.ref || '-'}) ${b.reversed ? '[REVERSED]' : ''}`,
+                            detail: '',
+                            amount: b.amount || 0,
+                            isDebit: true
+                        });
+                    }
+                });
+                (branch.mmWithdrawals || []).forEach(w => {
+                    if (w.date === targetDate) {
+                        activities.push({
+                            timestamp: w.timestamp || 0,
+                            time: w.time || '',
+                            type: 'MM Withdrawal',
+                            client: `${w.channel} → Cash`,
+                            description: `Wallet to Cash withdrawal${w.reversed ? ' [REVERSED]' : ''}`,
+                            detail: w.by || '',
+                            amount: w.amount || 0,
+                            isDebit: false
+                        });
+                    }
+                });
+                (branch.reversals || []).forEach(r => {
+                    if (r.date === targetDate) {
+                        activities.push({
+                            timestamp: r.timestamp || 0,
+                            time: r.time || '',
+                            type: 'Reversal',
+                            client: r.clientOrSource || '',
+                            description: `${r.subType || 'Reversal'}: ${r.description || ''}`,
+                            detail: r.by || '',
+                            amount: r.amount || 0,
+                            isDebit: false
+                        });
+                    }
+                });
+                activities.sort((a, b) => a.timestamp - b.timestamp);
+                let totalCol = 0, totalDisb = 0, totalExp = 0, totalBank = 0;
+                activities.forEach(a => {
+                    if (a.type === 'Collection') totalCol += a.amount;
+                    if (a.type === 'Disbursement') totalDisb += a.amount;
+                    if (a.type === 'Expense') totalExp += a.amount;
+                    if (a.type === 'Banking') totalBank += a.amount;
+                });
+                document.getElementById("dw-total-collections").innerText = Utils.formatUGX(totalCol);
+                document.getElementById("dw-total-disbursements").innerText = Utils.formatUGX(totalDisb);
+                document.getElementById("dw-total-expenses").innerText = Utils.formatUGX(totalExp);
+                document.getElementById("dw-total-bankings").innerText = Utils.formatUGX(totalBank);
+                const filtered = activities.filter(a => !search || (a.client && a.client.toLowerCase().includes(search)) || (a.description && a.description.toLowerCase().includes(search)) || (a.type && a.type.toLowerCase().includes(search)));
                 if (filtered.length === 0) {
-                    tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">No activities on ${selectedDate}</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-400">No entries for ${targetDate}</td></tr>`;
                     return;
                 }
-
-                tbody.innerHTML = filtered.map((act, index) => {
-                    let badgeClass = 'bg-slate-100 text-slate-700';
-                    if (act.type === 'Repayment') badgeClass = 'bg-emerald-100 text-emerald-800';
-                    else if (act.type === 'Disbursement') badgeClass = 'bg-indigo-100 text-indigo-800';
-                    else if (act.type === 'Expense') badgeClass = 'bg-rose-100 text-rose-800';
-                    else if (act.type === 'Banking') badgeClass = 'bg-blue-100 text-blue-800';
-                    else if (act.type.includes('Savings')) badgeClass = 'bg-teal-100 text-teal-800';
-                    else if (act.type === 'MM Withdrawal') badgeClass = 'bg-amber-100 text-amber-800';
-                    else if (act.type === 'Reversal') badgeClass = 'bg-red-100 text-red-900';
-
-                    const timeDisplay = act.time || `#${index + 1}`;
-                    return `<tr class="text-xs hover:bg-slate-50">
-                        <td class="p-3 font-mono text-[11px] font-bold text-slate-600">#${index + 1} · ${timeDisplay}</td>
-                        <td class="p-3"><span class="px-2 py-0.5 rounded font-bold text-[10px] ${badgeClass}">${act.type}</span></td>
-                        <td class="p-3 font-bold">${act.source}</td>
-                        <td class="p-3">${act.narration}</td>
-                        <td class="p-3 text-slate-500">${act.detail}</td>
-                        <td class="p-3 text-right font-mono font-bold">${Utils.formatUGX(act.amount)}</td>
-                    </tr>`;
-                }).join('');
+                tbody.innerHTML = filtered.map((a, idx) => `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-3 font-mono text-[11px] text-slate-500">#${idx + 1} (${a.time})</td>
+                        <td class="p-3 font-bold">${a.type}</td>
+                        <td class="p-3 font-semibold">${a.client}</td>
+                        <td class="p-3 text-slate-600">${a.description}</td>
+                        <td class="p-3 text-slate-500">${a.detail}</td>
+                        <td class="p-3 text-right font-mono font-bold ${a.isDebit ? 'text-rose-600' : 'text-emerald-600'}">${Utils.formatUGX(a.amount)}</td>
+                    </tr>
+                `).join('');
             },
             renderDebounced: null
         };
         DailyWorkspace.renderDebounced = Utils.debounce(() => DailyWorkspace.render(), 250);
 
         // ============================================================
-        // STAFF & PAST DATE HISTORICAL RECORDS VIEWER
+        // STAFF & OFFICERS
         // ============================================================
         const Staff = {
-            populateDropdowns() {
-                const branch = State.getActiveBranch();
-                const sel = document.getElementById("disburse-officer-select");
-                const histSel = document.getElementById("staff-history-select");
-                const histDate = document.getElementById("staff-history-date");
-
-                if (sel) {
-                    const prev = sel.value;
-                    sel.innerHTML = `<option value="">-- Select Staff --</option>` +
-                        branch.officers.map(o => `<option value="${o.id}">${o.name} (${o.phone || 'N/A'})</option>`).join('');
-                    if (prev) sel.value = prev;
-                }
-                if (histSel) {
-                    const prevHist = histSel.value;
-                    histSel.innerHTML = `<option value="">-- Select Staff --</option>` +
-                        branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
-                    if (prevHist) histSel.value = prevHist;
-                }
-                if (histDate && !histDate.value) {
-                    histDate.value = Utils.today();
-                }
-            },
             registerOfficer() {
+                if (!['Administrator', 'Manager', 'Accountant'].includes(state.currentUser?.role)) {
+                    Utils.toast("Not authorized");
+                    return;
+                }
                 const name = document.getElementById("officer-add-name").value.trim();
                 const phone = RegionManager.normalizePhone(document.getElementById("officer-add-phone").value);
-                if (!Validation.isRequired(name, "Staff Name") || !Validation.isValidPhone(phone)) return;
+                if (!Validation.isRequired(name, "Name") || !Validation.isValidPhone(phone) || Validation.isDuplicatePhone(phone)) return;
                 const branch = State.getActiveBranch();
                 branch.officers.push({ id: Utils.generateId("off"), name, phone });
                 State.save();
@@ -4213,257 +4399,181 @@
                 document.getElementById("officer-add-phone").value = "";
                 this.populateDropdowns();
                 this.renderHub();
-                Aging.render();
-                Utils.toast(`Staff "${name}" added`);
+                Utils.toast("Staff registered");
+            },
+            populateDropdowns() {
+                const branch = State.getActiveBranch();
+                const sel = document.getElementById("disburse-officer-select");
+                if (sel) sel.innerHTML = branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+                const histSel = document.getElementById("staff-history-select");
+                if (histSel) histSel.innerHTML = branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
+                const histDate = document.getElementById("staff-history-date");
+                if (histDate && !histDate.value) histDate.value = Utils.today();
+            },
+            renderHub() {
+                const branch = State.getActiveBranch();
+                const container = document.getElementById("officers-container");
+                if (!container) return;
+                container.innerHTML = branch.officers.map(o => {
+                    const clients = branch.clients.filter(c => c.officerId === o.id);
+                    const totalBalance = clients.reduce((s, c) => s + (c.balance || 0), 0);
+                    return `
+                        <div class="bg-white border p-4 rounded-xl shadow-sm space-y-2 text-xs">
+                            <div class="font-bold text-sm text-slate-900">${o.name}</div>
+                            <div class="text-slate-500 font-mono">${o.phone || 'N/A'}</div>
+                            <div class="flex justify-between pt-2 border-t text-xs">
+                                <span>Clients: <strong>${clients.length}</strong></span>
+                                <span class="font-mono font-bold text-blue-700">${Utils.formatUGX(totalBalance)}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('') || `<p class="text-xs text-slate-400 col-span-full text-center py-4">No staff registered</p>`;
             },
             renderHistoricalRecords() {
                 const officerId = document.getElementById("staff-history-select")?.value;
-                const targetDate = document.getElementById("staff-history-date")?.value;
-                const resultsDiv = document.getElementById("staff-history-results");
-                if (!resultsDiv) return;
-
-                if (!officerId || !targetDate) {
-                    Utils.toast("Please select both a staff member and a date");
-                    return;
-                }
-
+                const dateVal = document.getElementById("staff-history-date")?.value;
+                const resDiv = document.getElementById("staff-history-results");
+                if (!officerId || !dateVal || !resDiv) return;
                 const branch = State.getActiveBranch();
-                const officer = branch.officers.find(o => o.id === officerId);
-                const officerClients = branch.clients.filter(c => c.officerId === officerId);
-
-                let dayCollections = 0;
-                let dayDisbursements = 0;
-                const txnRows = [];
-
-                officerClients.forEach(c => {
-                    if (c.dateDisbursed === targetDate) {
-                        const disbAmt = c.principal || 0;
-                        dayDisbursements += disbAmt;
-                        txnRows.push({
-                            time: c.time || '-',
-                            client: c.name,
-                            type: 'Disbursement',
-                            detail: `Principal ${Utils.formatUGX(disbAmt)}`,
-                            amount: disbAmt
-                        });
-                    }
+                const off = branch.officers.find(o => o.id === officerId);
+                const offClients = branch.clients.filter(c => c.officerId === officerId);
+                let dayCollections = 0, dayDisbursements = 0;
+                const items = [];
+                offClients.forEach(c => {
                     (c.history || []).forEach(h => {
-                        if (h.date === targetDate && h.type !== 'Disbursement') {
-                            const amt = Number(h.amount) || 0;
-                            if (h.type === 'Repayment') dayCollections += amt;
-                            txnRows.push({
-                                time: h.time || '-',
-                                client: c.name,
-                                type: h.type,
-                                detail: h.channel || h.reason || '-',
-                                amount: amt
-                            });
+                        if (h.date === dateVal) {
+                            if (h.type === 'Repayment') dayCollections += Number(h.amount) || 0;
+                            if (h.type === 'Disbursement') dayDisbursements += Number(h.amount) || 0;
+                            items.push(`<div class="flex justify-between py-1 border-b text-[11px]"><span><strong>${c.name}</strong> — ${h.type} (${h.time || ''})</span><span class="font-mono font-bold">${Utils.formatUGX(h.amount || 0)}</span></div>`);
                         }
                     });
                 });
-
-                const activePortfolioBal = officerClients.reduce((s, c) => s + (Number(c.balance) || 0), 0);
-
-                Utils.show(resultsDiv);
-                resultsDiv.innerHTML = `
-                    <div class="flex flex-wrap justify-between items-center gap-2">
-                        <div class="font-bold text-slate-800 text-xs">
-                            Records for <span class="dyn-text">${officer ? officer.name : 'Staff'}</span> on <span class="font-mono">${targetDate}</span>
-                        </div>
-                        <div class="text-[11px] text-slate-500">Assigned Clients: <strong>${officerClients.length}</strong> | Current Balance: <strong>${Utils.formatUGX(activePortfolioBal)}</strong></div>
+                resDiv.innerHTML = `
+                    <div class="font-bold text-xs text-slate-800">${off ? off.name : 'Staff'} — Records for ${dateVal}</div>
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="bg-emerald-50 p-2 rounded border border-emerald-200">Collections: <strong class="text-emerald-700">${Utils.formatUGX(dayCollections)}</strong></div>
+                        <div class="bg-indigo-50 p-2 rounded border border-indigo-200">Disbursements: <strong class="text-indigo-700">${Utils.formatUGX(dayDisbursements)}</strong></div>
                     </div>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
-                        <div class="bg-emerald-50 border border-emerald-200 p-2.5 rounded-lg">
-                            <span class="text-[10px] text-emerald-700 block">Collections on ${targetDate}</span>
-                            <strong class="text-emerald-900 text-sm">${Utils.formatUGX(dayCollections)}</strong>
-                        </div>
-                        <div class="bg-indigo-50 border border-indigo-200 p-2.5 rounded-lg">
-                            <span class="text-[10px] text-indigo-700 block">Disbursements on ${targetDate}</span>
-                            <strong class="text-indigo-900 text-sm">${Utils.formatUGX(dayDisbursements)}</strong>
-                        </div>
-                        <div class="bg-slate-50 border p-2.5 rounded-lg col-span-2 sm:col-span-1">
-                            <span class="text-[10px] text-slate-500 block">Transactions Recorded</span>
-                            <strong class="text-slate-800 text-sm">${txnRows.length}</strong>
-                        </div>
-                    </div>
-                    <div class="overflow-x-auto border rounded-lg">
-                        <table class="w-full text-left border-collapse text-xs">
-                            <thead>
-                                <tr class="bg-slate-800 text-white text-[10px]">
-                                    <th class="p-2">Time</th>
-                                    <th class="p-2">Client</th>
-                                    <th class="p-2">Type</th>
-                                    <th class="p-2">Detail</th>
-                                    <th class="p-2 text-right">Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y">
-                                ${txnRows.length ? txnRows.map(r => `
-                                    <tr>
-                                        <td class="p-2 font-mono text-[10px]">${r.time}</td>
-                                        <td class="p-2 font-bold">${r.client}</td>
-                                        <td class="p-2">${r.type}</td>
-                                        <td class="p-2 text-slate-500">${r.detail}</td>
-                                        <td class="p-2 text-right font-mono font-bold">${Utils.formatUGX(r.amount)}</td>
-                                    </tr>
-                                `).join('') : `<tr><td colspan="5" class="p-4 text-center text-slate-400">No transactions recorded for this staff member on ${targetDate}.</td></tr>`}
-                            </tbody>
-                        </table>
-                    </div>
+                    <div class="max-h-40 overflow-y-auto">${items.join('') || '<p class="text-slate-400 text-[11px]">No transactions on this date.</p>'}</div>
                 `;
-            },
-            renderHub() {
-                const container = document.getElementById("officers-container");
-                if (!container) return;
-                const branch = State.getActiveBranch();
-                const today = Utils.today();
-                container.innerHTML = branch.officers.map(o => {
-                    const officerClients = branch.clients.filter(c => c.officerId === o.id);
-                    const totalBalance = officerClients.reduce((s, c) => s + (c.balance || 0), 0);
-                    const totalArrears = officerClients.reduce((s, c) => s + (c.arrears || 0), 0);
-                    let todayCollected = 0;
-                    officerClients.forEach(c => {
-                        (c.history || []).forEach(h => {
-                            if (h.date === today && h.type === 'Repayment') todayCollected += h.amount || 0;
-                        });
-                    });
-                    return `<div class="bg-white border rounded-xl p-4 shadow-sm space-y-2 text-xs">
-                        <div class="flex justify-between items-start border-b pb-2">
-                            <div><h4 class="font-bold text-slate-900 text-sm">${o.name}</h4><div class="text-slate-500">${o.phone || ''}</div></div>
-                            <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-bold">${officerClients.length} clients</span>
-                        </div>
-                        <div class="grid grid-cols-3 gap-2 pt-1 text-center">
-                            <div class="bg-slate-50 p-2 rounded"><span class="text-[10px] text-slate-500 block">Portfolio</span><strong class="text-blue-700">${Utils.formatUGX(totalBalance)}</strong></div>
-                            <div class="bg-slate-50 p-2 rounded"><span class="text-[10px] text-slate-500 block">Arrears</span><strong class="text-red-600">${Utils.formatUGX(totalArrears)}</strong></div>
-                            <div class="bg-slate-50 p-2 rounded"><span class="text-[10px] text-slate-500 block">Today</span><strong class="text-emerald-700">${Utils.formatUGX(todayCollected)}</strong></div>
-                        </div>
-                    </div>`;
-                }).join('') || `<p class="text-xs text-slate-400 col-span-full py-6 text-center">No staff registered</p>`;
+                Utils.show(resDiv);
             }
         };
 
         // ============================================================
-        // BANKINGS, EXPENSES, CAPITAL
+        // BANKING
         // ============================================================
         const Banking = {
             recordDeposit() {
+                if (!['Administrator', 'Manager', 'Accountant', 'Cashier'].includes(state.currentUser?.role)) {
+                    Utils.toast("Not authorized");
+                    return;
+                }
                 const name = document.getElementById("bank-name").value.trim();
-                const acc = document.getElementById("bank-acc-no").value.trim();
-                const amount = parseFloat(document.getElementById("bank-amount").value);
+                const accNo = document.getElementById("bank-acc-no").value.trim();
+                const amt = parseFloat(document.getElementById("bank-amount").value);
                 const ref = document.getElementById("bank-ref").value.trim();
-                if (!Validation.isRequired(name, "Bank Name") || !Validation.isPositiveAmount(amount)) return;
+                if (!Validation.isRequired(name, "Bank Name") || !Validation.isPositiveAmount(amt)) return;
                 const branch = State.getActiveBranch();
-                branch.bankings.push({
-                    id: Utils.generateId("bnk"),
-                    date: Utils.today(),
-                    timestamp: Date.now(),
-                    time: Utils.timeNow(),
-                    name, acc, amount, ref,
-                    reversedAmount: amount
-                });
-                CashPosition.deduct('cash', amount);
+                branch.bankings.push({ id: Utils.generateId("bnk"), name, accNo, amount: amt, ref, date: Utils.today(), timestamp: Date.now(), time: Utils.timeNow() });
+                CashPosition.deduct('cash', amt);
                 State.save();
-                document.getElementById("bank-name").value = "";
-                document.getElementById("bank-acc-no").value = "";
-                document.getElementById("bank-amount").value = "";
-                document.getElementById("bank-ref").value = "";
+                ["bank-name", "bank-acc-no", "bank-amount", "bank-ref"].forEach(id => document.getElementById(id).value = "");
                 this.renderHistory();
-                Reports.updateDashboard();
                 DailyWorkspace.render();
                 CashPosition.render();
-                Utils.toast("Banking recorded");
+                Utils.toast("Deposit recorded");
             },
             renderHistory() {
                 const branch = State.getActiveBranch();
-                const total = branch.bankings.reduce((s, b) => s + (b.reversed ? 0 : (b.amount || 0)), 0);
+                const tbody = document.getElementById("bankings-history-body");
+                if (!tbody) return;
+                const total = branch.bankings.filter(b => !b.reversed).reduce((s, b) => s + (b.amount || 0), 0);
                 document.getElementById("total-banked-display").innerText = Utils.formatUGX(total);
-                document.getElementById("bankings-history-body").innerHTML = branch.bankings.map(b => `
-                    <tr class="text-xs ${b.reversed ? 'opacity-50 line-through' : ''}">
+                tbody.innerHTML = branch.bankings.map(b => `
+                    <tr class="${b.reversed ? 'opacity-50 line-through' : ''}">
                         <td class="p-3">${b.date}</td>
                         <td class="p-3 font-bold">${b.name}</td>
                         <td class="p-3 font-mono">${b.ref || '-'}</td>
-                        <td class="p-3 text-right font-mono font-bold text-blue-700">${Utils.formatUGX(b.reversed ? (b.reversedAmount || 0) : b.amount)}</td>
+                        <td class="p-3 text-right font-mono font-bold text-blue-700">${Utils.formatUGX(b.amount)}</td>
                     </tr>
-                `).join('') || `<tr><td colspan="4" class="p-4 text-center text-slate-400">No deposits</td></tr>`;
+                `).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No deposits</td></tr>`;
             }
         };
 
+        // ============================================================
+        // EXPENSES
+        // ============================================================
         const Expenses = {
             record() {
-                const category = document.getElementById("exp-category").value;
-                const amount = parseFloat(document.getElementById("exp-amount").value);
-                const narration = document.getElementById("exp-narration").value.trim();
-                if (!Validation.isPositiveAmount(amount)) return;
+                if (!['Administrator', 'Manager', 'Accountant', 'Cashier'].includes(state.currentUser?.role)) {
+                    Utils.toast("Not authorized");
+                    return;
+                }
+                const cat = document.getElementById("exp-category").value;
+                const amt = parseFloat(document.getElementById("exp-amount").value);
+                const narr = document.getElementById("exp-narration").value.trim();
+                if (!Validation.isPositiveAmount(amt)) return;
                 const branch = State.getActiveBranch();
-                branch.expenses.push({
-                    id: Utils.generateId("exp"),
-                    date: Utils.today(),
-                    timestamp: Date.now(),
-                    time: Utils.timeNow(),
-                    category, amount, narration,
-                    reversedAmount: amount
-                });
-                CashPosition.deduct('cash', amount);
+                branch.expenses.push({ id: Utils.generateId("exp"), category: cat, amount: amt, narration: narr, date: Utils.today(), timestamp: Date.now(), time: Utils.timeNow() });
+                CashPosition.deduct('cash', amt);
                 State.save();
                 document.getElementById("exp-amount").value = "";
                 document.getElementById("exp-narration").value = "";
                 this.renderHistory();
-                Reports.updateDashboard();
                 DailyWorkspace.render();
                 CashPosition.render();
                 Utils.toast("Expense recorded");
             },
             renderHistory() {
                 const branch = State.getActiveBranch();
-                const total = branch.expenses.reduce((s, e) => s + (e.reversed ? 0 : (e.amount || 0)), 0);
+                const tbody = document.getElementById("expenses-history-body");
+                if (!tbody) return;
+                const total = branch.expenses.filter(e => !e.reversed).reduce((s, e) => s + (e.amount || 0), 0);
                 document.getElementById("total-expenses-display").innerText = Utils.formatUGX(total);
-                document.getElementById("expenses-history-body").innerHTML = branch.expenses.map(e => `
-                    <tr class="text-xs ${e.reversed ? 'opacity-50 line-through' : ''}">
+                tbody.innerHTML = branch.expenses.map(e => `
+                    <tr class="${e.reversed ? 'opacity-50 line-through' : ''}">
                         <td class="p-3">${e.date}</td>
-                        <td class="p-3 font-bold text-rose-700">${e.category}</td>
+                        <td class="p-3 font-bold">${e.category}</td>
                         <td class="p-3">${e.narration || '-'}</td>
-                        <td class="p-3 text-right font-mono font-bold">${Utils.formatUGX(e.reversed ? (e.reversedAmount || 0) : e.amount)}</td>
+                        <td class="p-3 text-right font-mono font-bold text-rose-600">${Utils.formatUGX(e.amount)}</td>
                     </tr>
-                `).join('') || `<tr><td colspan="4" class="p-4 text-center text-slate-400">No expenses</td></tr>`;
+                `).join('') || `<tr><td colspan="4" class="p-3 text-center text-slate-400">No expenses</td></tr>`;
             }
         };
 
+        // ============================================================
+        // CAPITAL
+        // ============================================================
         const Capital = {
             submit() {
-                const role = state.currentUser?.role;
-                if (role === "Manager") {
-                    Utils.toast("Managers are not permitted to add capital.");
+                if (state.currentUser?.role !== 'Administrator') {
+                    Utils.toast("Access Denied: Admin only");
                     return;
                 }
-                const amount = parseFloat(document.getElementById("cap-amount").value);
-                const narration = document.getElementById("cap-narration").value.trim() || "Capital Injection";
-                if (!Validation.isPositiveAmount(amount)) return;
+                const amt = parseFloat(document.getElementById("cap-amount").value);
+                const narr = document.getElementById("cap-narration").value.trim();
+                if (!Validation.isPositiveAmount(amt)) return;
                 const branch = State.getActiveBranch();
-                branch.capitalizations.push({
-                    id: Utils.generateId("cap"),
-                    date: Utils.today(),
-                    timestamp: Date.now(),
-                    time: Utils.timeNow(),
-                    amount, narration, status: 'Approved'
-                });
-                CashPosition.add('cash', amount);
+                branch.capitalizations.push({ id: Utils.generateId("cap"), amount: amt, narration: narr, date: Utils.today(), status: 'Approved' });
+                CashPosition.add('cash', amt);
                 State.save();
                 document.getElementById("cap-amount").value = "";
                 document.getElementById("cap-narration").value = "";
                 this.renderQueue();
-                DailyWorkspace.render();
                 CashPosition.render();
-                Utils.toast("Capital added to Cash at Hand");
+                Utils.toast("Capital injected");
             },
             renderQueue() {
                 const branch = State.getActiveBranch();
                 const list = document.getElementById("capital-approval-list");
+                if (!list) return;
                 list.innerHTML = branch.capitalizations.map(c => `
-                    <div class="bg-white p-3 border rounded flex justify-between items-center text-xs">
-                        <div><strong>${Utils.formatUGX(c.amount)}</strong> — ${c.narration}<br><span class="text-[10px] text-slate-400">${c.date}</span></div>
-                        <span class="bg-green-100 text-green-800 px-2 py-0.5 rounded font-bold">${c.status}</span>
+                    <div class="bg-white p-2.5 border rounded flex justify-between items-center text-xs">
+                        <div><strong>${Utils.formatUGX(c.amount)}</strong> — ${c.narration || 'Capital'} <span class="text-slate-400">(${c.date})</span></div>
+                        <span class="px-2 py-0.5 bg-green-100 text-green-800 rounded font-bold text-[10px]">${c.status}</span>
                     </div>
-                `).join('') || `<p class="text-slate-400 py-2">No capital entries</p>`;
+                `).join('') || `<p class="text-slate-400 text-xs">No capital records</p>`;
             }
         };
 
@@ -4473,321 +4583,243 @@
         const Reports = {
             updateDashboard() {
                 const branch = State.getActiveBranch();
-                const today = Utils.today();
-                let todayCollections = 0, todayDisbursed = 0, todayFees = 0;
+                const grid = document.getElementById("full-report-grid");
+                if (!grid) return;
+                const todayStr = Utils.today();
+                let todayCol = 0, todayDisb = 0;
                 branch.clients.forEach(c => {
-                    if (c.dateDisbursed === today) {
-                        todayDisbursed += c.principal || 0;
-                        todayFees += c.processingFee || 0;
-                    }
                     (c.history || []).forEach(h => {
-                        if (h.date === today && h.type === 'Repayment') todayCollections += h.amount || 0;
+                        if (h.date === todayStr) {
+                            if (h.type === 'Repayment') todayCol += h.amount || 0;
+                            if (h.type === 'Disbursement') todayDisb += h.amount || 0;
+                        }
                     });
                 });
-                const todayExpenses = branch.expenses.filter(e => e.date === today && !e.reversed).reduce((s, e) => s + (e.amount || 0), 0);
-                const todayBanked = branch.bankings.filter(b => b.date === today && !b.reversed).reduce((s, b) => s + (b.amount || 0), 0);
-                const activeLoanBook = branch.clients.filter(c => (Number(c.balance) || 0) > 0).reduce((s, c) => s + (c.balance || 0), 0);
-                const totalArrears = branch.clients.filter(c => (Number(c.balance) || 0) > 0).reduce((s, c) => s + (c.arrears || 0), 0);
-                const cashPosTotal = (state.cashPosition.cash || 0) + (state.cashPosition.mtn || 0) + (state.cashPosition.airtel || 0);
-
-                const grid = document.getElementById("full-report-grid");
+                const todayExp = branch.expenses.filter(e => e.date === todayStr && !e.reversed).reduce((s, e) => s + (e.amount || 0), 0);
+                const todayBank = branch.bankings.filter(b => b.date === todayStr && !b.reversed).reduce((s, b) => s + (b.amount || 0), 0);
+                const totalPortfolio = branch.clients.reduce((s, c) => s + (c.balance || 0), 0);
+                const totalCash = (state.cashPosition.cash || 0) + (state.cashPosition.mtn || 0) + (state.cashPosition.airtel || 0);
                 grid.innerHTML = `
-                    <div class="bg-slate-900 p-3 rounded border border-slate-700"><span class="text-slate-400 block text-[10px]">Today's Collections</span><strong class="text-emerald-400 text-sm">${Utils.formatUGX(todayCollections)}</strong></div>
-                    <div class="bg-slate-900 p-3 rounded border border-slate-700"><span class="text-slate-400 block text-[10px]">Today's Disbursements</span><strong class="text-indigo-400 text-sm">${Utils.formatUGX(todayDisbursed)}</strong></div>
-                    <div class="bg-slate-900 p-3 rounded border border-slate-700"><span class="text-slate-400 block text-[10px]">Today's Processing Fees</span><strong class="text-amber-400 text-sm">${Utils.formatUGX(todayFees)}</strong></div>
-                    <div class="bg-slate-900 p-3 rounded border border-slate-700"><span class="text-slate-400 block text-[10px]">Today's Expenses</span><strong class="text-rose-400 text-sm">${Utils.formatUGX(todayExpenses)}</strong></div>
-                    <div class="bg-slate-900 p-3 rounded border border-slate-700"><span class="text-slate-400 block text-[10px]">Today's Bankings</span><strong class="text-blue-400 text-sm">${Utils.formatUGX(todayBanked)}</strong></div>
-                    <div class="bg-slate-900 p-3 rounded border border-slate-700"><span class="text-slate-400 block text-[10px]">Total Cash Position</span><strong class="text-cyan-400 text-sm">${Utils.formatUGX(cashPosTotal)}</strong></div>
-                    <div class="bg-slate-900 p-3 rounded border border-slate-700"><span class="text-slate-400 block text-[10px]">Active Loan Book</span><strong class="text-white text-sm">${Utils.formatUGX(activeLoanBook)}</strong></div>
-                    <div class="bg-slate-900 p-3 rounded border border-slate-700"><span class="text-slate-400 block text-[10px]">Total Arrears</span><strong class="text-red-400 text-sm">${Utils.formatUGX(totalArrears)}</strong></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-400 text-[10px]">Collections Today</span><div class="font-bold text-sm text-emerald-400">${Utils.formatUGX(todayCol)}</div></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-400 text-[10px]">Disbursed Today</span><div class="font-bold text-sm text-indigo-400">${Utils.formatUGX(todayDisb)}</div></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-400 text-[10px]">Expenses Today</span><div class="font-bold text-sm text-rose-400">${Utils.formatUGX(todayExp)}</div></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-400 text-[10px]">Banked Today</span><div class="font-bold text-sm text-blue-400">${Utils.formatUGX(todayBank)}</div></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-400 text-[10px]">Total Portfolio</span><div class="font-bold text-sm text-amber-300">${Utils.formatUGX(totalPortfolio)}</div></div>
+                    <div class="bg-slate-700/60 p-3 rounded-xl"><span class="text-slate-400 text-[10px]">Total Cash & Wallets</span><div class="font-bold text-sm text-cyan-300">${Utils.formatUGX(totalCash)}</div></div>
                 `;
             },
             generateSummaryText() {
                 const branch = State.getActiveBranch();
-                const today = Utils.today();
-                let todayCollections = 0, todayDisbursed = 0, todayFees = 0;
+                const todayStr = Utils.today();
+                let todayCol = 0, todayDisb = 0;
                 branch.clients.forEach(c => {
-                    if (c.dateDisbursed === today) {
-                        todayDisbursed += c.principal || 0;
-                        todayFees += c.processingFee || 0;
-                    }
                     (c.history || []).forEach(h => {
-                        if (h.date === today && h.type === 'Repayment') todayCollections += h.amount || 0;
+                        if (h.date === todayStr) {
+                            if (h.type === 'Repayment') todayCol += h.amount || 0;
+                            if (h.type === 'Disbursement') todayDisb += h.amount || 0;
+                        }
                     });
                 });
-                const todayExpenses = branch.expenses.filter(e => e.date === today && !e.reversed).reduce((s, e) => s + (e.amount || 0), 0);
-                const todayBanked = branch.bankings.filter(b => b.date === today && !b.reversed).reduce((s, b) => s + (b.amount || 0), 0);
-                const cashPosTotal = (state.cashPosition.cash || 0) + (state.cashPosition.mtn || 0) + (state.cashPosition.airtel || 0);
-                const activeLoanBook = branch.clients.filter(c => (Number(c.balance) || 0) > 0).reduce((s, c) => s + (c.balance || 0), 0);
-                const totalArrears = branch.clients.filter(c => (Number(c.balance) || 0) > 0).reduce((s, c) => s + (c.arrears || 0), 0);
-
-                return `*${state.company.name}*\n*Daily Closing Report - ${today}*\n--------------------------------\n` +
-                    `Collections: ${Utils.formatUGX(todayCollections)}\n` +
-                    `Disbursements: ${Utils.formatUGX(todayDisbursed)}\n` +
-                    `Processing Fees: ${Utils.formatUGX(todayFees)}\n` +
-                    `Expenses: ${Utils.formatUGX(todayExpenses)}\n` +
-                    `Bankings: ${Utils.formatUGX(todayBanked)}\n` +
-                    `Cash Position: ${Utils.formatUGX(cashPosTotal)}\n` +
-                    `Active Loan Book: ${Utils.formatUGX(activeLoanBook)}\n` +
-                    `Total Arrears: ${Utils.formatUGX(totalArrears)}\n--------------------------------`;
+                const todayExp = branch.expenses.filter(e => e.date === todayStr && !e.reversed).reduce((s, e) => s + (e.amount || 0), 0);
+                const todayBank = branch.bankings.filter(b => b.date === todayStr && !b.reversed).reduce((s, b) => s + (b.amount || 0), 0);
+                const totalPortfolio = branch.clients.reduce((s, c) => s + (c.balance || 0), 0);
+                const totalCash = (state.cashPosition.cash || 0) + (state.cashPosition.mtn || 0) + (state.cashPosition.airtel || 0);
+                return `*${state.company.name}* — Daily Summary (${todayStr})\n` +
+                       `• Collections: ${Utils.formatUGX(todayCol)}\n` +
+                       `• Disbursed: ${Utils.formatUGX(todayDisb)}\n` +
+                       `• Expenses: ${Utils.formatUGX(todayExp)}\n` +
+                       `• Banked: ${Utils.formatUGX(todayBank)}\n` +
+                       `• Total Portfolio: ${Utils.formatUGX(totalPortfolio)}\n` +
+                       `• Total Cash & Wallets: ${Utils.formatUGX(totalCash)}`;
             },
             copySummaryText() {
                 const txt = this.generateSummaryText();
                 if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(txt).then(() => Utils.toast("Report copied to clipboard"));
+                    navigator.clipboard.writeText(txt).then(() => Utils.toast("Summary copied to clipboard")).catch(() => this._fallbackCopy(txt));
                 } else {
-                    const ta = document.createElement('textarea');
-                    ta.value = txt;
-                    document.body.appendChild(ta);
-                    ta.select();
-                    document.execCommand('copy');
-                    ta.remove();
-                    Utils.toast("Report copied to clipboard");
+                    this._fallbackCopy(txt);
                 }
             },
+            _fallbackCopy(txt) {
+                const ta = document.createElement("textarea");
+                ta.value = txt;
+                document.body.appendChild(ta);
+                ta.select();
+                try {
+                    document.execCommand("copy");
+                    Utils.toast("Summary copied to clipboard");
+                } catch (e) {
+                    Utils.toast("Copy failed");
+                }
+                ta.remove();
+            },
             openWhatsAppModal() {
-                const mgrBox = document.getElementById("whatsapp-manager-checkboxes");
+                const box = document.getElementById("whatsapp-manager-checkboxes");
                 if (!state.managers || state.managers.length === 0) {
-                    mgrBox.innerHTML = `<p class="text-xs text-amber-700 font-bold">No WhatsApp managers configured. Add in Settings.</p>`;
+                    box.innerHTML = `<p class="text-slate-400">No WhatsApp managers configured. Add in Settings.</p>`;
                 } else {
-                    mgrBox.innerHTML = state.managers.map((m, idx) => `
-                        <label class="flex items-center gap-2 text-xs font-bold cursor-pointer">
-                            <input type="checkbox" class="wa-mgr-cb" value="${m.phone}" ${idx === 0 ? 'checked' : ''}>
-                            <span>${m.name} (${m.phone})</span>
+                    box.innerHTML = state.managers.map(m => `
+                        <label class="flex items-center gap-2 text-xs">
+                            <input type="checkbox" class="wa-mgr-chk" value="${m.phone}" checked>
+                            <span><strong>${m.name}</strong> (${m.phone})</span>
                         </label>
                     `).join('');
                 }
                 document.getElementById("whatsapp-report-preview").value = this.generateSummaryText();
-                Utils.show("whatsapp-report-modal");
+                UI.show("whatsapp-report-modal");
             },
             async sendSelectedWhatsAppReports() {
-                const checked = Array.from(document.querySelectorAll(".wa-mgr-cb:checked")).map(cb => cb.value);
+                const checked = Array.from(document.querySelectorAll(".wa-mgr-chk:checked")).map(c => c.value);
                 if (checked.length === 0) {
                     Utils.toast("Select at least one manager");
                     return;
                 }
                 const branch = State.getActiveBranch();
-                const today = Utils.today();
-                let todayCollections = 0, todayDisbursed = 0, todayFees = 0;
+                const todayStr = Utils.today();
+                let todayCol = 0, todayDisb = 0;
                 branch.clients.forEach(c => {
-                    if (c.dateDisbursed === today) {
-                        todayDisbursed += c.principal || 0;
-                        todayFees += c.processingFee || 0;
-                    }
                     (c.history || []).forEach(h => {
-                        if (h.date === today && h.type === 'Repayment') todayCollections += h.amount || 0;
+                        if (h.date === todayStr) {
+                            if (h.type === 'Repayment') todayCol += h.amount || 0;
+                            if (h.type === 'Disbursement') todayDisb += h.amount || 0;
+                        }
                     });
                 });
-                const todayExpenses = branch.expenses.filter(e => e.date === today && !e.reversed).reduce((s, e) => s + (e.amount || 0), 0);
-                const todayBanked = branch.bankings.filter(b => b.date === today && !b.reversed).reduce((s, b) => s + (b.amount || 0), 0);
-                const cashPosTotal = (state.cashPosition.cash || 0) + (state.cashPosition.mtn || 0) + (state.cashPosition.airtel || 0);
+                const todayExp = branch.expenses.filter(e => e.date === todayStr && !e.reversed).reduce((s, e) => s + (e.amount || 0), 0);
+                const todayBank = branch.bankings.filter(b => b.date === todayStr && !b.reversed).reduce((s, b) => s + (b.amount || 0), 0);
+                const totalPortfolio = branch.clients.reduce((s, c) => s + (c.balance || 0), 0);
+                const totalCash = (state.cashPosition.cash || 0) + (state.cashPosition.mtn || 0) + (state.cashPosition.airtel || 0);
                 const rows = [
-                    ["Collections Today", Utils.formatUGX(todayCollections)],
-                    ["Disbursements Today", Utils.formatUGX(todayDisbursed)],
-                    ["Processing Fees Today", Utils.formatUGX(todayFees)],
-                    ["Expenses Today", Utils.formatUGX(todayExpenses)],
-                    ["Bankings Today", Utils.formatUGX(todayBanked)],
-                    ["Cash Position Total", Utils.formatUGX(cashPosTotal)]
+                    ["Collections Today", Utils.formatUGX(todayCol)],
+                    ["Disbursed Today", Utils.formatUGX(todayDisb)],
+                    ["Expenses Today", Utils.formatUGX(todayExp)],
+                    ["Banked Today", Utils.formatUGX(todayBank)],
+                    ["Total Portfolio", Utils.formatUGX(totalPortfolio)],
+                    ["Total Cash & Wallets", Utils.formatUGX(totalCash)]
                 ];
-                await PdfEngine.downloadReportPDF("DAILY CLOSING REPORT", ["Metric", "Value"], rows, [`Date: ${today}`]);
-                const summary = this.generateSummaryText();
+                await PdfEngine.downloadReportPDF("DAILY CLOSING REPORT", ["Metric", "Value"], rows, [`Date: ${todayStr}`]);
+                const summaryMsg = encodeURIComponent(this.generateSummaryText() + "\n\nPlease find the Daily Closing Report PDF attached.");
                 checked.forEach(phone => {
                     const waPhone = RegionManager.formatPhoneForWhatsApp(phone);
-                    window.open(`https://wa.me/${waPhone}?text=${encodeURIComponent(summary + "\n\n[PDF Report Generated & Downloaded]")}`, '_blank');
+                    window.open(`https://wa.me/${waPhone}?text=${summaryMsg}`, '_blank');
                 });
-                Utils.hide("whatsapp-report-modal");
-                Utils.toast("PDF downloaded & WhatsApp opened");
+                UI.hide("whatsapp-report-modal");
+                Utils.toast("Daily report PDF downloaded & WhatsApp opened");
             }
         };
 
         // ============================================================
-        // AGING & PAR (ONLY NON-ZERO BALANCE CLIENTS + PORTFOLIO / FIELD OFFICER)
+        // AGING & PAR
         // ============================================================
         const Aging = {
-            getPortfolioLabel(client, branch) {
-                if (!client) return "Unassigned";
-                const b = branch || State.getActiveBranch();
-                const officer = (b.officers || []).find(o => o.id === client.officerId);
-                if (officer && officer.name) {
-                    return officer.name;
-                }
-                return client.portfolio || client.portfolioName || "Unassigned";
-            },
-            getActiveLoanClients(branch) {
-                const b = branch || State.getActiveBranch();
-                return (b.clients || []).filter(c => (Number(c.balance) || 0) > 0);
-            },
             render() {
+                State.runDailyAging();
                 const branch = State.getActiveBranch();
-                const select = document.getElementById("aging-officer-filter");
-                if (select) {
-                    const prev = select.value;
-                    select.innerHTML = `<option value="ALL">-- ALL STAFF --</option>` +
-                        branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
-                    if (prev) select.value = prev;
+                const filterSel = document.getElementById("aging-officer-filter");
+                if (filterSel && filterSel.options.length <= 1) {
+                    filterSel.innerHTML = `<option value="ALL">-- ALL STAFF --</option>` + branch.officers.map(o => `<option value="${o.id}">${o.name}</option>`).join('');
                 }
-                const filterVal = select ? select.value : 'ALL';
-                const activeClients = this.getActiveLoanClients(branch);
-                const list = filterVal === 'ALL'
-                    ? activeClients
-                    : activeClients.filter(c => c.officerId === filterVal);
-
-                const totalBook = list.reduce((s, c) => s + (Number(c.balance) || 0), 0);
-                const atRisk = list.filter(c => (Number(c.overdueDays) || 0) > 0).reduce((s, c) => s + (Number(c.balance) || 0), 0);
-                const par = totalBook > 0 ? ((atRisk / totalBook) * 100).toFixed(2) : "0.00";
-                const totalArrears = list.reduce((s, c) => s + (Number(c.arrears) || 0), 0);
-
-                document.getElementById("par-metrics-summary-box").innerHTML = `
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                        <div class="bg-white p-3 rounded-xl border"><span class="text-slate-500 block text-[10px]">Active Loan Book</span><strong class="text-blue-700 text-base">${Utils.formatUGX(totalBook)}</strong></div>
-                        <div class="bg-white p-3 rounded-xl border"><span class="text-slate-500 block text-[10px]">Total Arrears</span><strong class="text-red-600 text-base">${Utils.formatUGX(totalArrears)}</strong></div>
-                        <div class="bg-slate-900 text-white p-3 rounded-xl"><span class="text-slate-300 block text-[10px]">Portfolio At Risk (PAR)</span><strong class="text-amber-400 text-base">${par}%</strong></div>
-                    </div>`;
-
+                const selectedOfficer = filterSel ? filterSel.value : "ALL";
+                const activeLoans = branch.clients.filter(c => (c.balance || 0) > 0 && (selectedOfficer === "ALL" || c.officerId === selectedOfficer));
+                const totalPortfolio = activeLoans.reduce((s, c) => s + (c.balance || 0), 0);
+                const atRisk = activeLoans.filter(c => (c.overdueDays || 0) > 0).reduce((s, c) => s + (c.balance || 0), 0);
+                const parPct = totalPortfolio > 0 ? ((atRisk / totalPortfolio) * 100).toFixed(1) : "0.0";
+                const box = document.getElementById("par-metrics-summary-box");
+                if (box) {
+                    box.innerHTML = `
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
+                            <div class="bg-white p-3 rounded-xl border shadow-sm"><span class="text-slate-500">Active Portfolio</span><div class="font-bold text-base text-slate-900">${Utils.formatUGX(totalPortfolio)}</div></div>
+                            <div class="bg-white p-3 rounded-xl border shadow-sm"><span class="text-slate-500">Portfolio at Risk</span><div class="font-bold text-base text-red-600">${Utils.formatUGX(atRisk)}</div></div>
+                            <div class="bg-white p-3 rounded-xl border shadow-sm"><span class="text-slate-500">PAR %</span><div class="font-bold text-base text-amber-600">${parPct}%</div></div>
+                        </div>
+                    `;
+                }
                 const sec = document.getElementById("officer-aging-sections");
-                if (list.length === 0) {
-                    sec.innerHTML = `<p class="text-xs text-slate-400 py-6 text-center">No active loans with outstanding balance</p>`;
+                if (!sec) return;
+                if (activeLoans.length === 0) {
+                    sec.innerHTML = `<p class="text-xs text-slate-400 text-center py-6">No active loans found</p>`;
                     return;
                 }
-                sec.innerHTML = `<div class="bg-white border rounded-xl overflow-x-auto"><table class="w-full text-left border-collapse text-xs">
-                    <thead><tr class="bg-slate-800 text-white text-[11px]"><th class="p-3">Client</th><th class="p-3">Portfolio / Field Officer</th><th class="p-3">Daily</th><th class="p-3">Arrears</th><th class="p-3">Overdue</th><th class="p-3 text-right">Balance</th></tr></thead>
-                    <tbody class="divide-y">` +
-                    list.map(c => {
-                        const portfolioName = this.getPortfolioLabel(c, branch);
-                        return `<tr>
-                            <td class="p-3"><strong>${c.name}</strong><br><span class="text-[10px] text-slate-400">${c.nin || 'N/A'}</span></td>
-                            <td class="p-3 font-semibold text-slate-700">${portfolioName}</td>
-                            <td class="p-3 font-mono">${Utils.formatUGX(c.dailyTarget || 0)}</td>
-                            <td class="p-3 font-mono text-red-600 font-bold">${Utils.formatUGX(c.arrears || 0)}</td>
-                            <td class="p-3"><span class="bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-bold text-[10px]">${c.overdueDays || 0}d</span></td>
-                            <td class="p-3 text-right font-mono font-bold text-blue-700">${Utils.formatUGX(c.balance || 0)}</td>
-                        </tr>`;
-                    }).join('') +
-                    `</tbody></table></div>`;
-            },
-            getFilteredList() {
-                const branch = State.getActiveBranch();
-                const filterVal = document.getElementById("aging-officer-filter")?.value || 'ALL';
-                const activeClients = this.getActiveLoanClients(branch);
-                return filterVal === 'ALL'
-                    ? activeClients
-                    : activeClients.filter(c => c.officerId === filterVal);
-            },
-            printAgingList() {
-                const branch = State.getActiveBranch();
-                const list = this.getFilteredList();
-                const filterVal = document.getElementById("aging-officer-filter")?.value || 'ALL';
-                const filterOfficer = filterVal === 'ALL'
-                    ? 'All Portfolios / Field Officers'
-                    : (branch.officers.find(o => o.id === filterVal)?.name || 'Selected Portfolio');
-                const totalBal = list.reduce((s, c) => s + (Number(c.balance) || 0), 0);
-                const totalArr = list.reduce((s, c) => s + (Number(c.arrears) || 0), 0);
-
-                const printArea = document.getElementById("printable-area");
-                if (!printArea) {
-                    window.print();
-                    return;
-                }
-                printArea.innerHTML = `
-                    <div style="font-family: Arial, sans-serif; color: #0f172a;">
-                        <h2 style="margin:0 0 4px 0;">${state.company.name || 'PMMS Microfinance'} — AGING REPORT</h2>
-                        <p style="margin:0 0 12px 0; font-size:12px; color:#475569;">
-                            Date: ${Utils.today()} (${Utils.timeNow()}) | Portfolio / Field Officer: <strong>${filterOfficer}</strong> | Active Loans (Balance &gt; 0): <strong>${list.length}</strong>
-                        </p>
-                        <table style="width:100%; border-collapse:collapse; font-size:12px;">
+                sec.innerHTML = `
+                    <div class="bg-white border rounded-xl overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-xs">
                             <thead>
-                                <tr style="background:#0f172a; color:#ffffff;">
-                                    <th style="padding:8px; text-align:left; border:1px solid #cbd5e1;">Client</th>
-                                    <th style="padding:8px; text-align:left; border:1px solid #cbd5e1;">NIN / ID</th>
-                                    <th style="padding:8px; text-align:left; border:1px solid #cbd5e1;">Portfolio / Field Officer</th>
-                                    <th style="padding:8px; text-align:right; border:1px solid #cbd5e1;">Daily Target</th>
-                                    <th style="padding:8px; text-align:right; border:1px solid #cbd5e1;">Arrears</th>
-                                    <th style="padding:8px; text-align:center; border:1px solid #cbd5e1;">Overdue Days</th>
-                                    <th style="padding:8px; text-align:right; border:1px solid #cbd5e1;">Balance</th>
+                                <tr class="bg-slate-800 text-white text-[11px]">
+                                    <th class="p-3">Client</th>
+                                    <th class="p-3">Overdue Days</th>
+                                    <th class="p-3 text-right">Arrears</th>
+                                    <th class="p-3 text-right">Balance</th>
                                 </tr>
                             </thead>
-                            <tbody>
-                                ${list.length ? list.map(c => `
+                            <tbody class="divide-y">
+                                ${activeLoans.map(c => `
                                     <tr>
-                                        <td style="padding:7px; border:1px solid #cbd5e1;"><strong>${c.name}</strong></td>
-                                        <td style="padding:7px; border:1px solid #cbd5e1;">${c.nin || 'N/A'}</td>
-                                        <td style="padding:7px; border:1px solid #cbd5e1;">${this.getPortfolioLabel(c, branch)}</td>
-                                        <td style="padding:7px; border:1px solid #cbd5e1; text-align:right;">${Utils.formatUGX(c.dailyTarget || 0)}</td>
-                                        <td style="padding:7px; border:1px solid #cbd5e1; text-align:right;">${Utils.formatUGX(c.arrears || 0)}</td>
-                                        <td style="padding:7px; border:1px solid #cbd5e1; text-align:center;">${c.overdueDays || 0}d</td>
-                                        <td style="padding:7px; border:1px solid #cbd5e1; text-align:right;"><strong>${Utils.formatUGX(c.balance || 0)}</strong></td>
+                                        <td class="p-3 font-bold">${c.name} <span class="text-slate-400">(${c.nin || ''})</span></td>
+                                        <td class="p-3 font-mono">${c.overdueDays || 0}d</td>
+                                        <td class="p-3 text-right font-mono text-red-600 font-bold">${Utils.formatUGX(c.arrears || 0)}</td>
+                                        <td class="p-3 text-right font-mono font-bold text-blue-700">${Utils.formatUGX(c.balance || 0)}</td>
                                     </tr>
-                                `).join('') : `<tr><td colspan="7" style="padding:12px; text-align:center; border:1px solid #cbd5e1;">No active loans with non-zero balance</td></tr>`}
+                                `).join('')}
                             </tbody>
                         </table>
-                        <p style="margin-top:12px; font-size:12px; font-weight:bold;">
-                            Total Arrears: ${Utils.formatUGX(totalArr)} | Total Outstanding Balance: ${Utils.formatUGX(totalBal)}
-                        </p>
                     </div>
                 `;
-                Utils.show(printArea);
-                window.print();
-                setTimeout(() => {
-                    Utils.hide(printArea);
-                    printArea.innerHTML = "";
-                }, 500);
             },
             exportCSV() {
                 const branch = State.getActiveBranch();
-                const list = this.getFilteredList();
-                const rows = ["Client Name,NIN,Portfolio / Field Officer,Daily Target,Arrears,Overdue Days,Balance"];
-                list.forEach(c => {
-                    const portfolioName = this.getPortfolioLabel(c, branch);
-                    rows.push(`"${String(c.name || '').replace(/"/g, '""')}","${c.nin || ''}","${String(portfolioName).replace(/"/g, '""')}",${c.dailyTarget || 0},${c.arrears || 0},${c.overdueDays || 0},${c.balance || 0}`);
+                const rows = [["Client Name", "NIN", "Overdue Days", "Arrears", "Balance"]];
+                branch.clients.filter(c => (c.balance || 0) > 0).forEach(c => {
+                    rows.push([c.name, c.nin || '', c.overdueDays || 0, c.arrears || 0, c.balance || 0]);
                 });
-                const blob = new Blob([rows.join("\n")], { type: "text/csv;charset=utf-8;" });
+                const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
                 const link = document.createElement("a");
-                link.href = URL.createObjectURL(blob);
+                link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
                 link.download = `PMMS_Aging_${Utils.today()}.csv`;
+                document.body.appendChild(link);
                 link.click();
-                Utils.toast("CSV exported (zero-balance loans excluded)");
+                link.remove();
+                Utils.toast("Aging CSV exported");
             },
             async exportPDF() {
                 const branch = State.getActiveBranch();
-                const list = this.getFilteredList();
-                const totalBal = list.reduce((s, c) => s + (Number(c.balance) || 0), 0);
-                const totalArr = list.reduce((s, c) => s + (Number(c.arrears) || 0), 0);
-                const rows = list.map(c => [
-                    c.name || '',
-                    this.getPortfolioLabel(c, branch),
-                    Utils.formatUGX(c.dailyTarget || 0),
-                    Utils.formatUGX(c.arrears || 0),
+                const rows = branch.clients.filter(c => (c.balance || 0) > 0).map(c => [
+                    c.name,
+                    c.nin || '',
                     `${c.overdueDays || 0}d`,
+                    Utils.formatUGX(c.arrears || 0),
                     Utils.formatUGX(c.balance || 0)
                 ]);
-                await PdfEngine.downloadReportPDF(
-                    "LOAN AGING REPORT",
-                    ["Client", "Portfolio / Field Officer", "Daily Target", "Arrears", "Overdue", "Balance"],
-                    rows,
-                    [
-                        `Active Clients (Non-Zero Balance): ${list.length}`,
-                        `Total Arrears: ${Utils.formatUGX(totalArr)}`,
-                        `Total Outstanding Balance: ${Utils.formatUGX(totalBal)}`
-                    ]
-                );
-                Utils.toast("Aging PDF downloaded (zero-balance loans excluded)");
-            }
+                await PdfEngine.downloadReportPDF("AGING & PAR REPORT", ["Client", "NIN", "Overdue", "Arrears", "Balance"], rows, [`Date: ${Utils.today()}`]);
+                Utils.toast("Aging PDF downloaded");
+            },
+            printAgingList() { window.print(); }
         };
 
+        // ============================================================
+        // DEFAULTERS
+        // ============================================================
         const Defaulters = {
             render() {
                 const branch = State.getActiveBranch();
-                const list = branch.clients.filter(c => (Number(c.balance) || 0) > 0 && (c.overdueDays || 0) >= 90);
                 const container = document.getElementById("demand-list-container");
-                if (list.length === 0) {
-                    container.innerHTML = `<p class="text-xs text-slate-400 col-span-full py-6 text-center">No defaulters (90+ days)</p>`;
+                if (!container) return;
+                const defaulters = branch.clients.filter(c => (c.balance || 0) > 0 && (c.overdueDays || 0) >= 90);
+                if (defaulters.length === 0) {
+                    container.innerHTML = `<p class="text-xs text-slate-400 col-span-full text-center py-6">No 90+ day defaulters</p>`;
                     return;
                 }
-                container.innerHTML = list.map(c => `
-                    <div class="bg-red-50 border border-red-200 p-4 rounded-xl text-xs space-y-2">
-                        <div class="flex justify-between items-start"><div><strong class="text-red-900 text-sm">${c.name}</strong><br>NIN: ${c.nin || 'N/A'} | Phone: ${c.phone || ''}</div><span class="bg-red-600 text-white px-2 py-0.5 rounded font-bold">${c.overdueDays}d</span></div>
-                        <div class="flex justify-between font-bold text-red-800 border-t border-red-200 pt-2"><span>Balance:</span><span>${Utils.formatUGX(c.balance)}</span></div>
-                    </div>`).join('');
+                container.innerHTML = defaulters.map(c => `
+                    <div class="bg-white border border-red-200 p-4 rounded-xl shadow-sm space-y-2 text-xs">
+                        <div class="flex justify-between items-start">
+                            <div><div class="font-bold text-sm text-slate-900">${c.name}</div><div class="text-slate-500">${c.phone || 'N/A'}</div></div>
+                            <span class="bg-red-100 text-red-700 px-2 py-0.5 rounded font-bold">${c.overdueDays} Days</span>
+                        </div>
+                        <div class="pt-2 border-t flex justify-between font-mono font-bold text-red-700">
+                            <span>Balance:</span>
+                            <span>${Utils.formatUGX(c.balance || 0)}</span>
+                        </div>
+                    </div>
+                `).join('');
             }
         };
 
@@ -4795,91 +4827,79 @@
         // SMS
         // ============================================================
         const SMS = {
+            populateQuickClients() {
+                const sel = document.getElementById("sms-quick-client-select");
+                if (!sel) return;
+                sel.innerHTML = state.globalClients.map(c => `<option value="${c.phone}">${c.name} (${c.phone})</option>`).join('');
+            },
+            toggleTargetDropdown(target) {
+                const container = document.getElementById("sms-single-client-container");
+                if (target === "SINGLE") Utils.show(container);
+                else Utils.hide(container);
+            },
             dispatch(phone, message, trigger = 'Manual') {
                 const normPhone = RegionManager.normalizePhone(phone);
                 if (!normPhone) return;
                 const carrier = document.getElementById("sms-preferred-network")?.value || 'Standard SIM';
-                const logEntry = {
+                state.smsLogs.unshift({
                     id: Utils.generateId("sms"),
-                    timestamp: Utils.now(),
+                    time: Utils.now(),
                     recipient: normPhone,
                     carrier,
                     trigger,
                     message
-                };
-                if (!state.smsLogs) state.smsLogs = [];
-                state.smsLogs.unshift(logEntry);
-                if (state.smsLogs.length > 500) state.smsLogs.length = 500;
+                });
+                if (state.smsLogs.length > 300) state.smsLogs.length = 300;
                 State.save();
                 this.renderLogs();
-                const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-                if (isMobile) {
-                    try {
-                        window.location.href = `sms:${normPhone}?body=${encodeURIComponent(message)}`;
-                    } catch (e) {}
-                }
-            },
-            toggleTargetDropdown(val) {
-                const container = document.getElementById("sms-single-client-container");
-                if (val === 'SINGLE') Utils.show(container);
-                else Utils.hide(container);
-            },
-            populateQuickClients() {
-                const select = document.getElementById("sms-quick-client-select");
-                if (!select) return;
-                const branch = State.getActiveBranch();
-                select.innerHTML = `<option value="">-- Select Client --</option>` +
-                    branch.clients.map(c => `<option value="${c.phone || ''}">${c.name} (${c.phone || 'N/A'})</option>`).join('');
             },
             dispatchBroadcast() {
-                const target = document.getElementById("sms-broadcast-target")?.value || 'SINGLE';
-                const msgTemplate = document.getElementById("sms-quick-message").value.trim();
-                if (!Validation.isRequired(msgTemplate, "Message")) return;
-                const branch = State.getActiveBranch();
-                let targets = [];
-                if (target === 'SINGLE') {
-                    const ph = document.getElementById("sms-quick-client-select").value;
-                    if (!ph) {
-                        Utils.toast("Select a client");
-                        return;
-                    }
-                    const cl = branch.clients.find(c => c.phone === ph);
-                    if (cl) targets = [cl];
-                } else if (target === 'ALL') targets = branch.clients;
-                else if (target === 'DEFAULTERS') targets = branch.clients.filter(c => (c.overdueDays || 0) >= 90);
-                else if (target === 'ACTIVE') targets = branch.clients.filter(c => (c.balance || 0) > 0);
-                else if (target === 'BODABODA') targets = branch.clients.filter(c => c.category === 'BODABODA');
-                if (targets.length === 0) {
-                    Utils.toast("No clients match this target");
+                const target = document.getElementById("sms-broadcast-target").value;
+                const template = document.getElementById("sms-quick-message").value.trim();
+                if (!template) {
+                    Utils.toast("Enter message");
                     return;
                 }
-                targets.forEach(c => {
-                    if (c.phone) {
-                        const personalized = msgTemplate
-                            .replace(/{name}/g, c.name || 'Client')
-                            .replace(/{balance}/g, Utils.formatUGX(c.balance || 0))
-                            .replace(/{nin}/g, c.nin || 'N/A');
-                        this.dispatch(c.phone, personalized, `Broadcast (${target})`);
-                    }
+                const branch = State.getActiveBranch();
+                let recipients = [];
+                if (target === "SINGLE") {
+                    const phone = document.getElementById("sms-quick-client-select").value;
+                    const gc = state.globalClients.find(c => c.phone === phone) || { name: 'Client', phone, nin: '' };
+                    recipients.push(gc);
+                } else if (target === "ALL") {
+                    recipients = state.globalClients;
+                } else if (target === "DEFAULTERS") {
+                    recipients = branch.clients.filter(c => (c.balance || 0) > 0 && (c.overdueDays || 0) >= 90);
+                } else if (target === "ACTIVE") {
+                    recipients = branch.clients.filter(c => (c.balance || 0) > 0);
+                } else if (target === "BODABODA") {
+                    recipients = branch.clients.filter(c => c.category === "BODABODA");
+                }
+                if (recipients.length === 0) {
+                    Utils.toast("No recipients in group");
+                    return;
+                }
+                recipients.forEach(r => {
+                    const bc = branch.clients.find(c => c.nin === r.nin || c.phone === r.phone);
+                    const bal = bc ? Utils.formatUGX(bc.balance || 0) : Utils.formatUGX(0);
+                    const msg = template.replace(/{name}/g, r.name || 'Client').replace(/{balance}/g, bal).replace(/{nin}/g, r.nin || '');
+                    this.dispatch(r.phone, msg, `Bulk (${target})`);
                 });
-                Utils.toast(`SMS dispatched to ${targets.length} recipient(s)`);
+                Utils.toast(`SMS queued for ${recipients.length} recipient(s)`);
             },
             renderLogs() {
                 const tbody = document.getElementById("sms-logs-table-body");
+                const countEl = document.getElementById("sms-log-count");
+                if (countEl) countEl.innerText = state.smsLogs.length;
                 if (!tbody) return;
-                const logs = state.smsLogs || [];
-                const cnt = document.getElementById("sms-log-count");
-                if (cnt) cnt.innerText = logs.length;
-                tbody.innerHTML = logs.map(l => `
-                    <tr class="text-xs">
-                        <td class="p-3 font-mono text-[10px]">${l.timestamp}</td>
-                        <td class="p-3 font-bold">${l.recipient}</td>
-                        <td class="p-3">${l.carrier || 'SIM'}</td>
+                tbody.innerHTML = state.smsLogs.map(l => `
+                    <tr>
+                        <td class="p-3 font-mono text-[11px]">${l.time}</td>
+                        <td class="p-3 font-mono">${l.recipient}</td>
+                        <td class="p-3">${l.carrier}</td>
                         <td class="p-3">${l.trigger}</td>
                         <td class="p-3 max-w-xs truncate">${l.message}</td>
-                        <td class="p-3 text-right">
-                            <a href="sms:${l.recipient}?body=${encodeURIComponent(l.message)}" class="text-sky-600 font-bold text-[10px] hover:underline">Open SIM</a>
-                        </td>
+                        <td class="p-3 text-right"><a href="sms:${l.recipient}?body=${encodeURIComponent(l.message)}" class="text-sky-600 font-bold hover:underline">Open SMS</a></td>
                     </tr>
                 `).join('') || `<tr><td colspan="6" class="p-4 text-center text-slate-400">No SMS logs</td></tr>`;
             },
@@ -4891,153 +4911,101 @@
         };
 
         // ============================================================
-        // X-PRINTER & RECEIPT PRINTING
+        // PRINTER & THEME
         // ============================================================
         const Printer = {
-            onTogglePrintReceipt(isChecked) {
-                state.settings.printReceiptEnabled = isChecked;
+            onTogglePrintReceipt(enabled) {
+                if (!state.settings) state.settings = {};
+                state.settings.printReceiptEnabled = !!enabled;
                 State.save();
-                Utils.toast(`Receipt printing ${isChecked ? 'enabled' : 'disabled'}`);
+                Utils.toast(enabled ? "Receipt printing enabled" : "Receipt printing disabled");
             },
             async connectXPrinter() {
-                const iface = document.getElementById("xprinter-interface-select")?.value || "bluetooth";
+                const iface = document.getElementById("xprinter-interface-select")?.value || 'bluetooth';
                 try {
-                    if (iface === "bluetooth" && navigator.bluetooth) {
-                        const device = await navigator.bluetooth.requestDevice({
+                    if (iface === 'bluetooth' && navigator.bluetooth) {
+                        xPrinterDevice = await navigator.bluetooth.requestDevice({
                             acceptAllDevices: true,
-                            optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2']
+                            optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
                         });
-                        const server = await device.gatt.connect();
-                        const services = await server.getPrimaryServices();
-                        for (const svc of services) {
-                            const chars = await svc.getCharacteristics();
-                            for (const ch of chars) {
-                                if (ch.properties.write || ch.properties.writeWithoutResponse) {
-                                    xPrinterCharacteristic = ch;
-                                    xPrinterDevice = device;
-                                    this.updateStatusUI(true, device.name || "XPrinter BLE");
-                                    Utils.toast(`Connected to ${device.name || 'XPrinter'}`);
-                                    return;
-                                }
-                            }
-                        }
-                        xPrinterDevice = device;
-                        this.updateStatusUI(true, device.name || "XPrinter");
-                        Utils.toast("XPrinter Bluetooth paired");
-                    } else if (iface === "usb" && navigator.serial) {
-                        const port = await navigator.serial.requestPort();
-                        await port.open({ baudRate: 9600 });
-                        xPrinterSerialPort = port;
-                        this.updateStatusUI(true, "XPrinter USB/Serial");
-                        Utils.toast("Connected to XPrinter via Serial/USB");
+                        const server = await xPrinterDevice.gatt.connect();
+                        const service = await server.getPrimaryService('000018f0-0000-1000-8000-00805f9b34fb');
+                        xPrinterCharacteristic = await service.getCharacteristic('00002af1-0000-1000-8000-00805f9b34fb');
+                        document.getElementById("xprinter-status-text").innerText = "Printer Connected";
+                        document.getElementById("xprinter-mini-dot").className = "w-2 h-2 rounded-full bg-emerald-500 inline-block";
+                        Utils.toast("X-Printer connected via Bluetooth");
+                    } else if (iface === 'usb' && navigator.serial) {
+                        xPrinterSerialPort = await navigator.serial.requestPort();
+                        await xPrinterSerialPort.open({ baudRate: 9600 });
+                        document.getElementById("xprinter-status-text").innerText = "Printer Connected";
+                        document.getElementById("xprinter-mini-dot").className = "w-2 h-2 rounded-full bg-emerald-500 inline-block";
+                        Utils.toast("X-Printer connected via Serial/USB");
                     } else {
-                        Utils.toast("Web Bluetooth/Serial not supported in this browser; system print dialog will be used.");
-                        this.updateStatusUI(false, "System Print");
+                        Utils.toast("Web Bluetooth/Serial not supported on this device");
                     }
-                } catch (err) {
-                    Utils.toast("Printer connection cancelled or unavailable; standard print fallback active.");
+                } catch (e) {
+                    Utils.toast("Printer connection cancelled or failed");
                 }
             },
-            updateStatusUI(connected, label = "Connect Printer") {
-                const txt = document.getElementById("xprinter-status-text");
-                const dot = document.getElementById("xprinter-mini-dot");
-                if (txt) txt.innerText = connected ? label : "Connect Printer";
-                if (dot) {
-                    dot.className = connected
-                        ? "w-2 h-2 rounded-full bg-emerald-500 inline-block"
-                        : "w-2 h-2 rounded-full bg-slate-400 inline-block";
-                    dot.title = connected ? `Connected: ${label}` : "Printer Disconnected";
+            async printToXPrinter(textData, force = false) {
+                lastPrintedReceiptText = textData;
+                const enabled = force ? true : (state.settings?.printReceiptEnabled ?? true);
+                if (!enabled) return;
+                if (xPrinterCharacteristic) {
+                    try {
+                        const encoder = new TextEncoder();
+                        await xPrinterCharacteristic.writeValue(encoder.encode(textData + "\n\n\n"));
+                        Utils.toast("Sent to thermal X-Printer");
+                        return;
+                    } catch (e) {}
+                }
+                if (xPrinterSerialPort && xPrinterSerialPort.writable) {
+                    try {
+                        const writer = xPrinterSerialPort.writable.getWriter();
+                        const encoder = new TextEncoder();
+                        await writer.write(encoder.encode(textData + "\n\n\n"));
+                        writer.releaseLock();
+                        Utils.toast("Sent to serial X-Printer");
+                        return;
+                    } catch (e) {}
+                }
+                const printArea = document.getElementById("printable-area");
+                if (printArea) {
+                    printArea.innerHTML = `<pre style="font-family:monospace;font-size:12px;white-space:pre-wrap;">${textData}</pre>`;
+                    Utils.show(printArea);
+                    window.print();
+                    Utils.hide(printArea);
                 }
             },
             async testPrint() {
-                const sample = `=== ${state.company.name} ===\nX-PRINTER TEST RECEIPT\nDate: ${Utils.today()} ${Utils.timeNow()}\n--------------------------------\nStatus: Connected & Ready\n--------------------------------\n`;
-                await this.printToXPrinter(sample, true);
-            },
-            async printToXPrinter(textData, forcePrint = false) {
-                lastPrintedReceiptText = textData;
-                if (!forcePrint && state.settings && state.settings.printReceiptEnabled === false) {
-                    return;
-                }
-                const encoder = new TextEncoder();
-                const escposData = encoder.encode("\x1B\x40" + textData + "\n\n\n\x1D\x56\x41\x00");
-
-                try {
-                    if (xPrinterCharacteristic) {
-                        const chunkSize = 180;
-                        for (let i = 0; i < escposData.length; i += chunkSize) {
-                            const slice = escposData.slice(i, i + chunkSize);
-                            await xPrinterCharacteristic.writeValue(slice);
-                        }
-                        Utils.toast("Sent to X-Printer");
-                        return;
-                    }
-                    if (xPrinterSerialPort && xPrinterSerialPort.writable) {
-                        const writer = xPrinterSerialPort.writable.getWriter();
-                        await writer.write(escposData);
-                        writer.releaseLock();
-                        Utils.toast("Sent to X-Printer Serial");
-                        return;
-                    }
-                } catch (e) {
-                    // Fallback to printable area print
-                }
-
-                const printArea = document.getElementById("printable-area");
-                if (printArea) {
-                    printArea.innerHTML = `<pre style="font-family: monospace; font-size: 13px; white-space: pre-wrap;">${textData.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</pre>`;
-                    Utils.show(printArea);
-                    window.print();
-                    setTimeout(() => {
-                        Utils.hide(printArea);
-                        printArea.innerHTML = "";
-                    }, 500);
-                } else {
-                    window.print();
-                }
+                await this.printToXPrinter(`=== ${state.company.name} ===\nTEST PRINT SUCCESSFUL\nDate: ${Utils.today()} ${Utils.timeNow()}\n`, true);
             }
         };
 
-        // ============================================================
-        // THEME CUSTOMIZER
-        // ============================================================
         const ThemeCustomizer = {
-            applyTheme(theme) {
-                document.body.className = document.body.className.replace(/theme-\S+/g, '').trim() + ' theme-' + theme;
-                localStorage.setItem('pmms_theme_color', theme);
+            applyTheme(themeName) {
+                document.body.className = document.body.className.replace(/\btheme-\S+/g, '').trim() + ` theme-${themeName}`;
+                State.save();
             },
-            applyFont(font) {
-                document.body.className = document.body.className.replace(/font-\S+/g, '').trim() + ' font-' + font;
-                localStorage.setItem('pmms_font_family', font);
-            },
-            loadSaved() {
-                const t = localStorage.getItem('pmms_theme_color');
-                const f = localStorage.getItem('pmms_font_family');
-                if (t) {
-                    this.applyTheme(t);
-                    const s = document.getElementById("theme-color-select");
-                    if (s) s.value = t;
-                }
-                if (f) {
-                    this.applyFont(f);
-                    const s = document.getElementById("theme-font-select");
-                    if (s) s.value = f;
-                }
+            applyFont(fontName) {
+                document.body.className = document.body.className.replace(/\bfont-\S+/g, '').trim() + ` font-${fontName}`;
+                State.save();
             }
         };
 
         // ============================================================
-        // INITIALIZATION
+        // INIT
         // ============================================================
         window.addEventListener("online", () => Utils.hide("offline-banner"));
         window.addEventListener("offline", () => Utils.show("offline-banner"));
-
-        (async () => {
-            ThemeCustomizer.loadSaved();
-            await State.load();
-            UI.refreshAll();
-            AdminSettings.renderManagersList();
+        window.addEventListener("DOMContentLoaded", async () => {
             if (!navigator.onLine) Utils.show("offline-banner");
-        })();
+            const recDate = document.getElementById("manual-receipt-date");
+            if (recDate) recDate.value = Utils.today();
+            await State.load();
+            AdminSettings.renderManagersList();
+            UI.refreshAll();
+        });
     </script>
 </body>
 </html>
